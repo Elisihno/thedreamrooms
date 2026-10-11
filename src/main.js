@@ -14,7 +14,8 @@ let toastT = 0;
 const ui = {
   setStance(crouch) { $('stanceImg').src = img(crouch ? 'crouch.webp' : 'stand.png'); },
   setHp(hp) { $('hp').textContent = '♥'.repeat(Math.max(0, hp)); },
-  setPrompt(t) { $('prompt').textContent = t; },
+  pressHand() { const c = $('cross'); c.classList.add('press'); setTimeout(() => c.classList.remove('press'), 160); },
+  setPrompt(t) { $('prompt').textContent = t; $('cross').classList.toggle('hand', !!t); },
   setHidden(h) { $('hide').style.opacity = h ? 1 : 0; },
   flashHurt() { $('hurt').style.opacity = 1; setTimeout(() => ($('hurt').style.opacity = 0), 350); },
   toast(t) { const e = $('toast'); e.textContent = t; e.style.opacity = 1; toastT = 3.2; },
@@ -25,6 +26,22 @@ const ui = {
   },
 };
 
+// The hand image is white on black; use its brightness as transparency so only the hand shows.
+function cutOutHand(src) {
+  const image = new Image();
+  image.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = image.width; c.height = image.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(image, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height);
+    for (let i = 0; i < d.data.length; i += 4) { d.data[i + 3] = d.data[i]; d.data[i] = d.data[i + 1] = d.data[i + 2] = 255; }
+    ctx.putImageData(d, 0, 0);
+    $('cross').style.setProperty('--hand', `url(${c.toDataURL()})`);
+  };
+  image.src = src;
+}
+
 // ---------- renderer / scene ----------
 const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
@@ -34,8 +51,8 @@ scene.background = new THREE.Color(0x04060a);
 scene.fog = new THREE.Fog(0x04060a, 1.5, 20);
 const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 80);
 scene.add(camera);
-scene.add(new THREE.AmbientLight(0x6a7088, 1.1));
-const lamp = new THREE.PointLight(0xffd9a8, 22, 15, 1.5); // the faint glow around you
+scene.add(new THREE.AmbientLight(0x9096a8, 0.5));
+const lamp = new THREE.PointLight(0xffeede, 9, 13, 1.6); // the faint glow around you
 camera.add(lamp);
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
@@ -200,6 +217,7 @@ addEventListener('keydown', (e) => {
 ui.setStance(false);
 loadMaterials()
   .then((mats) => {
+    cutOutHand(img('hand.png'));
     game = buildGame(mats);
     game.reset();
     $('start').textContent = 'START';

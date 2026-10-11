@@ -5,7 +5,8 @@
 export const T = 0.2; // wall thickness
 export const LH = 3; // level height
 export const ly = (l) => l * LH;
-const STYLE = { 0: 'concrete', 1: 'floral', 2: 'peel', 3: 'grime' };
+// Wall tile per level (all tiles come straight from public/img/atlas.png; see src/textures.js).
+const STYLE = { 0: 'concrete', 1: 'plaster', 2: 'plaster', 3: 'streak' };
 
 export const walls = [];
 export const doors = [];

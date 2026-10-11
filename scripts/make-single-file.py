@@ -15,7 +15,7 @@ def data_uri(path):
     mime = mimetypes.guess_type(path)[0] or ('image/webp' if path.endswith('.webp') else 'image/png')
     return f'data:{mime};base64,' + base64.b64encode(open(path, 'rb').read()).decode()
 
-imgs = {n: data_uri(f'public/img/{n}') for n in ['atlas.png', 'stand.png', 'crouch.webp']}
+imgs = {n: data_uri(f'public/img/{n}') for n in ['atlas.png', 'stand.png', 'crouch.webp', 'hand.png']}
 imgjs = 'window.__IMG=' + str({k: v for k, v in imgs.items()}).replace("'", '"') + ';'
 
 page = f'<title>{title}</title>\n<style>:root{{color-scheme:dark}}\n{style}</style>\n{body}\n<script>{imgjs}</script>\n<script type="module">{js}</script>\n'

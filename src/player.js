@@ -137,6 +137,7 @@ export class Player {
     const t = this.target;
     if (!t) return;
     const w = this.world;
+    this.ui.pressHand();
     if (t.type === 'door') {
       const d = t.door;
       if (!d.unlocked) {

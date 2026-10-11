@@ -18,6 +18,9 @@
     .chip { padding: 5px 10px; border-radius: 999px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.2); font-size: 13px; }
     .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
     #cross { top: 50%; left: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.55); }
+    /* the hand cursor: shown on whatever you can use, like a mouse pointer over a link */
+    #cross.hand { width: 46px; height: 44px; margin: -8px 0 0 -23px; border-radius: 0; background: var(--hand) center / contain no-repeat; filter: drop-shadow(0 0 4px #000); transition: transform .08s; }
+    #cross.hand.press { transform: scale(.78); }
     #prompt { bottom: 22%; left: 0; right: 0; text-align: center; font-size: 17px; text-shadow: 0 0 8px #000, 0 0 3px #000; }
     #toast { top: 22%; left: 0; right: 0; text-align: center; font-size: 17px; text-shadow: 0 0 8px #000; opacity: 0; transition: opacity .4s; padding: 0 20px; }
     #hurt { inset: 0; background: radial-gradient(circle, rgba(120,0,0,0) 35%, rgba(150,0,0,.85) 100%); opacity: 0; transition: opacity .5s; }

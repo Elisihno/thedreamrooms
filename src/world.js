@@ -135,8 +135,6 @@ export class World {
   buildFurniture() {
     for (const f of furniture) {
       const m = scaledBox(f.w, f.h, f.d, this.mat('darkwood'), 1.5);
-      m.material = m.material.clone();
-      m.material.color.set(f.color);
       m.position.set(f.x, ly(f.level) + f.elev + f.h / 2, f.z);
       this.scene.add(m);
       this.blockers.push(m);
@@ -195,9 +193,12 @@ export class World {
   }
 
   buildExterior() {
-    const mat = new THREE.MeshLambertMaterial({ color: 0x151d14 });
+    const mat = this.mat('moss');
     const quad = (x0, z0, x1, z1) => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), mat);
+      const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0);
+      const uv = g.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * (x1 - x0)) / 4, (uv.getY(i) * (z1 - z0)) / 4);
+      const m = new THREE.Mesh(g, mat);
       m.rotation.x = -Math.PI / 2;
       m.position.set((x0 + x1) / 2, ly(1) - 0.02, (z0 + z1) / 2);
       this.scene.add(m);
