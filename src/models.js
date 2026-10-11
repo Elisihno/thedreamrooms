@@ -39,7 +39,56 @@ export function makeVase(color = 0x86a3b8) {
   return g;
 }
 
+// Scissors, flat like the key. The blades point down (-y) and the two ring handles are at the top (+y).
+export function makeScissors(handleColor = 0xd24b3a) {
+  const g = new THREE.Group();
+  const flat = (c) => new THREE.MeshLambertMaterial({ color: c, emissive: new THREE.Color(c).multiplyScalar(0.25) });
+  const steel = flat(0xd4d6da), grip = flat(handleColor);
+  const depth = 0.012;
+  const bladeShape = (dir) => {
+    const s = new THREE.Shape();
+    s.moveTo(0, 0.02); s.lineTo(dir * 0.026, 0.0); s.lineTo(dir * 0.012, -0.19); s.lineTo(0, 0.0); s.closePath();
+    return s;
+  };
+  for (const dir of [1, -1]) {
+    const blade = new THREE.Mesh(new THREE.ExtrudeGeometry(bladeShape(dir), { depth, bevelEnabled: false }), steel);
+    blade.position.z = dir * 0.006 - depth / 2;
+    g.add(blade);
+    // the handle: a rectangular loop, like the key's bow
+    const loop = new THREE.Shape();
+    loop.moveTo(0, 0.02); loop.lineTo(dir * 0.075, 0.07); loop.lineTo(dir * 0.075, 0.15); loop.lineTo(dir * 0.025, 0.15); loop.lineTo(dir * 0.0, 0.09); loop.closePath();
+    const hole = new THREE.Path();
+    hole.moveTo(dir * 0.03, 0.085); hole.lineTo(dir * 0.058, 0.1); hole.lineTo(dir * 0.058, 0.13); hole.lineTo(dir * 0.04, 0.13); hole.closePath();
+    loop.holes.push(hole);
+    const h = new THREE.Mesh(new THREE.ExtrudeGeometry(loop, { depth, bevelEnabled: false }), grip);
+    h.position.z = dir * 0.006 - depth / 2;
+    g.add(h);
+  }
+  return g;
+}
+
+// A lockpick: a thin steel pick with a small hook on a short wooden grip. The pick points down (-y).
+export function makeLockpick() {
+  const g = new THREE.Group();
+  const flat = (c) => new THREE.MeshLambertMaterial({ color: c, emissive: new THREE.Color(c).multiplyScalar(0.25) });
+  const steel = flat(0xc9ccd1), wood = flat(0x6d5a48);
+  const depth = 0.01;
+  const grip = new THREE.Shape();
+  grip.moveTo(-0.018, 0.2); grip.lineTo(0.018, 0.2); grip.lineTo(0.014, 0.04); grip.lineTo(-0.014, 0.04); grip.closePath();
+  const gm = new THREE.Mesh(new THREE.ExtrudeGeometry(grip, { depth, bevelEnabled: false }), wood);
+  gm.position.z = -depth / 2;
+  const pick = new THREE.Shape();
+  [[-0.005, 0.045], [0.005, 0.045], [0.005, -0.12], [0.03, -0.14], [0.03, -0.115], [0.014, -0.1], [0.014, -0.125], [-0.005, -0.125]]
+    .forEach(([x, y], i) => (i ? pick.lineTo(x, y) : pick.moveTo(x, y)));
+  pick.closePath();
+  const pm = new THREE.Mesh(new THREE.ExtrudeGeometry(pick, { depth, bevelEnabled: false }), steel);
+  pm.position.z = -depth / 2;
+  g.add(gm, pm);
+  return g;
+}
+
 export function makeItemModel(item, KEYS) {
   if (item.kind === 'vase') return makeVase();
+  if (item.kind === 'tool') return item.id === 'scissors' ? makeScissors() : makeLockpick();
   return makeKey(KEYS[item.id].color);
 }

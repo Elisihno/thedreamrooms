@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SPAWN, ly, groundY, KEYS } from './layout.js';
+import { SPAWN, ly, groundY, KEYS, itemInfo } from './layout.js';
 import { WAKE, wakeState } from './wake.js';
 
 const R = 0.3;
@@ -38,6 +38,7 @@ export class Player {
     this.hurtT = 0;
     this.moving = false;
     this.introT = WAKE; // finished unless startIntro() is called
+    this.hintT = 0;
   }
 
   startIntro() { this.introT = 0; }
@@ -50,6 +51,10 @@ export class Player {
 
   toggleCrouch() {
     if (this.hidden || this.intro) return;
+    if (this.crouch && this.world.inCrawl(this.x, this.z, Math.round(this.y / 3))) {
+      this.ui.toast('There is not enough room to stand up in here.');
+      return;
+    }
     this.crouch = !this.crouch;
     this.ui.setStance(this.crouch);
   }
@@ -97,10 +102,11 @@ export class Player {
       const mz = (fz * fl + rz * sl) * speed * dt;
       this.moving = Math.hypot(mx, mz) > 1e-4;
       if (this.moving) {
+        const head = this.crouch ? 1.0 : 1.5;
         let nx = this.x + mx, nz = this.z;
-        [nx, nz] = this.world.collide(nx, nz, this.y, R);
+        [nx, nz] = this.world.collide(nx, nz, this.y, R, head);
         let px = nx, pz = nz + mz;
-        [px, pz] = this.world.collide(px, pz, this.y, R);
+        [px, pz] = this.world.collide(px, pz, this.y, R, head);
         this.x = px;
         this.z = pz;
         this.y = groundY(this.x, this.z, this.y);
@@ -121,18 +127,25 @@ export class Player {
     this.camera.position.set(this.x, this.y + this.eye + bobY, this.z);
     this.camera.rotation.set(this.pitch, this.yaw, this.hurtT * 0.25);
 
+    // a hint at the crawlspace openings
+    this.hintT -= dt;
+    if (!this.crouch && this.hintT <= 0 && this.world.crawlHint(this.x, this.z, Math.round(this.y / 3))) {
+      this.ui.toast('A low crawlspace. Crouch [C] to crawl through.');
+      this.hintT = 10;
+    }
     this.updateTarget();
   }
 
   updateTarget() {
     this.target = null;
     if (this.hidden) { this.ui.setPrompt(this.hidden.under ? '[E] Come out' : '[E] Leave ' + (this.hidden.label ?? 'hiding spot')); return; }
+    this.camera.updateMatrixWorld(true); // aim with this frame's camera, not last frame's
     this.ray.setFromCamera({ x: 0, y: 0 }, this.camera);
     const hits = this.ray.intersectObjects([...this.world.interactables, ...this.world.blockers], false);
     for (const h of hits) {
       const ref = h.object.userData.ref;
       if (ref) {
-        if (ref.type === 'pickup' && ref.taken) continue;
+        if (ref.type === 'pickup' && (ref.taken || ref.hidden)) continue;
         this.target = ref;
       }
       break; // the first thing hit decides; walls block
@@ -144,12 +157,34 @@ export class Player {
     if (!t) return '';
     if (t.type === 'door') {
       const d = t.door;
-      if (!d.unlocked) return `[E] Locked - needs ${KEYS[d.key].label}`;
+      if (!d.unlocked) {
+        const missing = d.keys.filter((k) => !this.inv.has(k));
+        return missing.length ? `[E] Locked - needs ${missing.map((k) => KEYS[k].label).join(' and ')}` : '[E] Unlock';
+      }
       return d.open ? '[E] Close door' : '[E] Open door';
     }
     if (t.type === 'pickup') return `[E] Take ${t.group.userData.label}`;
     if (t.type === 'hide') return t.under ? `[E] Hide under the ${t.label}` : `[E] Hide in the ${t.label}`;
+    if (t.type === 'container') {
+      if (t.oneWay && t.opened) return '';
+      const name = { box: 'box', drawer: 'drawer', safe: 'safe', sealed: 'sealed box', locker: 'locker' }[t.kind];
+      return t.opened ? `[E] Close the ${name}` : `[E] Open the ${name}`;
+    }
+    if (t.type === 'bin') return this.items.some((p) => p.item.kind === 'vase') ? '[E] Drop a vase in the trash can' : '[E] Look in the trash can';
     return '';
+  }
+
+  // Using a tool on something. Scissors snap after two uses.
+  useTool(p) {
+    this.sound.swing();
+    if (p.uses == null) return;
+    p.uses -= 1;
+    if (p.uses <= 0) {
+      this.items.splice(this.items.indexOf(p), 1);
+      this.sel = Math.max(0, Math.min(this.sel, this.items.length - 1));
+      this.ui.toast(`The ${itemInfo(p.item).label.toLowerCase()} snapped. They are no use now.`);
+    }
+    this.ui.setInv(this.items, this.sel);
   }
 
   interact() {
@@ -162,16 +197,21 @@ export class Player {
     if (t.type === 'door') {
       const d = t.door;
       if (!d.unlocked) {
-        if (this.inv.has(d.key)) {
-          d.unlocked = true;
-          this.ui.toast(`Unlocked the ${d.name.toLowerCase()}`);
-          this.sound.pickup();
-        } else {
+        const missing = d.keys.filter((k) => !this.inv.has(k));
+        if (missing.length) {
           this.sound.locked();
-          this.ui.toast(`${d.name} is locked. You need the ${KEYS[d.key].label}.`);
+          const ready = d.keys.length - missing.length;
+          this.ui.toast(`${d.name} is locked. You need the ${missing.map((k) => KEYS[k].label).join(' and the ')}.` +
+            (d.keys.length > 1 && ready ? ` (${ready} of ${d.keys.length} keys found)` : ''));
           w.noise(d.cx, d.level * 3, d.cz, 3);
           return;
         }
+        d.unlocked = true;
+        d.lockMeshes.forEach((m) => { m.visible = false; });
+        this.sound.pickup();
+        this.ui.toast(d.id === 'front'
+          ? 'Both locks click open. This is not the way out. It leads to the kitchen and the living room.'
+          : d.id === 'vault' ? 'The three locks fall away.' : `Unlocked the ${d.name.toLowerCase()}.`);
       }
       w.setDoor(d, !d.open);
       this.sound.door(0.5);
@@ -182,14 +222,38 @@ export class Player {
       this.sound.pickup();
       this.items.push(t);
       this.sel = this.items.length - 1; // pick it up into your hand
-      this.ui.toast(t.item.kind === 'key'
-        ? `You are holding the ${KEYS[t.item.id].label}`
-        : 'You are holding a vase. Throw it [F] to lure Granny away.');
+      this.ui.toast(t.item.kind === 'vase'
+        ? 'You are holding a vase. Throw it with [F] or right click.'
+        : `You are holding the ${itemInfo(t.item).label}`);
       this.ui.setInv(this.items, this.sel);
     } else if (t.type === 'hide') {
       this.enterHide(t);
+    } else if (t.type === 'container') {
+      if (t.requires) {
+        const tool = this.items.find((p) => p.item.id === t.requires);
+        if (!tool) { this.sound.locked(); this.ui.toast(t.hint); return; }
+        this.useTool(tool);
+        w.unseal(t);
+        if (t.done) this.ui.toast(t.done);
+      }
+      if (t.oneWay && t.opened) return; // once opened it stays open
+      const opening = t.target === 0;
+      w.setContainer(t, opening);
+      this.sound.door(0.2);
+      if (opening && t.kind === 'box' && !this.hasContents(t)) this.ui.toast(t.junk ?? 'Empty.');
+      if (opening && t.id === 'redbox') this.ui.toast('The red box. There is a key inside!');
+    } else if (t.type === 'bin') {
+      const vase = this.items.find((p) => p.item.kind === 'vase');
+      if (!vase) { this.ui.toast('An old trash can. Something could be thrown in here.'); return; }
+      if (!w.throwInBin()) { this.ui.toast('The sauna is already heating up.'); return; }
+      this.items.splice(this.items.indexOf(vase), 1);
+      this.sel = Math.max(0, Math.min(this.sel, this.items.length - 1));
+      this.ui.setInv(this.items, this.sel);
+      this.sound.crash(0.4);
     }
   }
+
+  hasContents(c) { return this.world.pickups.some((p) => p.item.inside === c.id); }
 
   // Cycle the item in your hand (Q, mouse wheel, number keys).
   cycle(dir) {
@@ -265,7 +329,7 @@ export class Player {
     this.camera.getWorldDirection(dir);
     mesh.position.copy(this.camera.position).addScaledVector(dir, 0.4);
     this.world.scene.add(mesh);
-    this.world.projectiles.push({ mesh, vel: dir.multiplyScalar(11).add(new THREE.Vector3(0, 1.5, 0)), onLand });
+    this.world.projectiles.push({ mesh, refY: this.y, vel: dir.multiplyScalar(11).add(new THREE.Vector3(0, 1.5, 0)), onLand });
     this.sound.swing();
   }
 }

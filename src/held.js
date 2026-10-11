@@ -33,11 +33,13 @@ export class HeldItem {
     this.model = null;
     if (!pickup) return;
     this.model = makeItemModel(pickup.item, KEYS);
-    if (pickup.item.kind === 'key') {
-      // like Granny: low in the bottom-right corner, flat face toward you, teeth pointing up and to the left
-      this.model.rotation.set(0.35, 0.28, -2.1);
-      this.model.scale.setScalar(0.72);
-      this.rig.position.set(0.23, -0.2, -0.45);
+    if (pickup.item.kind !== 'vase') {
+      // keys and tools are held pointing FORWARD, away from you: the grip is near your hand at the bottom right
+      // and the business end points into the room, tilted a touch upward and toward the middle
+      this.model.rotation.order = 'YXZ';
+      this.model.rotation.set(Math.PI / 2 + 0.1, 0.12, 0);
+      this.model.scale.setScalar(pickup.item.kind === 'tool' ? 1.0 : 1.05);
+      this.rig.position.set(0.15, -0.17, -0.44);
     } else {
       this.model.rotation.set(0.1, 0.5, -0.15);
       this.model.scale.setScalar(1.2);

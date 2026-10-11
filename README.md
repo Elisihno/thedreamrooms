@@ -27,9 +27,18 @@ npm run build    # static build in dist/
 
 A run opens with a waking-up intro (about 5 seconds): eyes shut and blurred, they open, the blur clears and you sit up. Controls unlock when it ends.
 
-## Goal
+## How to win (spoilers)
 
-Padlock Key (in the Bathroom sink, next to the starting bedroom) -> cellar door -> Master Key (Sauna, basement) -> study door -> Front Door Key -> front door.
+1. Take the **Padlock Key** from the sink in the bathroom, right next to the starting bedroom.
+2. Unlock the **basement door** (ground floor, at the bottom of the foyer stairs) and go down.
+3. In the garage, find the **red box** among all the boxes on the shelves. The **Attic Key** is inside.
+4. Use it on the locked door in the attic (the Special Room). Two **Front Door Keys** are inside.
+5. Unlock the **front door** (ground floor, east side) with both keys. It isn't the way out: it opens the kitchen and living room.
+6. In the living room drawer: **scissors**. They work twice.
+7. Use the scissors on the **safe** in the basement's dirt room (a **Rusty Key**) and on the **sealed box** in the master bedroom (a **Silver Key**).
+8. In the **sauna**, throw a vase into the trash can. The stove heats up and a **lockpick** drops onto the bench.
+9. Use the lockpick on the **locker** in the starting bedroom for the **Black Key**.
+10. In the basement (dirt room, south wall), **crouch through the crawlspace** to the vault. Use the three keys on the three-lock door and walk out.
 
 ## How it works
 
@@ -37,7 +46,8 @@ Padlock Key (in the Bathroom sink, next to the starting bedroom) -> cellar door 
   Reshape the house here; collision, floors and the AI graph rebuild from it.
 - `src/world.js` - builds meshes, collision and line-of-sight from the layout.
 - `src/granny.js` - AI: patrol, investigate noises, chase on sight, search, check hiding spots.
-- `src/player.js` - movement, crouch, interaction, hiding, throwing.
+- `src/player.js` - movement, crouch, interaction (doors with several locks, containers, tools), hiding, throwing.
+- `src/models.js`, `src/held.js` - the flat Granny-style key, scissors, lockpick, vase, and how they are held (pointing forward).
 - `public/img/` - reference screenshot, the wall/floor texture atlas (sliced at runtime) and the stance icons.
 
 ## The house
@@ -45,9 +55,9 @@ Padlock Key (in the Bathroom sink, next to the starting bedroom) -> cellar door 
 Four levels, with room names taken from the Granny wiki (the geometry is our own, since the wiki has no floor plan):
 
 - **Attic:** Nursery, Mannequin Room, Jail, Special Room
-- **Upper floor (each room has its own wall tile; the hall keeps one):** Starting Bedroom, Bathroom (next door), Bookshelf Room, Bedroom 1, Walk-In Closet, Bedroom 2
-- **Ground floor:** Foyer, Study, Living Room, Dining Room, Kitchen
-- **Basement:** Basement, Dirt Room, Sauna, Garage
+- **Upper floor (each room has its own wall tile; the hall keeps one):** Starting Bedroom (locker), Bathroom (next door), Bookshelf Room, Master Bedroom (sealed box), Walk-In Closet, Bedroom 2
+- **Ground floor:** Foyer, Study, Dining Room, and behind the Front Door the Kitchen and Living Room
+- **Basement:** Basement hall, Dirt Room (safe), Sauna, Boiler Room, Garage (shelves of boxes), then under the yard a Crawlspace, the Vault and the exit tunnel
 
 Not built yet: the secret area, abandoned house/sewers, spider cellar, backyard and shed.
 The layout is meant to be edited in `src/layout.js`.

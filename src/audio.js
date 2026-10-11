@@ -79,6 +79,9 @@ export class Sound {
     [0.4, 1.5, 2.6].forEach((d) => setTimeout(() => this.ctx && this._tone('sine', 62, 36, 0.3, 0.5), d * 1000));
   }
 
+  drip() { if (this.ctx) this._tone('sine', 1500 + Math.random() * 500, 500, 0.12, 0.06); }
+  hiss() { if (this.ctx) this._burst(2.2, 6000, 0.18, 0.5); }
+
   step(vol = 0.5) { if (this.ctx) this._burst(0.11, 260 + Math.random() * 120, vol); }
   door(vol = 0.5) { if (this.ctx) { this._tone('sawtooth', 120 + Math.random() * 40, 70, 0.5, vol * 0.18); this._burst(0.15, 500, vol * 0.5); } }
   locked(vol = 0.5) { if (this.ctx) this._burst(0.08, 900, vol); }

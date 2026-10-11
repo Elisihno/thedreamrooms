@@ -4,7 +4,7 @@ import { World } from './world.js';
 import { Player } from './player.js';
 import { Granny } from './granny.js';
 import { Sound } from './audio.js';
-import { KEYS, groundY } from './layout.js';
+import { KEYS, groundY, WIN_Z, itemInfo } from './layout.js';
 import { img } from './assets.js';
 import { HeldItem } from './held.js';
 import { WAKE, wakeState } from './wake.js';
@@ -34,14 +34,16 @@ const ui = {
   setInv(items, sel) {
     $('inv').innerHTML = items
       .map((p, i) => {
-        const k = p.item.kind === 'key' ? KEYS[p.item.id] : null;
-        const dot = k ? `<i class="dot" style="background:#${k.color.toString(16).padStart(6, '0')}"></i>` : '';
-        return `<span class="chip${i === sel ? ' sel' : ''}" data-i="${i}">${dot}${k ? k.label : 'Vase'}</span>`;
+        const info = itemInfo(p.item);
+        const dot = p.item.kind === 'vase' ? '' : `<i class="dot" style="background:#${info.color.toString(16).padStart(6, '0')}"></i>`;
+        const uses = p.uses != null ? ` (${p.uses})` : '';
+        return `<span class="chip${i === sel ? ' sel' : ''}" data-i="${i}">${dot}${info.label}${uses}</span>`;
       })
       .join('');
     $('drop').style.display = items.length ? 'block' : 'none';
     held.set(items[sel] ?? null);
   },
+
 };
 
 // The HUD art is white on black (or has a black box); use brightness as transparency and crop to the shape.
@@ -243,19 +245,22 @@ function buildGame(mats) {
   const world = new World(scene, mats);
   const player = new Player(camera, world, sound, ui);
   const granny = ENABLE_GRANNY ? new Granny(scene, world, sound) : null;
+  world.onEvent = (type) => {
+    if (type === 'sauna-start') {
+      sound.crash(0.5);
+      sound.hiss();
+      ui.toast('The vase clatters into the bin. The stove starts to roar.');
+    } else if (type === 'lockpick') {
+      sound.pickup();
+      ui.toast('Something fell onto the sauna bench. A lockpick!');
+    }
+  };
   const g = {
     world, player, granny, time: 0,
     reset() {
       player.reset();
       granny?.reset();
-      world.doors.forEach((d) => { d.unlocked = !d.key; world.setDoor(d, false); d.angle = 0; });
-      world.pickups.forEach((p) => {
-        const o = p.origin;
-        p.taken = false; p.group.visible = true; p.baseY = o.y;
-        p.group.position.set(o.x, o.y, o.z);
-        p.hit.position.set(o.x, o.y + 0.12, o.z);
-        p.item.x = o.x; p.item.z = o.z; p.item.level = o.level;
-      });
+      world.resetState();
       ui.setStance(false); ui.setInv(player.items, 0); ui.setHidden(false);
       input.keys.clear();
     },
@@ -283,12 +288,13 @@ function frame(now) {
     if (game.granny) game.granny.update(dt, game.player);
     else game.world.noises.length = 0;
     game.world.update(dt, game.time);
+    basementAtmosphere(dt, game.player);
     const chase = !!game.granny?.chasing;
     sound.heartbeat(dt, chase ? 1 : 0);
     $('fear').style.opacity = chase ? 1 : 0;
     // end conditions
     if (game.player.hp <= 0) end('dead');
-    else if (game.player.z > 15.2 && game.player.y < 4) { sound.win(); end('won'); }
+    else if (game.player.z > WIN_Z && game.player.y < 1) { sound.win(); end('won'); }
   } else {
     game.player.update(0, input);
   }
@@ -298,6 +304,19 @@ function frame(now) {
     held.update(dt, game.player.moving, game.player.bob, !!game.player.hidden);
     if (held.rig.visible) { renderer.clearDepth(); renderer.render(held.scene, held.cam); }
   }
+}
+
+// Down in the basement the light flickers now and then and water drips somewhere.
+let dripT = 3, flicker = 0;
+function basementAtmosphere(dt, P) {
+  const down = P.y < 2;
+  flicker -= dt;
+  let k = 1;
+  if (down && flicker < 0.25 && flicker > 0) k = 0.35 + Math.random() * 0.4;
+  if (down && flicker <= 0) flicker = 4 + Math.random() * 9;
+  lamp.intensity = 9 * k;
+  dripT -= dt;
+  if (down && dripT <= 0) { sound.drip(); dripT = 2 + Math.random() * 6; }
 }
 
 function end(which) {
