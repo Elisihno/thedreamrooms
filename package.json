@@ -2,9 +2,10 @@
   "name": "thedreamrooms",
   "version": "1.0.0",
   "description": "Where Am I? In Heaven?",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
   },
   "repository": {
     "type": "git",
@@ -16,5 +17,11 @@
   "bugs": {
     "url": "https://github.com/Elisihno/thedreamrooms/issues"
   },
-  "homepage": "https://github.com/Elisihno/thedreamrooms#readme"
+  "homepage": "https://github.com/Elisihno/thedreamrooms#readme",
+  "dependencies": {
+    "three": "^0.186.1",
+    "vite": "^8.3.4"
+  },
+  "type": "module",
+  "private": true
 }
