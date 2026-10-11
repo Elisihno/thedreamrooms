@@ -158,8 +158,8 @@ export class Player {
     if (t.type === 'door') {
       const d = t.door;
       if (!d.unlocked) {
-        const missing = d.keys.filter((k) => !this.inv.has(k));
-        return missing.length ? `[E] Locked - needs ${missing.map((k) => KEYS[k].label).join(' and ')}` : '[E] Unlock';
+        const missing = d.keys.filter((k) => !d.filled.has(k));
+        return this.inv.size && missing.some((k) => this.inv.has(k)) ? '[E] Unlock' : `[E] Locked - needs ${missing.map((k) => KEYS[k].label).join(' and ')}`;
       }
       return d.open ? '[E] Close door' : '[E] Open door';
     }
@@ -197,21 +197,34 @@ export class Player {
     if (t.type === 'door') {
       const d = t.door;
       if (!d.unlocked) {
-        const missing = d.keys.filter((k) => !this.inv.has(k));
+        // every key you carry that fits goes into its lock, and is used up
+        const fits = d.keys.filter((k) => !d.filled.has(k) && this.inv.has(k));
+        for (const k of fits) {
+          d.filled.add(k);
+          d.lockMeshes.filter((l) => l.key === k).forEach((l) => { l.mesh.visible = false; });
+          const idx = this.items.findIndex((p) => p.item.kind === 'key' && p.item.id === k);
+          this.items.splice(idx, 1);
+        }
+        if (fits.length) {
+          this.sel = Math.max(0, Math.min(this.sel, this.items.length - 1));
+          this.ui.setInv(this.items, this.sel);
+          this.sound.pickup();
+        }
+        const missing = d.keys.filter((k) => !d.filled.has(k));
         if (missing.length) {
           this.sound.locked();
-          const ready = d.keys.length - missing.length;
-          this.ui.toast(`${d.name} is locked. You need the ${missing.map((k) => KEYS[k].label).join(' and the ')}.` +
-            (d.keys.length > 1 && ready ? ` (${ready} of ${d.keys.length} keys found)` : ''));
+          const done = d.filled.size;
+          this.ui.toast(
+            (fits.length ? `The ${fits.map((k) => KEYS[k].label).join(' and the ')} turn${fits.length > 1 ? '' : 's'} in the lock and ${fits.length > 1 ? 'crumble' : 'crumbles'} away. ` : '') +
+            `${d.name} is locked. You still need the ${missing.map((k) => KEYS[k].label).join(' and the ')}.` +
+            (d.keys.length > 1 && done ? ` (${done} of ${d.keys.length} locks open)` : ''));
           w.noise(d.cx, d.level * 3, d.cz, 3);
           return;
         }
         d.unlocked = true;
-        d.lockMeshes.forEach((m) => { m.visible = false; });
-        this.sound.pickup();
         this.ui.toast(d.id === 'front'
           ? 'Both locks click open. This is not the way out. It leads to the kitchen and the living room.'
-          : d.id === 'vault' ? 'The three locks fall away.' : `Unlocked the ${d.name.toLowerCase()}.`);
+          : d.id === 'vault' ? 'The three locks fall away.' : `Unlocked the ${d.name.toLowerCase()}. The key crumbles away.`);
       }
       w.setDoor(d, !d.open);
       this.sound.door(0.5);

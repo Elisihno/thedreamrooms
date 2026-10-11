@@ -120,7 +120,7 @@ export class World {
     const fw = 0.06; // door frame thickness
     const metal = new THREE.MeshPhongMaterial({ color: 0xb9bcc0, shininess: 70 });
     for (const d of doors) {
-      const door = { ...d, open: false, angle: 0, target: 0, unlocked: d.keys.length === 0, lockMeshes: [] };
+      const door = { ...d, open: false, angle: 0, target: 0, unlocked: d.keys.length === 0, lockMeshes: [], filled: new Set() };
       const base = ly(d.level);
       const alongX = d.axis === 'x';
       const clearH = 2.1;
@@ -159,7 +159,7 @@ export class World {
           lock.add(bodyM, shackle);
           lock.position.set(leafW * 0.5, y, side * 0.06);
           pivot.add(lock);
-          door.lockMeshes.push(lock);
+          door.lockMeshes.push({ key: k, mesh: lock });
         }
       });
       const hinge = d.c - d.w / 2 + fw + 0.005;
@@ -470,7 +470,8 @@ export class World {
       d.unlocked = d.keys.length === 0;
       this.setDoor(d, false);
       d.angle = 0;
-      d.lockMeshes.forEach((m) => { m.visible = true; });
+      d.lockMeshes.forEach((l) => { l.mesh.visible = true; });
+      d.filled.clear();
     }
     for (const c of this.containers.values()) {
       c.t = c.target = 0;
