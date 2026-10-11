@@ -7,12 +7,21 @@ import { Sound } from './audio.js';
 import { KEYS, groundY } from './layout.js';
 import { img } from './assets.js';
 
+// Set to true to bring Granny back. Off while the house is being tested on its own.
+const ENABLE_GRANNY = false;
+
 const $ = (id) => document.getElementById(id);
 
 // ---------- UI helpers ----------
 let toastT = 0;
 const ui = {
-  setStance(crouch) { $('stanceImg').src = img(crouch ? 'crouch.webp' : 'stand.png'); },
+  setStance(crouch) {
+    const s = cut[crouch ? 'crouch.webp' : 'stand.png'];
+    if (!s) return;
+    const el = $('stanceImg');
+    el.src = s.url;
+    el.style.height = crouch ? 'calc(var(--fig) * 0.6)' : 'var(--fig)'; // a crouching person is about 60% as tall
+  },
   setHp(hp) { $('hp').textContent = '♥'.repeat(Math.max(0, hp)); },
   pressHand() { const c = $('cross'); c.classList.add('press'); setTimeout(() => c.classList.remove('press'), 160); },
   setPrompt(t) { $('prompt').textContent = t; $('cross').classList.toggle('hand', !!t); },
@@ -26,20 +35,41 @@ const ui = {
   },
 };
 
-// The hand image is white on black; use its brightness as transparency so only the hand shows.
-function cutOutHand(src) {
-  const image = new Image();
-  image.onload = () => {
-    const c = document.createElement('canvas');
-    c.width = image.width; c.height = image.height;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(image, 0, 0);
-    const d = ctx.getImageData(0, 0, c.width, c.height);
-    for (let i = 0; i < d.data.length; i += 4) { d.data[i + 3] = d.data[i]; d.data[i] = d.data[i + 1] = d.data[i + 2] = 255; }
-    ctx.putImageData(d, 0, 0);
-    $('cross').style.setProperty('--hand', `url(${c.toDataURL()})`);
-  };
-  image.src = src;
+// The HUD art is white on black (or has a black box); use brightness as transparency and crop to the shape.
+const cut = {};
+function cutOut(name, crop = false) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = image.width; c.height = image.height;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(image, 0, 0);
+      const d = ctx.getImageData(0, 0, c.width, c.height);
+      let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+      for (let i = 0; i < d.data.length; i += 4) {
+        const b = (d.data[i] + d.data[i + 1] + d.data[i + 2]) / 3;
+        const a = Math.round(Math.min(1, Math.max(0, (b - 45) / 150)) * 255); // ignore the near-black backdrop
+        d.data[i + 3] = a;
+        d.data[i] = d.data[i + 1] = d.data[i + 2] = 255;
+        if (a > 60) {
+          const p = i / 4, x = p % c.width, y = (p - x) / c.width;
+          x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+        }
+      }
+      ctx.putImageData(d, 0, 0);
+      let out = c;
+      if (crop && x1 > x0) {
+        out = document.createElement('canvas');
+        out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+        out.getContext('2d').drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+      }
+      cut[name] = { url: out.toDataURL(), w: out.width, h: out.height };
+      resolve();
+    };
+    image.onerror = resolve;
+    image.src = img(name);
+  });
 }
 
 // ---------- renderer / scene ----------
@@ -99,7 +129,7 @@ $('stance').addEventListener('pointerdown', (e) => { e.stopPropagation(); game?.
 // touch: virtual stick (left) + look drag (anywhere else)
 const stick = $('stick'), knob = $('knob');
 let stickId = null, lookId = null, lookPos = null;
-const R_STICK = 56;
+const R_STICK = 52;
 stick.addEventListener('pointerdown', (e) => { stickId = e.pointerId; stick.setPointerCapture(e.pointerId); moveStick(e); });
 stick.addEventListener('pointermove', (e) => { if (e.pointerId === stickId) moveStick(e); });
 const endStick = (e) => { if (e.pointerId !== stickId) return; stickId = null; input.joy.x = input.joy.y = 0; knob.style.transform = ''; };
@@ -156,12 +186,12 @@ function startGame() {
 function buildGame(mats) {
   const world = new World(scene, mats);
   const player = new Player(camera, world, sound, ui);
-  const granny = new Granny(scene, world, sound);
+  const granny = ENABLE_GRANNY ? new Granny(scene, world, sound) : null;
   const g = {
     world, player, granny, time: 0,
     reset() {
       player.reset();
-      granny.reset();
+      granny?.reset();
       world.doors.forEach((d) => { d.unlocked = !d.key; world.setDoor(d, false); d.angle = 0; });
       world.pickups.forEach((p) => { p.taken = false; p.group.visible = true; });
       ui.setStance(false); ui.setHp(player.hp); ui.setInv(player.inv, 0); ui.setHidden(false);
@@ -187,9 +217,10 @@ function frame(now) {
   if (state === 'play' && !paused) {
     game.time += dt;
     game.player.update(dt, input);
-    game.granny.update(dt, game.player);
+    if (game.granny) game.granny.update(dt, game.player);
+    else game.world.noises.length = 0;
     game.world.update(dt, game.time);
-    const chase = game.granny.chasing;
+    const chase = !!game.granny?.chasing;
     sound.heartbeat(dt, chase ? 1 : 0);
     $('fear').style.opacity = chase ? 1 : 0;
     // end conditions
@@ -214,12 +245,16 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && state === 'play' && !paused) setPaused(true);
 });
 
-ui.setStance(false);
-loadMaterials()
+Promise.all([cutOut('hand.png'), cutOut('stand.png', true), cutOut('crouch.webp', true)])
+  .then(() => {
+    $('cross').style.setProperty('--hand', `url(${cut['hand.png']?.url})`);
+    // crouch art is drawn bigger than the standing art, so scale it to the standing figure's proportions
+    return loadMaterials();
+  })
   .then((mats) => {
-    cutOutHand(img('hand.png'));
     game = buildGame(mats);
     game.reset();
+    ui.setStance(false);
     $('start').textContent = 'START';
     window.__game = game; window.__gy = groundY; // handy for debugging
     window.__startForTest = () => { sound.init(); state = 'play'; paused = false; $('menu').classList.remove('show'); };
