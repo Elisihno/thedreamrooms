@@ -6,7 +6,7 @@ export const T = 0.2; // wall thickness
 export const LH = 3; // level height
 export const ly = (l) => l * LH;
 // Wall tile per level (all tiles come straight from public/img/atlas.png; see src/textures.js).
-const STYLE = { 0: 'gray', 1: 'plaster', 2: 'grime', 3: 'grime' };
+const STYLE = { 0: 'gray', 1: 'plaster', 2: 'concrete', 3: 'concrete' }; // default wall tile per floor (halls, landings)
 
 export const walls = [];
 export const doors = [];
@@ -14,16 +14,58 @@ export const rooms = [];
 export const furniture = [];
 export const items = [];
 
+// ---------- rooms (floors / ceilings) ----------
+// `wall` is the wall tile used inside that room. Halls and landings leave it out and share the floor's default (STYLE).
+const R = (level, name, x0, z0, x1, z1, floor, ceil, wall) => rooms.push({ level, name, x0, z0, x1, z1, floor, ceil, wall });
+R(0, 'Basement', 2, 0, 18, 5, 'gray', 'concrete');
+R(0, 'Dirt Room', 2, 5, 7.4, 12, 'gray', 'concrete');
+R(0, 'Cellar stairs', 7.4, 5, 9.4, 12, 'gray', 'concrete');
+R(0, 'Sauna', 9.4, 5, 13, 12, 'planks', 'gray');
+R(0, 'Garage', 13, 5, 18, 12, 'gray', 'concrete');
+R(1, 'Foyer', 7, 0, 13, 14, 'planks', 'gray');
+R(1, 'Study', 0, 0, 7, 7, 'planks', 'gray');
+R(1, 'Living Room', 0, 7, 7, 14, 'planks', 'gray');
+R(1, 'Kitchen', 13, 0, 20, 7, 'planks', 'gray');
+R(1, 'Dining Room', 13, 7, 20, 14, 'planks', 'gray');
+R(2, 'Upper Hall', 7, 0, 13, 14, 'planks', 'gray');
+R(2, 'Starting Bedroom', 0, 0, 7, 6, 'planks', 'gray', 'floral');
+R(2, 'Bathroom', 0, 6, 7, 10, 'gray', 'gray', 'plaster');
+R(2, 'Bookshelf Room', 0, 10, 7, 14, 'planks', 'gray', 'planks');
+R(2, 'Bedroom 1', 13, 0, 20, 5, 'planks', 'gray', 'streak');
+R(2, 'Walk-In Closet', 13, 5, 20, 9, 'planks', 'gray', 'vert');
+R(2, 'Bedroom 2', 13, 9, 20, 14, 'planks', 'gray', 'gray');
+R(3, 'Attic Landing', 7, 0, 13, 14, 'planks', 'gray');
+R(3, 'Nursery', 0, 0, 7, 7, 'planks', 'gray', 'streak');
+R(3, 'Mannequin Room', 0, 7, 7, 14, 'planks', 'gray', 'planks');
+R(3, 'Jail', 13, 0, 20, 7, 'gray', 'gray', 'gray');
+R(3, 'Special Room', 13, 7, 20, 14, 'planks', 'gray', 'floral');
+
+
 // ---------- walls & doors ----------
+const roomAt = (level, x, z) => rooms.find((r) => r.level === level && x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1);
+const tileAt = (level, x, z) => roomAt(level, x, z)?.wall ?? STYLE[level];
+
+// A wall segment. It is split wherever a room boundary crosses it, and each broad face takes the wall tile
+// of the room it faces, so a wall between a bedroom and the hall can look different on each side.
 function piece(level, axis, fixed, p0, p1, y0, h, tex) {
-  const len = p1 - p0;
-  if (len < 0.01) return;
-  const c = (p0 + p1) / 2;
-  walls.push(
-    axis === 'x'
-      ? { kind: 'wall', level, x: c, z: fixed, w: len, d: T, y0, h, tex }
-      : { kind: 'wall', level, x: fixed, z: c, w: T, d: len, y0, h, tex },
-  );
+  const cuts = [p0, p1];
+  for (const r of rooms) {
+    if (r.level !== level) continue;
+    for (const e of axis === 'x' ? [r.x0, r.x1] : [r.z0, r.z1]) if (e > p0 + 0.05 && e < p1 - 0.05) cuts.push(e);
+  }
+  cuts.sort((a, b) => a - b);
+  for (let i = 0; i < cuts.length - 1; i++) {
+    const a = cuts[i], b = cuts[i + 1], len = b - a;
+    if (len < 0.05) continue;
+    const c = (a + b) / 2, o = T / 2 + 0.06;
+    const pos = axis === 'x' ? tileAt(level, c, fixed + o) : tileAt(level, fixed + o, c);
+    const neg = axis === 'x' ? tileAt(level, c, fixed - o) : tileAt(level, fixed - o, c);
+    walls.push(
+      axis === 'x'
+        ? { kind: 'wall', level, axis, x: c, z: fixed, w: len, d: T, y0, h, tex, texPos: pos, texNeg: neg }
+        : { kind: 'wall', level, axis, x: fixed, z: c, w: T, d: len, y0, h, tex, texPos: pos, texNeg: neg },
+    );
+  }
 }
 
 // Walls stop 1cm short of the ceiling, so their tops never share a plane with the floor above (that flickers).
@@ -157,31 +199,6 @@ export function groundY(x, z, y) {
 // The cellar door sits at the top of the basement stairs.
 // The cellar door: an ordinary single door set into a short wall across the top of the stairs.
 run(1, 'x', 11.1, 7.4, 9.4, [{ c: 8.4, w: 1.1, id: 'cellar', key: 'brass', name: 'Cellar door', swing: -1 }], true);
-
-// ---------- rooms (floors / ceilings) ----------
-const R = (level, name, x0, z0, x1, z1, floor, ceil) => rooms.push({ level, name, x0, z0, x1, z1, floor, ceil });
-R(0, 'Basement', 2, 0, 18, 5, 'gray', 'concrete');
-R(0, 'Dirt Room', 2, 5, 7.4, 12, 'gray', 'concrete');
-R(0, 'Cellar stairs', 7.4, 5, 9.4, 12, 'gray', 'concrete');
-R(0, 'Sauna', 9.4, 5, 13, 12, 'planks', 'gray');
-R(0, 'Garage', 13, 5, 18, 12, 'gray', 'concrete');
-R(1, 'Foyer', 7, 0, 13, 14, 'planks', 'gray');
-R(1, 'Study', 0, 0, 7, 7, 'planks', 'gray');
-R(1, 'Living Room', 0, 7, 7, 14, 'planks', 'gray');
-R(1, 'Kitchen', 13, 0, 20, 7, 'planks', 'gray');
-R(1, 'Dining Room', 13, 7, 20, 14, 'planks', 'gray');
-R(2, 'Upper Hall', 7, 0, 13, 14, 'planks', 'gray');
-R(2, 'Starting Bedroom', 0, 0, 7, 6, 'planks', 'gray');
-R(2, 'Bathroom', 0, 6, 7, 10, 'gray', 'gray');
-R(2, 'Bookshelf Room', 0, 10, 7, 14, 'planks', 'gray');
-R(2, 'Bedroom 1', 13, 0, 20, 5, 'planks', 'gray');
-R(2, 'Walk-In Closet', 13, 5, 20, 9, 'planks', 'gray');
-R(2, 'Bedroom 2', 13, 9, 20, 14, 'planks', 'gray');
-R(3, 'Attic Landing', 7, 0, 13, 14, 'planks', 'gray');
-R(3, 'Nursery', 0, 0, 7, 7, 'planks', 'gray');
-R(3, 'Mannequin Room', 0, 7, 7, 14, 'planks', 'gray');
-R(3, 'Jail', 13, 0, 20, 7, 'gray', 'gray');
-R(3, 'Special Room', 13, 7, 20, 14, 'planks', 'gray');
 
 // ---------- furniture ----------
 // hide: exit is the unit direction the player steps out toward (tables work out their own).

@@ -45,7 +45,7 @@ Padlock Key (in the Bathroom sink, next to the starting bedroom) -> cellar door 
 Four levels, with room names taken from the Granny wiki (the geometry is our own, since the wiki has no floor plan):
 
 - **Attic:** Nursery, Mannequin Room, Jail, Special Room
-- **Upper floor:** Starting Bedroom, Bathroom (next door), Bookshelf Room, Bedroom 1, Walk-In Closet, Bedroom 2
+- **Upper floor (each room has its own wall tile; the hall keeps one):** Starting Bedroom, Bathroom (next door), Bookshelf Room, Bedroom 1, Walk-In Closet, Bedroom 2
 - **Ground floor:** Foyer, Study, Living Room, Dining Room, Kitchen
 - **Basement:** Basement, Dirt Room, Sauna, Garage
 

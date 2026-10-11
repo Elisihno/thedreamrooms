@@ -4,12 +4,15 @@ import { walls, doors, rooms, stairs, furniture, items, KEYS, ly, LH, groundY, T
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
+// A box whose UVs repeat the texture every `tile` metres. `mat` can be one material or six (one per face:
+// +x, -x, +y, -y, +z, -z). Wide tiles (plaster) keep their proportions.
 function scaledBox(w, h, d, mat, tile = 2) {
   const g = new THREE.BoxGeometry(w, h, d);
   const uv = g.attributes.uv;
-  const aspect = mat.userData?.aspect ?? 1;
   const dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
   for (let f = 0; f < 6; f++) {
+    const m = Array.isArray(mat) ? mat[f] : mat;
+    const aspect = m.userData?.aspect ?? 1;
     for (let i = 0; i < 4; i++) {
       const k = f * 4 + i;
       uv.setXY(k, (uv.getX(k) * dims[f][0]) / (tile * aspect), (uv.getY(k) * dims[f][1]) / tile);
@@ -51,7 +54,13 @@ export class World {
     const { scene } = this;
     // walls
     for (const w of walls) {
-      const m = scaledBox(w.w, w.h, w.d, this.mat(w.tex));
+      let mat = this.mat(w.tex);
+      if (w.axis) {
+        // broad faces take the tile of the room they face: +z/-z for walls along x, +x/-x for walls along z
+        const base = this.mat(w.tex), pos = this.mat(w.texPos), neg = this.mat(w.texNeg);
+        mat = w.axis === 'x' ? [base, base, base, base, pos, neg] : [pos, neg, base, base, base, base];
+      }
+      const m = scaledBox(w.w, w.h, w.d, mat);
       m.position.set(w.x, w.y0 + w.h / 2, w.z);
       scene.add(m);
       this.blockers.push(m);
