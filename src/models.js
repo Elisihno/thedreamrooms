@@ -1,38 +1,28 @@
 import * as THREE from 'three';
 
-// An ornate skeleton key. Long axis is Y: the clover-shaped bow is at the top (+y) and the bit at the bottom.
-// `bowColor` lets a key carry a coloured enamel bow (the Master Key).
-export function makeKey(color, bowColor = color) {
+// A flat, low-poly key like the one in Granny: a rectangular bow with a slot cut out, a flat blade with a few teeth,
+// plain unshiny colours. Long axis is Y: bow at the top (+y), teeth at the bottom. Lies flat in the XY plane.
+export function makeKey(color) {
   const g = new THREE.Group();
-  const metal = (c) => new THREE.MeshPhongMaterial({
-    color: c, specular: 0xffffff, shininess: 90, emissive: new THREE.Color(c).multiplyScalar(0.22),
-  });
-  const body = metal(color);
-  const bowMat = metal(bowColor);
-  const add = (geo, mat, x, y, z, rx = 0) => {
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set(x, y, z);
-    m.rotation.x = rx;
-    g.add(m);
-    return m;
-  };
-  // bow: a ring with three lobes, like a clover
-  add(new THREE.TorusGeometry(0.05, 0.015, 12, 28), bowMat, 0, 0.17, 0);
-  for (let i = 0; i < 3; i++) {
-    const a = Math.PI / 2 + (i * Math.PI * 2) / 3;
-    add(new THREE.TorusGeometry(0.026, 0.011, 10, 20), bowMat, Math.cos(a) * 0.075, 0.17 + Math.sin(a) * 0.075, 0);
-  }
-  // collars where the bow meets the shaft
-  add(new THREE.CylinderGeometry(0.022, 0.022, 0.018, 14), body, 0, 0.098, 0);
-  add(new THREE.CylinderGeometry(0.017, 0.017, 0.012, 14), body, 0, 0.072, 0);
-  add(new THREE.CylinderGeometry(0.021, 0.021, 0.014, 14), body, 0, 0.05, 0);
-  // shaft
-  add(new THREE.CylinderGeometry(0.0115, 0.0115, 0.25, 12), body, 0, -0.08, 0);
-  // bit with teeth
-  add(new THREE.BoxGeometry(0.07, 0.05, 0.012), body, 0.036, -0.15, 0);
-  add(new THREE.BoxGeometry(0.03, 0.018, 0.012), body, 0.056, -0.112, 0);
-  add(new THREE.BoxGeometry(0.03, 0.018, 0.012), body, 0.056, -0.186, 0);
-  add(new THREE.SphereGeometry(0.0125, 10, 8), body, 0, -0.205, 0);
+  const flat = (c) => new THREE.MeshLambertMaterial({ color: c, emissive: new THREE.Color(c).multiplyScalar(0.28) });
+  const blade = new THREE.Color(color).lerp(new THREE.Color(0xd9d6cc), 0.6); // the metal part is paler than the bow
+  const depth = 0.014;
+
+  const bow = new THREE.Shape();
+  bow.moveTo(-0.062, 0.05); bow.lineTo(0.062, 0.05); bow.lineTo(0.062, 0.15); bow.lineTo(-0.062, 0.15); bow.closePath();
+  const slot = new THREE.Path();
+  slot.moveTo(-0.024, 0.078); slot.lineTo(-0.024, 0.122); slot.lineTo(0.024, 0.122); slot.lineTo(0.024, 0.078); slot.closePath();
+  bow.holes.push(slot);
+  const bowMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(bow, { depth, bevelEnabled: false }), flat(color));
+  bowMesh.position.z = -depth / 2;
+
+  const shaft = new THREE.Shape();
+  [[-0.015, 0.055], [0.015, 0.055], [0.015, -0.085], [0.058, -0.085], [0.058, -0.115], [0.015, -0.115], [0.015, -0.14],
+    [0.07, -0.14], [0.07, -0.19], [-0.015, -0.19]].forEach(([x, y], i) => (i ? shaft.lineTo(x, y) : shaft.moveTo(x, y)));
+  shaft.closePath();
+  const shaftMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shaft, { depth, bevelEnabled: false }), flat(blade));
+  shaftMesh.position.z = -depth / 2;
+  g.add(bowMesh, shaftMesh);
   return g;
 }
 
@@ -51,6 +41,5 @@ export function makeVase(color = 0x86a3b8) {
 
 export function makeItemModel(item, KEYS) {
   if (item.kind === 'vase') return makeVase();
-  const k = KEYS[item.id];
-  return makeKey(item.id === 'red' ? 0xc9a24d : k.color, k.color);
+  return makeKey(KEYS[item.id].color);
 }

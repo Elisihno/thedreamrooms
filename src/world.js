@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { makeItemModel } from './models.js';
-import { walls, doors, rooms, stairs, furniture, items, KEYS, ly, LH, groundY } from './layout.js';
+import { walls, doors, rooms, stairs, furniture, items, KEYS, ly, LH, groundY, T as T_WALL } from './layout.js';
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
@@ -104,30 +104,53 @@ export class World {
   }
 
   buildDoors() {
+    const fw = 0.06; // door frame thickness
+    const metal = new THREE.MeshPhongMaterial({ color: 0xb9bcc0, shininess: 70 });
     for (const d of doors) {
       const door = { ...d, open: false, angle: 0, target: 0, unlocked: !d.key };
+      const base = ly(d.level);
+      const alongX = d.axis === 'x';
+      const clearH = 2.1;
+      // the frame lines the doorway so the opening looks finished
+      const frame = (w, h, x, y) => {
+        const dim = alongX ? [w, h, T_WALL + 0.02] : [T_WALL + 0.02, h, w];
+        const m = scaledBox(dim[0], dim[1], dim[2], this.mat('planks'), 1.5);
+        m.position.set(alongX ? x : d.fixed, base + y, alongX ? d.fixed : x);
+        this.scene.add(m);
+      };
+      frame(fw, clearH, d.c - d.w / 2 + fw / 2, clearH / 2);
+      frame(fw, clearH, d.c + d.w / 2 - fw / 2, clearH / 2);
+      frame(d.w - 2 * fw, fw, d.c, clearH - fw / 2);
+
+      // the leaf: the wood texture is stretched once over the whole door (no repeating seam across it)
+      const leafW = d.w - 2 * fw - 0.01, leafH = clearH - fw - 0.005;
       const pivot = new THREE.Group();
-      const h = 2.08; // a hair under the lintel so the two never share a plane
-      const leaf = scaledBox(d.w - 0.04, h, 0.08, this.mat('vert'), 1.5);
-      leaf.position.set(d.w / 2, h / 2, 0);
+      const leaf = new THREE.Mesh(new THREE.BoxGeometry(leafW, leafH, 0.07), this.mat('vert'));
+      leaf.position.set(leafW / 2, leafH / 2, 0);
       leaf.userData.ref = { type: 'door', door };
       pivot.add(leaf);
-      const hinge = d.c - d.w / 2;
-      if (d.axis === 'x') pivot.position.set(hinge, ly(d.level), d.fixed);
-      else pivot.position.set(d.fixed, ly(d.level), hinge);
+      for (const side of [-1, 1]) {
+        const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.05, 10), metal);
+        knob.rotation.x = Math.PI / 2;
+        knob.position.set(leafW - 0.1, 1.0, side * 0.06);
+        pivot.add(knob);
+      }
+      const hinge = d.c - d.w / 2 + fw + 0.005;
+      if (alongX) pivot.position.set(hinge, base, d.fixed);
+      else pivot.position.set(d.fixed, base, hinge);
       door.pivot = pivot;
-      door.closedRot = d.axis === 'x' ? 0 : -Math.PI / 2;
+      door.closedRot = alongX ? 0 : -Math.PI / 2;
       pivot.rotation.y = door.closedRot;
       this.scene.add(pivot);
       this.interactables.push(leaf);
       this.blockers.push(leaf);
-      door.cx = d.axis === 'x' ? d.c : d.fixed;
-      door.cz = d.axis === 'x' ? d.fixed : d.c;
+      door.cx = alongX ? d.c : d.fixed;
+      door.cz = alongX ? d.fixed : d.c;
       door.collider = {
         kind: 'door', door,
         x: door.cx, z: door.cz,
-        w: d.axis === 'x' ? d.w : 0.14, d: d.axis === 'x' ? 0.14 : d.w,
-        y0: ly(d.level), h,
+        w: alongX ? d.w : 0.14, d: alongX ? 0.14 : d.w,
+        y0: base, h: clearH,
       };
       this.colliders.push(door.collider);
       this.doors.push(door);

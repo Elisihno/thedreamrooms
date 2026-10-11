@@ -34,10 +34,10 @@ export class HeldItem {
     if (!pickup) return;
     this.model = makeItemModel(pickup.item, KEYS);
     if (pickup.item.kind === 'key') {
-      // the bit points up and away to the left, the bow is in your hand below the edge of the screen
-      this.model.rotation.set(-0.35, 0.5, -2.45);
-      this.model.scale.setScalar(0.95);
-      this.rig.position.set(0.19, -0.25, -0.5);
+      // like Granny: low in the bottom-right corner, flat face toward you, teeth pointing up and to the left
+      this.model.rotation.set(0.35, 0.28, -2.1);
+      this.model.scale.setScalar(0.72);
+      this.rig.position.set(0.23, -0.2, -0.45);
     } else {
       this.model.rotation.set(0.1, 0.5, -0.15);
       this.model.scale.setScalar(1.2);

@@ -153,7 +153,8 @@ export function groundY(x, z, y) {
 }
 
 // The cellar door sits at the top of the basement stairs.
-doors.push({ id: 'cellar', name: 'Cellar door', level: 1, axis: 'x', fixed: 11.1, c: 8.4, w: 2.0, key: 'brass', swing: -1 });
+// The cellar door: an ordinary single door set into a short wall across the top of the stairs.
+run(1, 'x', 11.1, 7.4, 9.4, [{ c: 8.4, w: 1.1, id: 'cellar', key: 'brass', name: 'Cellar door', swing: -1 }], true);
 
 // ---------- rooms (floors / ceilings) ----------
 const R = (level, name, x0, z0, x1, z1, floor, ceil) => rooms.push({ level, name, x0, z0, x1, z1, floor, ceil });
