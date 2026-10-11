@@ -18,8 +18,8 @@ npm run build    # static build in dist/
 | Move | WASD / arrows | left stick |
 | Look | mouse | drag the right side |
 | Crouch (quieter) | C / Ctrl | tap the stance icon (top-left) |
-| Use / hide | E | USE |
-| Throw a vase to lure Granny | F or click | THROW |
+| Use / hide | E or left click | USE |
+| Throw a vase to lure Granny | F or right click | THROW |
 
 ## Goal
 

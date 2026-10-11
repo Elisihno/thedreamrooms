@@ -116,11 +116,23 @@ document.addEventListener('mousemove', (e) => {
   input.lookX += e.movementX * 0.0022;
   input.lookY += e.movementY * 0.0022;
 });
-canvas.addEventListener('mousedown', () => {
-  if (state !== 'play') return;
-  if (document.pointerLockElement !== canvas) { if (lockOK) tryLock(); }
-  else game.throw();
+// Left click = [E] (use / open / take / hide). Right click or F throws a vase.
+let downAt = null;
+canvas.addEventListener('mousedown', (e) => {
+  if (state !== 'play' || paused) return;
+  if (e.button === 2) { game.throw(); return; }
+  if (e.button !== 0) return;
+  if (document.pointerLockElement !== canvas && lockOK) { tryLock(); return; } // first click captures the mouse
+  if (lockOK) game.player.interact();
+  else downAt = [e.clientX, e.clientY]; // no pointer lock: a click that doesn't drag counts as a use
 });
+canvas.addEventListener('mouseup', (e) => {
+  if (!downAt || e.button !== 0) return;
+  const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]);
+  downAt = null;
+  if (moved < 5 && state === 'play' && !paused) game.player.interact();
+});
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement !== canvas && state === 'play' && !isTouch && lockOK) setPaused(true);
 });
