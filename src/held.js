@@ -37,9 +37,9 @@ export class HeldItem {
       // keys and tools are held pointing FORWARD, away from you: the grip is near your hand at the bottom right
       // and the business end points into the room, tilted a touch upward and toward the middle
       if (pickup.item.kind === 'key') {
-        // a key is rolled a quarter turn about its own length, so it stands on edge with the teeth up (as if going into a lock)
+        // a key is rolled a quarter turn about its own length, so it stands on edge with the teeth down
         const inner = this.model;
-        inner.rotation.y = Math.PI / 2;
+        inner.rotation.y = -Math.PI / 2;
         this.model = new THREE.Group();
         this.model.add(inner);
       }
