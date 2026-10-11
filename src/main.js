@@ -7,6 +7,7 @@ import { Sound } from './audio.js';
 import { KEYS, groundY } from './layout.js';
 import { img } from './assets.js';
 import { HeldItem } from './held.js';
+import { WAKE, wakeState } from './wake.js';
 
 // Set to true to bring Granny back. Off while the house is being tested on its own.
 const ENABLE_GRANNY = false;
@@ -196,6 +197,32 @@ function setPaused(p) {
   $('start').textContent = p ? 'RESUME' : 'START';
 }
 
+// The waking-up intro: eyes shut and blurred, they open and the world comes into focus.
+function startWake() {
+  game.player.startIntro();
+  sound.wake(WAKE);
+  document.body.classList.add('intro');
+  const w = $('wake');
+  w.style.display = 'block';
+  applyWake(wakeState(0));
+}
+function applyWake(s) {
+  const w = $('wake');
+  w.style.setProperty('--lid', s.lid.toFixed(3));
+  const f = `blur(${s.blur.toFixed(1)}px)`;
+  w.style.backdropFilter = f;
+  w.style.webkitBackdropFilter = f;
+}
+function updateWake() {
+  const P = game.player;
+  if (!P.intro) {
+    const w = $('wake');
+    if (w.style.display !== 'none') { w.style.display = 'none'; document.body.classList.remove('intro'); }
+    return;
+  }
+  applyWake(wakeState(P.introT));
+}
+
 function startGame() {
   sound.init();
   if (!game) return;
@@ -204,6 +231,7 @@ function startGame() {
   } else {
     game.reset();
     state = 'play';
+    startWake();
     $('menu').classList.remove('show');
     $('dead').classList.remove('show');
     $('won').classList.remove('show');
@@ -251,6 +279,7 @@ function frame(now) {
   if (state === 'play' && !paused) {
     game.time += dt;
     game.player.update(dt, input);
+    updateWake();
     if (game.granny) game.granny.update(dt, game.player);
     else game.world.noises.length = 0;
     game.world.update(dt, game.time);

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SPAWN, ly, groundY, KEYS } from './layout.js';
+import { WAKE, wakeState } from './wake.js';
 
 const R = 0.3;
 const WALK = 2.7;
@@ -36,7 +37,11 @@ export class Player {
     this.target = null;
     this.hurtT = 0;
     this.moving = false;
+    this.introT = WAKE; // finished unless startIntro() is called
   }
+
+  startIntro() { this.introT = 0; }
+  get intro() { return this.introT < WAKE; }
 
   get inv() { return new Set(this.items.filter((p) => p.item.kind === 'key').map((p) => p.item.id)); }
   get held() { return this.items[this.sel] ?? null; }
@@ -44,7 +49,7 @@ export class Player {
   get speedNoise() { return this.crouch ? 2 : 6.5; }
 
   toggleCrouch() {
-    if (this.hidden) return;
+    if (this.hidden || this.intro) return;
     this.crouch = !this.crouch;
     this.ui.setStance(this.crouch);
   }
@@ -58,6 +63,19 @@ export class Player {
   }
 
   update(dt, input) {
+    if (this.intro) {
+      // waking up: no control yet, the camera does the work
+      input.lookX = input.lookY = 0;
+      this.introT += dt;
+      const w = wakeState(this.introT);
+      this.eye = w.eye;
+      this.camera.position.set(this.x, this.y + w.eye, this.z);
+      this.camera.rotation.set(this.pitch + w.pitch, this.yaw, w.roll);
+      this.moving = false;
+      this.target = null;
+      this.ui.setPrompt('');
+      return;
+    }
     // look
     this.yaw -= input.lookX;
     this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch - input.lookY));
@@ -135,6 +153,7 @@ export class Player {
   }
 
   interact() {
+    if (this.intro) return;
     if (this.hidden) { this.leaveHide(); return; }
     const t = this.target;
     if (!t) return;
@@ -174,6 +193,7 @@ export class Player {
 
   // Cycle the item in your hand (Q, mouse wheel, number keys).
   cycle(dir) {
+    if (this.intro) return;
     if (this.items.length < 2) return;
     this.sel = (this.sel + dir + this.items.length) % this.items.length;
     this.ui.setInv(this.items, this.sel);
@@ -187,7 +207,7 @@ export class Player {
 
   // Put the item in your hand down on the floor in front of you.
   drop() {
-    if (this.hidden || !this.held) return;
+    if (this.intro || this.hidden || !this.held) return;
     const p = this.items.splice(this.sel, 1)[0];
     this.sel = Math.max(0, Math.min(this.sel, this.items.length - 1));
     let x = this.x - Math.sin(this.yaw) * 0.8, z = this.z - Math.cos(this.yaw) * 0.8;
@@ -230,7 +250,7 @@ export class Player {
   }
 
   throwVase(onLand) {
-    if (this.hidden) return;
+    if (this.intro || this.hidden) return;
     let i = this.items.findIndex((p, k) => k === this.sel && p.item.kind === 'vase');
     if (i < 0) i = this.items.findIndex((p) => p.item.kind === 'vase');
     if (i < 0) { this.ui.toast('You have no vase to throw.'); return; }

@@ -23,6 +23,10 @@ npm run build    # static build in dist/
 | Drop what you hold | G | DROP |
 | Switch item in hand | Q, mouse wheel, 1-9 | tap the item at top right |
 
+## Starting a run
+
+A run opens with a waking-up intro (about 5 seconds): eyes shut and blurred, they open, the blur clears and you sit up. Controls unlock when it ends.
+
 ## Goal
 
 Padlock Key (in the Bathroom sink, next to the starting bedroom) -> cellar door -> Master Key (Sauna, basement) -> study door -> Front Door Key -> front door.

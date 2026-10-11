@@ -11,7 +11,12 @@ export class Sound {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       this.master = this.ctx.createGain();
       this.master.gain.value = 0.7;
-      this.master.connect(this.ctx.destination);
+      // everything goes through a low-pass filter so the waking-up intro can start muffled and clear up
+      this.muffle = this.ctx.createBiquadFilter();
+      this.muffle.type = 'lowpass';
+      this.muffle.frequency.value = 20000;
+      this.master.connect(this.muffle);
+      this.muffle.connect(this.ctx.destination);
       // low ambient drone
       const o = this.ctx.createOscillator();
       const o2 = this.ctx.createOscillator();
@@ -59,6 +64,19 @@ export class Sound {
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     s.connect(f); f.connect(g); g.connect(this.master);
     s.start(t);
+  }
+
+  // Waking up: hearing starts muffled and gradually clears; two slow heartbeats.
+  wake(seconds = 5) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.muffle.frequency.cancelScheduledValues(t);
+    this.muffle.frequency.setValueAtTime(220, t);
+    this.muffle.frequency.exponentialRampToValueAtTime(20000, t + seconds);
+    this.master.gain.cancelScheduledValues(t);
+    this.master.gain.setValueAtTime(0.25, t);
+    this.master.gain.linearRampToValueAtTime(0.7, t + seconds);
+    [0.4, 1.5, 2.6].forEach((d) => setTimeout(() => this.ctx && this._tone('sine', 62, 36, 0.3, 0.5), d * 1000));
   }
 
   step(vol = 0.5) { if (this.ctx) this._burst(0.11, 260 + Math.random() * 120, vol); }
