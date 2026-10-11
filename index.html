@@ -14,7 +14,6 @@
     :root { --fig: clamp(110px, 28vh, 210px); }
     #stance { top: 12px; left: 18px; height: var(--fig); display: flex; align-items: flex-end; pointer-events: auto; }
     #stance img { height: var(--fig); width: auto; display: block; filter: drop-shadow(0 0 3px rgba(0,0,0,.6)); }
-    #hp { top: 20px; left: calc(var(--fig) * .8 + 40px); font-size: 22px; letter-spacing: 4px; color: var(--blood); text-shadow: 0 0 6px #000; }
     #inv { top: 14px; right: 14px; display: flex; gap: 8px; align-items: center; }
     .chip { padding: 5px 10px; border-radius: 999px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.2); font-size: 13px; }
     .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
@@ -48,7 +47,6 @@
   <canvas id="c"></canvas>
 
   <div class="hud" id="stance"><img id="stanceImg" alt="stance" /></div>
-  <div class="hud" id="hp"></div>
   <div class="hud" id="inv"></div>
   <div class="hud" id="cross"></div>
   <div class="hud" id="prompt"></div>

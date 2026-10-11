@@ -22,7 +22,6 @@ const ui = {
     el.src = s.url;
     el.style.height = crouch ? 'calc(var(--fig) * 0.6)' : 'var(--fig)'; // a crouching person is about 60% as tall
   },
-  setHp(hp) { $('hp').textContent = '♥'.repeat(Math.max(0, hp)); },
   pressHand() { const c = $('cross'); c.classList.add('press'); setTimeout(() => c.classList.remove('press'), 160); },
   setPrompt(t) { $('prompt').textContent = t; $('cross').classList.toggle('hand', !!t); },
   setHidden(h) { $('hide').style.opacity = h ? 1 : 0; },
@@ -206,7 +205,7 @@ function buildGame(mats) {
       granny?.reset();
       world.doors.forEach((d) => { d.unlocked = !d.key; world.setDoor(d, false); d.angle = 0; });
       world.pickups.forEach((p) => { p.taken = false; p.group.visible = true; });
-      ui.setStance(false); ui.setHp(player.hp); ui.setInv(player.inv, 0); ui.setHidden(false);
+      ui.setStance(false); ui.setInv(player.inv, 0); ui.setHidden(false);
       input.keys.clear();
     },
     throw() {

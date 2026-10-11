@@ -27,7 +27,7 @@ export class Player {
     this.pitch = 0;
     this.crouch = false;
     this.eye = EYE;
-    this.hp = 3;
+    this.hp = 1; // no lives: one hit from Granny ends the run
     this.inv = new Set();
     this.vases = 0;
     this.hidden = null;
@@ -50,7 +50,6 @@ export class Player {
     this.hp -= 1;
     this.hurtT = 0.6;
     this.sound.hit();
-    this.ui.setHp(this.hp);
     this.ui.flashHurt();
     if (this.hidden) this.leaveHide();
   }

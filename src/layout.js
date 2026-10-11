@@ -178,32 +178,32 @@ R(3, 'Special Room', 13, 7, 20, 14, 'planks', 'gray');
 const F = (level, x, z, w, d, h, color, extra = {}) => furniture.push({ level, x, z, w, d, h, color, elev: 0, ...extra });
 // upper floor
 F(2, 1.3, 1.4, 1.8, 2.4, 0.6, 0x6b5b4b); // bed
-F(2, 4.5, 5.55, 1.4, 0.7, 2.0, 0x4a3426, { hide: { exit: [0, -1] }, label: 'wardrobe' });
+F(2, 5.6, 5.55, 1.4, 0.7, 2.0, 0x4a3426, { hide: { exit: [0, -1] }, label: 'wardrobe' });
 F(2, 6.6, 1.0, 0.7, 1.0, 0.8, 0x4a3426); // nightstand
 F(2, 0.4, 7.5, 0.5, 2.6, 2.2, 0x3b2c20); // bookshelves
-F(2, 3.5, 7.5, 1.4, 0.8, 0.8, 0x4a3426); // reading table
+F(2, 5.4, 7.5, 1.4, 0.8, 0.8, 0x4a3426); // reading table (kept clear of the doors)
 F(2, 1.1, 12.8, 2.0, 1.1, 0.7, 0xb9b5aa); // bathtub
 F(2, 5.5, 9.6, 2.0, 0.6, 0.9, 0x6a6258); // sink counter
 F(2, 18.0, 1.4, 2.4, 1.8, 0.6, 0x5a4a60); // bed
-F(2, 16.5, 4.55, 1.4, 0.7, 2.0, 0x4a3426, { hide: { exit: [0, -1] }, label: 'wardrobe' });
+F(2, 14.3, 4.55, 1.4, 0.7, 2.0, 0x4a3426, { hide: { exit: [0, -1] }, label: 'wardrobe' });
 F(2, 19.4, 7.0, 0.8, 3.0, 2.0, 0x3b2c20); // closet racks
-F(2, 17.5, 11.5, 1.8, 1.0, 0.7, 0x6b5238); // dresser
-F(2, 16.5, 9.55, 1.4, 0.7, 2.0, 0x4a3426, { hide: { exit: [0, 1] }, label: 'wardrobe' });
-F(2, 8.0, 12.6, 0.5, 0.5, 1.0, 0x3b2c20); // hall side table
+F(2, 17.6, 13.3, 1.8, 1.0, 0.7, 0x6b5238); // dresser
+F(2, 14.3, 9.55, 1.4, 0.7, 2.0, 0x4a3426, { hide: { exit: [0, 1] }, label: 'wardrobe' });
+F(2, 8.2, 13.5, 0.5, 0.5, 1.0, 0x3b2c20); // hall side table
 // attic
 F(3, 18.5, 1.2, 1.0, 1.8, 0.9, 0x8a7a68); // crib
 F(3, 1.0, 1.2, 1.0, 1.8, 0.9, 0x8a7a68); // crib
-F(3, 4.0, 5.0, 1.2, 1.2, 0.5, 0x5a4a60); // toy chest
+F(3, 1.3, 5.7, 1.2, 1.2, 0.5, 0x5a4a60); // toy chest
 F(3, 6.5, 4.5, 0.6, 1.4, 2.0, 0x4a3426, { hide: { exit: [-1, 0] }, label: 'cupboard' });
 F(3, 1.0, 9.0, 0.5, 0.5, 1.8, 0x8f8a80); // mannequin
-F(3, 3.5, 9.0, 0.5, 0.5, 1.8, 0x8f8a80); // mannequin
+F(3, 5.2, 9.0, 0.5, 0.5, 1.8, 0x8f8a80); // mannequin
 F(3, 2.2, 12.5, 0.5, 0.5, 1.8, 0x8f8a80); // mannequin
 F(3, 15.5, 3.5, 2.0, 0.8, 0.5, 0x555555); // cell bench
 F(3, 19.4, 10.5, 0.8, 4.0, 2.0, 0x3b2c20); // shelves
 F(3, 15.5, 10.5, 1.6, 1.6, 1.0, 0x6b5238); // chest
-F(3, 7.6, 12.6, 0.5, 0.5, 1.0, 0x3b2c20); // landing table
+F(3, 8.2, 13.5, 0.5, 0.5, 1.0, 0x3b2c20); // landing table
 // ground floor
-F(1, 3.5, 13.2, 3.0, 1.0, 0.9, 0x6b3b3b); // sofa
+F(1, 3.0, 13.38, 3.0, 1.0, 0.9, 0x6b3b3b); // sofa
 F(1, 3.5, 10.4, 1.6, 1.0, 0.8, 0x4a3426); // coffee table
 F(1, 0.55, 9.0, 0.7, 1.5, 2.0, 0x4a3426, { hide: { exit: [1, 0] }, label: 'cabinet' });
 F(1, 3.5, 1.2, 2.4, 1.0, 0.9, 0x4a3426); // desk
@@ -236,9 +236,9 @@ K('gold', 1, 3.5, 1.2, 0.95); // study desk
 V(1, 3.5, 10.4, 0.85);
 V(1, 16.5, 10.5, 0.9);
 V(1, 16.5, 0.5, 0.95);
-V(2, 3.5, 7.5, 0.85);
-V(2, 8.0, 12.6, 1.05);
-V(3, 4.0, 5.0, 0.55);
+V(2, 5.4, 7.5, 0.85);
+V(2, 8.2, 13.5, 1.05);
+V(3, 1.3, 5.7, 0.55);
 
 // ---------- Granny's path graph ----------
 export const nodes = [];
