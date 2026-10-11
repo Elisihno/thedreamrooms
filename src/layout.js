@@ -6,7 +6,7 @@ export const T = 0.2; // wall thickness
 export const LH = 3; // level height
 export const ly = (l) => l * LH;
 // Wall tile per level (all tiles come straight from public/img/atlas.png; see src/textures.js).
-const STYLE = { 0: 'concrete', 1: 'plaster', 2: 'plaster', 3: 'plaster' };
+const STYLE = { 0: 'gray', 1: 'plaster', 2: 'concrete', 3: 'concrete' };
 
 export const walls = [];
 export const doors = [];
@@ -122,13 +122,15 @@ for (const s of stairs) {
   const x1 = s.x + s.w;
   const z1 = s.z + s.len;
   const y0 = ly(s.low);
-  // side walls / railings
-  walls.push({ kind: 'wall', level: s.low, x: s.x - 0.1, z: s.z + s.len / 2, w: 0.2, d: s.len, y0, h: 4, tex: 'plaster' });
-  walls.push({ kind: 'wall', level: s.low, x: x1 + 0.1, z: s.z + s.len / 2, w: 0.2, d: s.len, y0, h: 4, tex: 'plaster' });
+  // Side walls / railings, in two stacked pieces so each part wears the wall tile of the floor it is on.
+  for (const sx of [s.x - 0.1, x1 + 0.1]) {
+    walls.push({ kind: 'wall', level: s.low, x: sx, z: s.z + s.len / 2, w: 0.2, d: s.len, y0, h: LH, tex: STYLE[s.low] });
+    walls.push({ kind: 'wall', level: s.low + 1, x: sx, z: s.z + s.len / 2, w: 0.2, d: s.len, y0: y0 + LH, h: 1, tex: STYLE[s.low + 1] });
+  }
   const lowZ = s.rise === 'S' ? s.z - 0.1 : z1 + 0.1; // cap at the low end, on the upper level (railing)
   const highZ = s.rise === 'S' ? z1 + 0.1 : s.z - 0.1; // cap at the high end, on the lower level
-  walls.push({ kind: 'wall', level: s.low + 1, x: s.x + s.w / 2, z: lowZ, w: s.w, d: 0.2, y0: y0 + LH, h: 1, tex: 'plaster' });
-  walls.push({ kind: 'wall', level: s.low, x: s.x + s.w / 2, z: highZ, w: s.w, d: 0.2, y0, h: LH - 0.01, tex: 'plaster' });
+  walls.push({ kind: 'wall', level: s.low + 1, x: s.x + s.w / 2, z: lowZ, w: s.w, d: 0.2, y0: y0 + LH, h: 1, tex: STYLE[s.low + 1] });
+  walls.push({ kind: 'wall', level: s.low, x: s.x + s.w / 2, z: highZ, w: s.w, d: 0.2, y0, h: LH - 0.01, tex: STYLE[s.low] });
 }
 
 export function stairY(s, x, z) {
