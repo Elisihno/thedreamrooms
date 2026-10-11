@@ -15,6 +15,11 @@
     #stance { top: 12px; left: 18px; height: var(--fig); display: flex; align-items: flex-end; pointer-events: auto; }
     #stance img { height: var(--fig); width: auto; display: block; filter: drop-shadow(0 0 3px rgba(0,0,0,.6)); }
     #inv { top: 14px; right: 14px; display: flex; gap: 8px; align-items: center; }
+    #inv { pointer-events: auto; }
+    .chip.sel { border-color: #fff; background: rgba(255,255,255,.18); }
+    #drop { display: none; bottom: 4.5%; left: 50%; transform: translateX(-50%); font-size: clamp(30px, 7vh, 60px); font-variant: small-caps; letter-spacing: 2px; color: #fff; text-shadow: 0 0 10px #000, 0 0 3px #000; pointer-events: auto; cursor: pointer; }
+    #drop small { font-size: 13px; letter-spacing: 1px; opacity: .6; font-variant: normal; vertical-align: middle; }
+    body.touch #drop small { display: none; }
     .chip { padding: 5px 10px; border-radius: 999px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.2); font-size: 13px; }
     .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
     #cross { top: 50%; left: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.55); }
@@ -26,6 +31,7 @@
     #hurt { inset: 0; background: radial-gradient(circle, rgba(120,0,0,0) 35%, rgba(150,0,0,.85) 100%); opacity: 0; transition: opacity .5s; }
     #hide { inset: 0; opacity: 0; transition: opacity .25s; background:
       repeating-linear-gradient(90deg, rgba(0,0,0,.96) 0 46%, rgba(0,0,0,.0) 46% 50%, rgba(0,0,0,.96) 50% 100%); }
+    #hide.under { background: radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0) 18%, rgba(0,0,0,.9) 78%); }
     #fear { inset: 0; opacity: 0; background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,.8) 100%); transition: opacity .6s; }
     #stick { bottom: 30px; left: 30px; width: 128px; height: 128px; border-radius: 50%; border: 4px solid rgba(220,220,220,.8); background: transparent; display: none; pointer-events: auto; }
     #knob { position: absolute; left: 50%; top: 50%; width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px rgba(0,0,0,.6); }
@@ -48,6 +54,7 @@
 
   <div class="hud" id="stance"><img id="stanceImg" alt="stance" /></div>
   <div class="hud" id="inv"></div>
+  <div class="hud" id="drop">Drop <small>[G]</small></div>
   <div class="hud" id="cross"></div>
   <div class="hud" id="prompt"></div>
   <div class="hud" id="toast"></div>
@@ -64,7 +71,7 @@
     <button class="go" id="start">LOADING...</button>
     <div class="keys">
       <kbd>W A S D</kbd> move &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>C</kbd> crouch (quieter) &nbsp; <kbd>E</kbd> or <kbd>Left click</kbd> use / hide<br />
-      <kbd>F</kbd> / <kbd>Right click</kbd> throw a vase to lure her &nbsp; <kbd>Esc</kbd> pause<br />
+      <kbd>F</kbd> / <kbd>Right click</kbd> throw a vase to lure her &nbsp; <kbd>G</kbd> drop &nbsp; <kbd>Q</kbd> / wheel switch item &nbsp; <kbd>Esc</kbd> pause<br />
       Touch: left stick moves, drag the right side to look.
     </div>
   </div>

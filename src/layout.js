@@ -26,24 +26,31 @@ function piece(level, axis, fixed, p0, p1, y0, h, tex) {
   );
 }
 
+// Walls stop 1cm short of the ceiling, so their tops never share a plane with the floor above (that flickers).
+const WH = LH - 0.01;
+
 // A wall running along `axis` at coordinate `fixed`, from a to b, with doorway gaps.
-function run(level, axis, fixed, a, b, gaps = []) {
+// Runs butt against the walls they meet (they stop at the other wall's face) so no faces overlap and flicker.
+// `outer` runs (north and south walls) instead stretch past their ends to close the corners.
+function run(level, axis, fixed, a, b, gaps = [], outer = false) {
   const tex = STYLE[level];
   const base = ly(level);
-  let cur = a - T / 2;
+  const e = outer ? -T / 2 : T / 2;
+  let cur = a + e;
+  const end = b - e;
   for (const g of gaps.slice().sort((p, q) => p.c - q.c)) {
     const w = g.w ?? 1.1;
-    piece(level, axis, fixed, cur, g.c - w / 2, base, LH, tex);
-    piece(level, axis, fixed, g.c - w / 2, g.c + w / 2, base + 2.1, LH - 2.1, tex); // lintel
+    piece(level, axis, fixed, cur, g.c - w / 2, base, WH, tex);
+    piece(level, axis, fixed, g.c - w / 2, g.c + w / 2, base + 2.1, WH - 2.1, tex); // lintel
     doors.push({ id: g.id, name: g.name ?? 'Door', level, axis, fixed, c: g.c, w, key: g.key ?? null, swing: g.swing ?? 1 });
     cur = g.c + w / 2;
   }
-  piece(level, axis, fixed, cur, b + T / 2, base, LH, tex);
+  piece(level, axis, fixed, cur, end, base, WH, tex);
 }
 
 // Ground floor (level 1)
-run(1, 'x', 0, 0, 20);
-run(1, 'x', 14, 0, 20, [{ c: 10, w: 1.6, id: 'front', key: 'gold', name: 'Front door', swing: -1 }]);
+run(1, 'x', 0, 0, 20, [], true);
+run(1, 'x', 14, 0, 20, [{ c: 10, w: 1.6, id: 'front', key: 'gold', name: 'Front door', swing: -1 }], true);
 run(1, 'z', 0, 0, 14);
 run(1, 'z', 20, 0, 14);
 run(1, 'z', 7, 0, 14, [
@@ -58,26 +65,26 @@ run(1, 'x', 7, 0, 7);
 run(1, 'x', 7, 13, 20, [{ c: 16.5, id: 'g_kd' }]);
 
 // Upper floor (level 2)
-run(2, 'x', 0, 0, 20);
-run(2, 'x', 14, 0, 20);
+run(2, 'x', 0, 0, 20, [], true);
+run(2, 'x', 14, 0, 20, [], true);
 run(2, 'z', 0, 0, 14);
 run(2, 'z', 20, 0, 14);
 run(2, 'z', 7, 0, 14, [
   { c: 2.5, id: 'u_bed', name: 'Bedroom door' },
-  { c: 12.5, id: 'u_bath', name: 'Bathroom door' },
+  { c: 12.5, id: 'u_book', name: 'Bookshelf room door' },
 ]);
 run(2, 'z', 13, 0, 14, [
   { c: 2.5, id: 'u_b1', name: 'Bedroom 1 door' },
   { c: 12.5, id: 'u_b2', name: 'Bedroom 2 door' },
 ]);
-run(2, 'x', 6, 0, 7, [{ c: 3.5, id: 'u_book', name: 'Bookshelf room door' }]);
-run(2, 'x', 9, 0, 7, [{ c: 3.5, id: 'u_bath2', name: 'Bathroom door' }]);
+run(2, 'x', 6, 0, 7, [{ c: 3.5, id: 'u_bath', name: 'Bathroom door' }]); // straight off the starting bedroom
+run(2, 'x', 10, 0, 7, [{ c: 3.5, id: 'u_bath2', name: 'Bookshelf room door' }]);
 run(2, 'x', 5, 13, 20, [{ c: 16.5, id: 'u_cl1', name: 'Closet door' }]);
 run(2, 'x', 9, 13, 20, [{ c: 16.5, id: 'u_cl2', name: 'Closet door' }]);
 
 // Attic (level 3)
-run(3, 'x', 0, 0, 20);
-run(3, 'x', 14, 0, 20);
+run(3, 'x', 0, 0, 20, [], true);
+run(3, 'x', 14, 0, 20, [], true);
 run(3, 'z', 0, 0, 14);
 run(3, 'z', 20, 0, 14);
 run(3, 'z', 7, 0, 14, [
@@ -92,8 +99,8 @@ run(3, 'x', 7, 0, 7, [{ c: 3.5, id: 'a_nm' }]);
 run(3, 'x', 7, 13, 20, [{ c: 16.5, id: 'a_js', name: 'Jail cell door' }]);
 
 // Basement (level 0)
-run(0, 'x', 0, 2, 18);
-run(0, 'x', 12, 2, 18);
+run(0, 'x', 0, 2, 18, [], true);
+run(0, 'x', 12, 2, 18, [], true);
 run(0, 'z', 2, 0, 12);
 run(0, 'z', 18, 0, 12);
 run(0, 'x', 5, 2, 7.4, [{ c: 4.5, id: 'b_dirt', name: 'Dirt room door' }]);
@@ -121,7 +128,7 @@ for (const s of stairs) {
   const lowZ = s.rise === 'S' ? s.z - 0.1 : z1 + 0.1; // cap at the low end, on the upper level (railing)
   const highZ = s.rise === 'S' ? z1 + 0.1 : s.z - 0.1; // cap at the high end, on the lower level
   walls.push({ kind: 'wall', level: s.low + 1, x: s.x + s.w / 2, z: lowZ, w: s.w, d: 0.2, y0: y0 + LH, h: 1, tex: 'plaster' });
-  walls.push({ kind: 'wall', level: s.low, x: s.x + s.w / 2, z: highZ, w: s.w, d: 0.2, y0, h: LH, tex: 'plaster' });
+  walls.push({ kind: 'wall', level: s.low, x: s.x + s.w / 2, z: highZ, w: s.w, d: 0.2, y0, h: LH - 0.01, tex: 'plaster' });
 }
 
 export function stairY(s, x, z) {
@@ -162,8 +169,8 @@ R(1, 'Kitchen', 13, 0, 20, 7, 'planks', 'gray');
 R(1, 'Dining Room', 13, 7, 20, 14, 'planks', 'gray');
 R(2, 'Upper Hall', 7, 0, 13, 14, 'planks', 'gray');
 R(2, 'Starting Bedroom', 0, 0, 7, 6, 'planks', 'gray');
-R(2, 'Bookshelf Room', 0, 6, 7, 9, 'planks', 'gray');
-R(2, 'Bathroom', 0, 9, 7, 14, 'gray', 'gray');
+R(2, 'Bathroom', 0, 6, 7, 10, 'gray', 'gray');
+R(2, 'Bookshelf Room', 0, 10, 7, 14, 'planks', 'gray');
 R(2, 'Bedroom 1', 13, 0, 20, 5, 'planks', 'gray');
 R(2, 'Walk-In Closet', 13, 5, 20, 9, 'planks', 'gray');
 R(2, 'Bedroom 2', 13, 9, 20, 14, 'planks', 'gray');
@@ -174,17 +181,25 @@ R(3, 'Jail', 13, 0, 20, 7, 'gray', 'gray');
 R(3, 'Special Room', 13, 7, 20, 14, 'planks', 'gray');
 
 // ---------- furniture ----------
-// hide: exit is the unit direction the player steps out toward.
-const F = (level, x, z, w, d, h, color, extra = {}) => furniture.push({ level, x, z, w, d, h, color, elev: 0, ...extra });
-// upper floor
+// hide: exit is the unit direction the player steps out toward (tables work out their own).
+// table: a tabletop on legs you can hide under (press E). sink: a basin with a tap. tex picks an atlas tile.
+const F = (level, x, z, w, d, h, color, extra = {}) => furniture.push({ level, x, z, w, d, h, color, elev: 0, tex: 'planks', ...extra });
+const TABLE = { table: true, hide: { under: true }, label: 'table' };
+// upper floor: starting bedroom
 F(2, 1.3, 1.4, 1.8, 2.4, 0.6, 0x6b5b4b); // bed
 F(2, 5.6, 5.55, 1.4, 0.7, 2.0, 0x4a3426, { hide: { exit: [0, -1] }, label: 'wardrobe' });
 F(2, 6.6, 1.0, 0.7, 1.0, 0.8, 0x4a3426); // nightstand
-F(2, 0.4, 7.5, 0.5, 2.6, 2.2, 0x3b2c20); // bookshelves
-F(2, 5.4, 7.5, 1.4, 0.8, 0.8, 0x4a3426); // reading table (kept clear of the doors)
-F(2, 1.1, 12.8, 2.0, 1.1, 0.7, 0xb9b5aa); // bathtub
-F(2, 5.5, 9.6, 2.0, 0.6, 0.9, 0x6a6258); // sink counter
+F(2, 1.8, 4.6, 1.4, 0.8, 0.78, 0x4a3426, TABLE); // desk
+// bathroom (next to the starting bedroom): the Padlock Key is in the sink
+F(2, 1.2, 9.25, 2.0, 1.1, 0.7, 0xb9b5aa, { tex: 'concrete' }); // bathtub
+F(2, 5.8, 6.45, 0.55, 0.45, 0.9, 0xb9b5aa, { tex: 'concrete', sink: true }); // sink
+F(2, 6.1, 9.4, 0.6, 0.8, 0.45, 0xb9b5aa, { tex: 'concrete' }); // toilet
+// bookshelf room
+F(2, 0.4, 12.0, 0.5, 3.0, 2.2, 0x3b2c20); // bookshelves
+F(2, 2.9, 12.9, 1.4, 0.8, 0.78, 0x4a3426, TABLE); // reading table
+// bedroom 1, closet, bedroom 2
 F(2, 18.0, 1.4, 2.4, 1.8, 0.6, 0x5a4a60); // bed
+F(2, 15.0, 1.2, 1.4, 0.9, 0.78, 0x4a3426, TABLE); // table
 F(2, 14.3, 4.55, 1.4, 0.7, 2.0, 0x4a3426, { hide: { exit: [0, -1] }, label: 'wardrobe' });
 F(2, 19.4, 7.0, 0.8, 3.0, 2.0, 0x3b2c20); // closet racks
 F(2, 17.6, 13.3, 1.8, 1.0, 0.7, 0x6b5238); // dresser
@@ -193,6 +208,7 @@ F(2, 8.2, 13.5, 0.5, 0.5, 1.0, 0x3b2c20); // hall side table
 // attic
 F(3, 18.5, 1.2, 1.0, 1.8, 0.9, 0x8a7a68); // crib
 F(3, 1.0, 1.2, 1.0, 1.8, 0.9, 0x8a7a68); // crib
+F(3, 4.5, 1.4, 1.4, 0.8, 0.78, 0x4a3426, TABLE); // nursery table
 F(3, 1.3, 5.7, 1.2, 1.2, 0.5, 0x5a4a60); // toy chest
 F(3, 6.5, 4.5, 0.6, 1.4, 2.0, 0x4a3426, { hide: { exit: [-1, 0] }, label: 'cupboard' });
 F(3, 1.0, 9.0, 0.5, 0.5, 1.8, 0x8f8a80); // mannequin
@@ -204,39 +220,40 @@ F(3, 15.5, 10.5, 1.6, 1.6, 1.0, 0x6b5238); // chest
 F(3, 8.2, 13.5, 0.5, 0.5, 1.0, 0x3b2c20); // landing table
 // ground floor
 F(1, 3.0, 13.38, 3.0, 1.0, 0.9, 0x6b3b3b); // sofa
-F(1, 3.5, 10.4, 1.6, 1.0, 0.8, 0x4a3426); // coffee table
+F(1, 3.5, 10.4, 1.6, 1.0, 0.8, 0x4a3426, TABLE); // coffee table
 F(1, 0.55, 9.0, 0.7, 1.5, 2.0, 0x4a3426, { hide: { exit: [1, 0] }, label: 'cabinet' });
-F(1, 3.5, 1.2, 2.4, 1.0, 0.9, 0x4a3426); // desk
+F(1, 3.5, 1.2, 2.4, 1.0, 0.9, 0x4a3426, TABLE); // study desk
 F(1, 0.4, 4.2, 0.5, 3.0, 2.2, 0x3b2c20); // bookshelf
-F(1, 16.5, 10.5, 3.0, 1.4, 0.85, 0x4a3426); // dining table
+F(1, 16.5, 10.5, 3.0, 1.4, 0.85, 0x4a3426, TABLE); // dining table
 F(1, 19.5, 11.5, 0.7, 1.6, 2.0, 0x4a3426, { hide: { exit: [-1, 0] }, label: 'cabinet' });
-F(1, 16.5, 0.5, 5.0, 0.9, 0.9, 0x7a7266); // kitchen counter
-F(1, 19.4, 3.0, 1.0, 1.0, 2.0, 0xaaa59a); // fridge
+F(1, 14.7, 4.9, 1.8, 1.0, 0.78, 0x4a3426, TABLE); // kitchen table
+F(1, 16.5, 0.5, 5.0, 0.9, 0.9, 0x7a7266, { tex: 'concrete' }); // kitchen counter
+F(1, 19.4, 3.0, 1.0, 1.0, 2.0, 0xaaa59a, { tex: 'concrete' }); // fridge
 F(1, 7.6, 0.6, 0.7, 0.5, 2.0, 0x3b2c20); // grandfather clock
 // basement
 F(0, 3.0, 1.2, 1.4, 1.4, 1.0, 0x6b5238); // crates
 F(0, 16.5, 1.3, 1.0, 1.0, 1.0, 0x6b5238);
 F(0, 2.6, 9.0, 0.7, 1.6, 2.0, 0x4a3426, { hide: { exit: [1, 0] }, label: 'cabinet' }); // dirt room
 F(0, 11.2, 10.5, 1.4, 1.0, 0.9, 0x6b5238); // sauna bench (Master Key sits on top)
-F(0, 16.0, 10.5, 3.0, 1.6, 0.9, 0x55504a); // garage workbench
+F(0, 16.0, 10.5, 3.0, 1.6, 0.9, 0x55504a, { tex: 'concrete' }); // garage workbench
 F(0, 17.4, 6.4, 1.0, 1.2, 1.0, 0x6b5238); // garage crates
 
 // ---------- items ----------
-// y is the offset above the level floor.
+// y is the surface height the item rests on, plus 5cm.
 export const KEYS = {
-  brass: { label: 'Padlock Key', color: 0xd9a441 },
-  red: { label: 'Master Key', color: 0xc23b3b },
-  gold: { label: 'Front Door Key', color: 0xffd84a },
+  brass: { label: 'Padlock Key', color: 0xc9a24d },
+  red: { label: 'Master Key', color: 0xb3262b },
+  gold: { label: 'Front Door Key', color: 0xf2c63c },
 };
 const K = (id, level, x, z, y) => items.push({ kind: 'key', id, level, x, z, y });
 const V = (level, x, z, y) => items.push({ kind: 'vase', level, x, z, y });
-K('brass', 2, 5.5, 9.6, 0.95); // upstairs bathroom counter
+K('brass', 2, 5.8, 6.45, 0.93); // in the bathroom sink, right next to the starting bedroom
 K('red', 0, 11.2, 10.5, 0.95); // sauna bench
 K('gold', 1, 3.5, 1.2, 0.95); // study desk
 V(1, 3.5, 10.4, 0.85);
 V(1, 16.5, 10.5, 0.9);
 V(1, 16.5, 0.5, 0.95);
-V(2, 5.4, 7.5, 0.85);
+V(2, 2.9, 12.9, 0.85);
 V(2, 8.2, 13.5, 1.05);
 V(3, 1.3, 5.7, 0.55);
 
@@ -259,8 +276,8 @@ N('g_kd', 1, 16.5, 7);
 // upper floor
 N('u_n', 2, 10, 2.5); N('u_m', 2, 10, 8); N('u_s', 2, 10, 12.5);
 N('u_sut', 2, 11.6, 3.0); N('u_s2', 2, 8.4, 12.2);
-N('u_bed_d', 2, 7, 2.5); N('u_bed', 2, 3.5, 3.0); N('u_book_d', 2, 3.5, 6); N('u_book', 2, 3.5, 7.6);
-N('u_bath2', 2, 3.5, 9); N('u_bath', 2, 3.5, 11.5); N('u_bath_d', 2, 7, 12.5);
+N('u_bed_d', 2, 7, 2.5); N('u_bed', 2, 3.5, 3.0); N('u_bath_door', 2, 3.5, 6); N('u_bath', 2, 3.5, 8);
+N('u_shelf_door', 2, 3.5, 10); N('u_shelf', 2, 3.5, 12); N('u_shelf_d', 2, 7, 12.5);
 N('u_b1_d', 2, 13, 2.5); N('u_b1', 2, 16.5, 2.5); N('u_cl1', 2, 16.5, 5); N('u_closet', 2, 16.5, 7);
 N('u_cl2', 2, 16.5, 9); N('u_b2', 2, 16.5, 11.5); N('u_b2_d', 2, 13, 12.5);
 // attic

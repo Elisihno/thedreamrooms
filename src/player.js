@@ -28,8 +28,8 @@ export class Player {
     this.crouch = false;
     this.eye = EYE;
     this.hp = 1; // no lives: one hit from Granny ends the run
-    this.inv = new Set();
-    this.vases = 0;
+    this.items = []; // pickups you are carrying (keys and vases); the selected one is shown in your hand
+    this.sel = 0;
     this.hidden = null;
     this.stepT = 0;
     this.bob = 0;
@@ -37,6 +37,9 @@ export class Player {
     this.hurtT = 0;
     this.moving = false;
   }
+
+  get inv() { return new Set(this.items.filter((p) => p.item.kind === 'key').map((p) => p.item.id)); }
+  get held() { return this.items[this.sel] ?? null; }
 
   get speedNoise() { return this.crouch ? 2 : 6.5; }
 
@@ -93,7 +96,7 @@ export class Player {
       }
     }
 
-    const tgtEye = this.hidden ? 1.25 : this.crouch ? EYE_CROUCH : EYE;
+    const tgtEye = this.hidden ? (this.hidden.under ? 0.5 : 1.25) : this.crouch ? EYE_CROUCH : EYE;
     this.eye += (tgtEye - this.eye) * Math.min(1, dt * 10);
     const bobY = this.moving ? Math.sin(this.bob) * 0.035 : 0;
     this.hurtT = Math.max(0, this.hurtT - dt);
@@ -105,7 +108,7 @@ export class Player {
 
   updateTarget() {
     this.target = null;
-    if (this.hidden) { this.ui.setPrompt('[E] Leave ' + (this.hidden.label ?? 'hiding spot')); return; }
+    if (this.hidden) { this.ui.setPrompt(this.hidden.under ? '[E] Come out' : '[E] Leave ' + (this.hidden.label ?? 'hiding spot')); return; }
     this.ray.setFromCamera({ x: 0, y: 0 }, this.camera);
     const hits = this.ray.intersectObjects([...this.world.interactables, ...this.world.blockers], false);
     for (const h of hits) {
@@ -127,7 +130,7 @@ export class Player {
       return d.open ? '[E] Close door' : '[E] Open door';
     }
     if (t.type === 'pickup') return `[E] Take ${t.group.userData.label}`;
-    if (t.type === 'hide') return `[E] Hide in ${t.label}`;
+    if (t.type === 'hide') return t.under ? `[E] Hide under the ${t.label}` : `[E] Hide in the ${t.label}`;
     return '';
   }
 
@@ -158,27 +161,62 @@ export class Player {
       t.taken = true;
       t.group.visible = false;
       this.sound.pickup();
-      if (t.item.kind === 'key') {
-        this.inv.add(t.item.id);
-        this.ui.toast(`Picked up the ${KEYS[t.item.id].label}`);
-      } else {
-        this.vases += 1;
-        this.ui.toast('Picked up a vase. Throw it [F] to lure Granny away.');
-      }
-      this.ui.setInv(this.inv, this.vases);
+      this.items.push(t);
+      this.sel = this.items.length - 1; // pick it up into your hand
+      this.ui.toast(t.item.kind === 'key'
+        ? `You are holding the ${KEYS[t.item.id].label}`
+        : 'You are holding a vase. Throw it [F] to lure Granny away.');
+      this.ui.setInv(this.items, this.sel);
     } else if (t.type === 'hide') {
       this.enterHide(t);
     }
   }
 
+  // Cycle the item in your hand (Q, mouse wheel, number keys).
+  cycle(dir) {
+    if (this.items.length < 2) return;
+    this.sel = (this.sel + dir + this.items.length) % this.items.length;
+    this.ui.setInv(this.items, this.sel);
+  }
+
+  select(i) {
+    if (i < 0 || i >= this.items.length || i === this.sel) return;
+    this.sel = i;
+    this.ui.setInv(this.items, this.sel);
+  }
+
+  // Put the item in your hand down on the floor in front of you.
+  drop() {
+    if (this.hidden || !this.held) return;
+    const p = this.items.splice(this.sel, 1)[0];
+    this.sel = Math.max(0, Math.min(this.sel, this.items.length - 1));
+    let x = this.x - Math.sin(this.yaw) * 0.8, z = this.z - Math.cos(this.yaw) * 0.8;
+    [x, z] = this.world.collide(x, z, this.y, 0.15);
+    const fy = groundY(x, z, this.y);
+    p.baseY = fy + (p.item.kind === 'key' ? 0.022 : 0);
+    p.group.position.set(x, p.baseY, z);
+    p.hit.position.set(x, p.baseY + 0.12, z);
+    p.item.x = x; p.item.z = z; p.item.level = Math.round(fy / 3);
+    p.group.visible = true;
+    p.taken = false;
+    this.sound.step(0.3);
+    this.world.noise(x, fy, z, 4);
+    this.ui.setInv(this.items, this.sel);
+  }
+
   enterHide(h) {
+    if (h.under) {
+      // step out the way you came in: toward the side of the table you are standing on
+      const dx = this.x - h.x, dz = this.z - h.z;
+      h.exit = Math.abs(dx) / h.w > Math.abs(dz) / h.d ? [Math.sign(dx) || 1, 0] : [0, Math.sign(dz) || 1];
+    }
     this.hidden = h;
     this.stash = { x: this.x, z: this.z };
     this.x = h.x;
     this.z = h.z;
     this.yaw = Math.atan2(h.exit[0], h.exit[1]) + Math.PI; // face the way out
     this.pitch = 0;
-    this.ui.setHidden(true);
+    this.ui.setHidden(true, h.under);
     this.sound.door(0.3);
   }
 
@@ -192,12 +230,16 @@ export class Player {
   }
 
   throwVase(onLand) {
-    if (this.hidden || this.vases <= 0) return;
-    this.vases -= 1;
-    this.ui.setInv(this.inv, this.vases);
+    if (this.hidden) return;
+    let i = this.items.findIndex((p, k) => k === this.sel && p.item.kind === 'vase');
+    if (i < 0) i = this.items.findIndex((p) => p.item.kind === 'vase');
+    if (i < 0) { this.ui.toast('You have no vase to throw.'); return; }
+    this.items.splice(i, 1);
+    this.sel = Math.max(0, Math.min(this.sel, this.items.length - 1));
+    this.ui.setInv(this.items, this.sel);
     const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.13, 8, 6),
-      new THREE.MeshLambertMaterial({ color: 0x7aa0b8 }),
+      new THREE.SphereGeometry(0.12, 10, 8),
+      new THREE.MeshPhongMaterial({ color: 0x86a3b8, shininess: 60 }),
     );
     const dir = new THREE.Vector3();
     this.camera.getWorldDirection(dir);

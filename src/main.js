@@ -6,11 +6,13 @@ import { Granny } from './granny.js';
 import { Sound } from './audio.js';
 import { KEYS, groundY } from './layout.js';
 import { img } from './assets.js';
+import { HeldItem } from './held.js';
 
 // Set to true to bring Granny back. Off while the house is being tested on its own.
 const ENABLE_GRANNY = false;
 
 const $ = (id) => document.getElementById(id);
+const held = new HeldItem();
 
 // ---------- UI helpers ----------
 let toastT = 0;
@@ -24,13 +26,20 @@ const ui = {
   },
   pressHand() { const c = $('cross'); c.classList.add('press'); setTimeout(() => c.classList.remove('press'), 160); },
   setPrompt(t) { $('prompt').textContent = t; $('cross').classList.toggle('hand', !!t); },
-  setHidden(h) { $('hide').style.opacity = h ? 1 : 0; },
+  setHidden(h, under = false) { const e = $('hide'); e.classList.toggle('under', !!under); e.style.opacity = h ? 1 : 0; },
   flashHurt() { $('hurt').style.opacity = 1; setTimeout(() => ($('hurt').style.opacity = 0), 350); },
   toast(t) { const e = $('toast'); e.textContent = t; e.style.opacity = 1; toastT = 3.2; },
-  setInv(inv, vases) {
-    $('inv').innerHTML =
-      [...inv].map((k) => `<span class="chip"><i class="dot" style="background:#${KEYS[k].color.toString(16).padStart(6, '0')}"></i>${KEYS[k].label}</span>`).join('') +
-      (vases ? `<span class="chip">Vase x${vases}</span>` : '');
+  // items: what you carry; sel: the one in your hand
+  setInv(items, sel) {
+    $('inv').innerHTML = items
+      .map((p, i) => {
+        const k = p.item.kind === 'key' ? KEYS[p.item.id] : null;
+        const dot = k ? `<i class="dot" style="background:#${k.color.toString(16).padStart(6, '0')}"></i>` : '';
+        return `<span class="chip${i === sel ? ' sel' : ''}" data-i="${i}">${dot}${k ? k.label : 'Vase'}</span>`;
+      })
+      .join('');
+    $('drop').style.display = items.length ? 'block' : 'none';
+    held.set(items[sel] ?? null);
   },
 };
 
@@ -75,6 +84,7 @@ function cutOut(name, crop = false) {
 const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.autoClear = false; // the world and the item in your hand are drawn in two passes
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x04060a);
 scene.fog = new THREE.Fog(0x04060a, 1.5, 20);
@@ -86,6 +96,7 @@ camera.add(lamp);
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
   camera.aspect = innerWidth / innerHeight;
+  held.resize(camera.aspect);
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize);
@@ -104,6 +115,9 @@ addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.code === 'KeyC' || e.code === 'ControlLeft') game.player.toggleCrouch();
   if (e.code === 'KeyE') game.player.interact();
+  if (e.code === 'KeyG') game.player.drop();
+  if (e.code === 'KeyQ') game.player.cycle(1);
+  if (/^Digit[1-9]$/.test(e.code)) game.player.select(Number(e.code.slice(5)) - 1);
   if (e.code === 'KeyF') game.throw();
 });
 addEventListener('keyup', (e) => input.keys.delete(e.code));
@@ -132,6 +146,9 @@ canvas.addEventListener('mouseup', (e) => {
   if (moved < 5 && state === 'play' && !paused) game.player.interact();
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('wheel', (e) => { if (state === 'play' && !paused) game.player.cycle(e.deltaY > 0 ? 1 : -1); }, { passive: true });
+$('drop').addEventListener('pointerdown', (e) => { e.stopPropagation(); game?.player.drop(); });
+$('inv').addEventListener('pointerdown', (e) => { const c = e.target.closest('.chip'); if (c) { e.stopPropagation(); game?.player.select(Number(c.dataset.i)); } });
 document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement !== canvas && state === 'play' && !isTouch && lockOK) setPaused(true);
 });
@@ -204,8 +221,14 @@ function buildGame(mats) {
       player.reset();
       granny?.reset();
       world.doors.forEach((d) => { d.unlocked = !d.key; world.setDoor(d, false); d.angle = 0; });
-      world.pickups.forEach((p) => { p.taken = false; p.group.visible = true; });
-      ui.setStance(false); ui.setInv(player.inv, 0); ui.setHidden(false);
+      world.pickups.forEach((p) => {
+        const o = p.origin;
+        p.taken = false; p.group.visible = true; p.baseY = o.y;
+        p.group.position.set(o.x, o.y, o.z);
+        p.hit.position.set(o.x, o.y + 0.12, o.z);
+        p.item.x = o.x; p.item.z = o.z; p.item.level = o.level;
+      });
+      ui.setStance(false); ui.setInv(player.items, 0); ui.setHidden(false);
       input.keys.clear();
     },
     throw() {
@@ -240,7 +263,12 @@ function frame(now) {
   } else {
     game.player.update(0, input);
   }
+  renderer.clear();
   renderer.render(scene, camera);
+  if (held.model) {
+    held.update(dt, game.player.moving, game.player.bob, !!game.player.hidden);
+    if (held.rig.visible) { renderer.clearDepth(); renderer.render(held.scene, held.cam); }
+  }
 }
 
 function end(which) {

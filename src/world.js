@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { makeItemModel } from './models.js';
 import { walls, doors, rooms, stairs, furniture, items, KEYS, ly, LH, groundY } from './layout.js';
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -6,11 +7,12 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 function scaledBox(w, h, d, mat, tile = 2) {
   const g = new THREE.BoxGeometry(w, h, d);
   const uv = g.attributes.uv;
+  const aspect = mat.userData?.aspect ?? 1;
   const dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
   for (let f = 0; f < 6; f++) {
     for (let i = 0; i < 4; i++) {
       const k = f * 4 + i;
-      uv.setXY(k, (uv.getX(k) * dims[f][0]) / tile, (uv.getY(k) * dims[f][1]) / tile);
+      uv.setXY(k, (uv.getX(k) * dims[f][0]) / (tile * aspect), (uv.getY(k) * dims[f][1]) / tile);
     }
   }
   return new THREE.Mesh(g, mat);
@@ -105,7 +107,7 @@ export class World {
     for (const d of doors) {
       const door = { ...d, open: false, angle: 0, target: 0, unlocked: !d.key };
       const pivot = new THREE.Group();
-      const h = 2.1;
+      const h = 2.08; // a hair under the lintel so the two never share a plane
       const leaf = scaledBox(d.w - 0.04, h, 0.08, this.mat('vert'), 1.5);
       leaf.position.set(d.w / 2, h / 2, 0);
       leaf.userData.ref = { type: 'door', door };
@@ -134,24 +136,54 @@ export class World {
 
   buildFurniture() {
     for (const f of furniture) {
-      const m = scaledBox(f.w, f.h, f.d, this.mat('planks'), 1.5);
-      m.position.set(f.x, ly(f.level) + f.elev + f.h / 2, f.z);
-      this.scene.add(m);
-      this.blockers.push(m);
-      const col = { kind: 'furn', x: f.x, z: f.z, w: f.w, d: f.d, y0: ly(f.level) + f.elev, h: f.h };
+      const mat = this.mat(f.tex ?? 'planks');
+      const base = ly(f.level) + f.elev;
+      const parts = [];
+      let col = { kind: 'furn', x: f.x, z: f.z, w: f.w, d: f.d, y0: base, h: f.h };
+      if (f.table) {
+        const top = scaledBox(f.w, 0.07, f.d, mat, 1.5);
+        top.position.set(f.x, base + f.h - 0.035, f.z);
+        parts.push(top);
+        const lx = f.w / 2 - 0.08, lz = f.d / 2 - 0.08;
+        for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+          const leg = scaledBox(0.07, f.h - 0.07, 0.07, mat, 1.5);
+          leg.position.set(f.x + sx * lx, base + (f.h - 0.07) / 2, f.z + sz * lz);
+          parts.push(leg);
+        }
+        col = { ...col, y0: base + f.h - 0.1, h: 0.1 }; // the tabletop is what blocks you; you hide under it with [E]
+      } else if (f.sink) {
+        const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 0.78, 14), mat);
+        ped.position.set(f.x, base + 0.39, f.z);
+        // a lathed basin: outer wall, rim, then the inner bowl
+        const prof = [[0.07, 0.78], [0.2, 0.8], [0.27, 0.86], [0.27, 0.9], [0.245, 0.9], [0.235, 0.87], [0.17, 0.83], [0, 0.82]].map(([x, y]) => new THREE.Vector2(x, y));
+        const basin = new THREE.Mesh(new THREE.LatheGeometry(prof, 24), new THREE.MeshLambertMaterial({ map: mat.map, side: THREE.DoubleSide }));
+        basin.position.set(f.x, base, f.z);
+        const tap = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.13, 8), new THREE.MeshPhongMaterial({ color: 0xb8bcc2, shininess: 80 }));
+        tap.position.set(f.x, base + 0.96, f.z - 0.2);
+        const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.1, 8), tap.material);
+        spout.rotation.x = Math.PI / 2;
+        spout.position.set(f.x, base + 1.02, f.z - 0.15);
+        parts.push(ped, basin, tap, spout);
+      } else {
+        const box = scaledBox(f.w, f.h, f.d, mat, 1.5);
+        box.position.set(f.x, base + f.h / 2, f.z);
+        parts.push(box);
+      }
+      parts.forEach((m) => { this.scene.add(m); this.blockers.push(m); });
       this.colliders.push(col);
       if (f.hide) {
-        const hide = { type: 'hide', x: f.x, z: f.z, level: f.level, exit: f.hide.exit, label: f.label, col, w: f.w, d: f.d };
-        m.userData.ref = hide;
-        this.interactables.push(m);
+        const hide = { type: 'hide', x: f.x, z: f.z, level: f.level, exit: f.hide.exit, under: !!f.hide.under, label: f.label, col, w: f.w, d: f.d };
+        parts.forEach((m) => { m.userData.ref = hide; this.interactables.push(m); });
         this.hides.push(hide);
-        // a dark door-line so hiding spots read as wardrobes
-        const dir = f.hide.exit;
-        const slit = new THREE.Mesh(new THREE.PlaneGeometry(0.04, f.h * 0.85), new THREE.MeshBasicMaterial({ color: 0x0c0806 }));
-        slit.position.set(f.x + dir[0] * (f.w / 2 + 0.01) * (dir[0] ? 1 : 0), ly(f.level) + f.h / 2, f.z + dir[1] * (f.d / 2 + 0.01));
-        if (dir[0]) { slit.position.x = f.x + dir[0] * (f.w / 2 + 0.01); slit.rotation.y = dir[0] > 0 ? Math.PI / 2 : -Math.PI / 2; }
-        else if (dir[1] < 0) slit.rotation.y = Math.PI;
-        this.scene.add(slit);
+        if (!f.hide.under) {
+          // a dark door-line so wardrobes and cabinets read as hiding spots
+          const dir = f.hide.exit;
+          const slit = new THREE.Mesh(new THREE.PlaneGeometry(0.04, f.h * 0.85), new THREE.MeshBasicMaterial({ color: 0x0c0c0e }));
+          slit.position.set(f.x, base + f.h / 2, f.z + dir[1] * (f.d / 2 + 0.01));
+          if (dir[0]) { slit.position.set(f.x + dir[0] * (f.w / 2 + 0.01), base + f.h / 2, f.z); slit.rotation.y = dir[0] > 0 ? Math.PI / 2 : -Math.PI / 2; }
+          else if (dir[1] < 0) slit.rotation.y = Math.PI;
+          this.scene.add(slit);
+        }
       }
     }
   }
@@ -159,31 +191,19 @@ export class World {
   buildItems() {
     for (const it of items) {
       const g = new THREE.Group();
+      const model = makeItemModel(it, KEYS);
       if (it.kind === 'key') {
-        const col = KEYS[it.id].color;
-        const mat = new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: 0.55 });
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.02, 6, 12), mat);
-        ring.position.y = 0.12;
-        const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.2, 0.03), mat);
-        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.03, 0.03), mat);
-        tooth.position.set(0.04, -0.07, 0);
-        g.add(ring, shaft, tooth);
-        g.userData.label = KEYS[it.id].label;
-      } else {
-        const mat = new THREE.MeshLambertMaterial({ color: 0x7aa0b8 });
-        const body = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), mat);
-        body.scale.y = 1.3;
-        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.12, 8), mat);
-        neck.position.y = 0.19;
-        g.add(body, neck);
-        g.userData.label = 'Vase';
+        model.rotation.x = -Math.PI / 2; // lie flat on the surface
+        model.scale.setScalar(0.85);
       }
-      g.position.set(it.x, ly(it.level) + it.y + 0.15, it.z);
-      g.scale.setScalar(1.4);
-      const pickup = { type: 'pickup', item: it, group: g, taken: false, baseY: g.position.y };
+      g.add(model);
+      g.userData.label = it.kind === 'key' ? KEYS[it.id].label : 'Vase';
+      const base = ly(it.level) + it.y - 0.05 + (it.kind === 'key' ? 0.022 : 0);
+      g.position.set(it.x, base, it.z);
+      const pickup = { type: 'pickup', item: it, group: g, taken: false, baseY: base, origin: { x: it.x, z: it.z, y: base, level: it.level } };
       // invisible, generous hit-box for aiming
-      const hit = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshBasicMaterial({ visible: false }));
-      hit.position.copy(g.position);
+      const hit = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.45), new THREE.MeshBasicMaterial({ visible: false }));
+      hit.position.set(it.x, base + 0.12, it.z);
       hit.userData.ref = pickup;
       pickup.hit = hit;
       this.scene.add(g, hit);
@@ -266,7 +286,7 @@ export class World {
     for (const p of this.pickups) {
       if (p.taken) continue;
       p.group.rotation.y = time * 1.4;
-      p.group.position.y = p.baseY + Math.sin(time * 2 + p.baseY) * 0.03;
+      p.group.position.y = p.baseY + Math.sin(time * 2 + p.baseY) * 0.012;
     }
     // thrown vases
     for (let i = this.projectiles.length - 1; i >= 0; i--) {

@@ -20,10 +20,12 @@ npm run build    # static build in dist/
 | Crouch (quieter) | C / Ctrl | tap the stance icon (top-left) |
 | Use / hide | E or left click | USE |
 | Throw a vase to lure Granny | F or right click | THROW |
+| Drop what you hold | G | DROP |
+| Switch item in hand | Q, mouse wheel, 1-9 | tap the item at top right |
 
 ## Goal
 
-Padlock Key (Bathroom, upper floor) -> cellar door -> Master Key (Sauna, basement) -> study door -> Front Door Key -> front door.
+Padlock Key (in the Bathroom sink, next to the starting bedroom) -> cellar door -> Master Key (Sauna, basement) -> study door -> Front Door Key -> front door.
 
 ## How it works
 
@@ -39,7 +41,7 @@ Padlock Key (Bathroom, upper floor) -> cellar door -> Master Key (Sauna, basemen
 Four levels, with room names taken from the Granny wiki (the geometry is our own, since the wiki has no floor plan):
 
 - **Attic:** Nursery, Mannequin Room, Jail, Special Room
-- **Upper floor:** Starting Bedroom, Bookshelf Room, Bathroom, Bedroom 1, Walk-In Closet, Bedroom 2
+- **Upper floor:** Starting Bedroom, Bathroom (next door), Bookshelf Room, Bedroom 1, Walk-In Closet, Bedroom 2
 - **Ground floor:** Foyer, Study, Living Room, Dining Room, Kitchen
 - **Basement:** Basement, Dirt Room, Sauna, Garage
 

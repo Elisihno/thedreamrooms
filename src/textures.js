@@ -33,7 +33,8 @@ export function loadMaterials() {
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.magFilter = THREE.NearestFilter;
         tex.anisotropy = 4;
-        mats[name] = new THREE.MeshLambertMaterial({ map: tex }) // the atlas tile exactly as drawn;
+        mats[name] = new THREE.MeshLambertMaterial({ map: tex }); // the atlas tile exactly as drawn
+        mats[name].userData.aspect = w / h; // wide tiles (plaster) must not be stretched;
       }
       resolve(mats);
     };
