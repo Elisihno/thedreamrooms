@@ -81,8 +81,8 @@ scene.background = new THREE.Color(0x04060a);
 scene.fog = new THREE.Fog(0x04060a, 1.5, 20);
 const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 80);
 scene.add(camera);
-scene.add(new THREE.AmbientLight(0x9096a8, 0.5));
-const lamp = new THREE.PointLight(0xffeede, 9, 13, 1.6); // the faint glow around you
+scene.add(new THREE.AmbientLight(0xa4aab8, 0.5));
+const lamp = new THREE.PointLight(0xe9edf5, 9, 13, 1.6); // the faint glow around you
 camera.add(lamp);
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false);

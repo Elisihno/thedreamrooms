@@ -6,7 +6,7 @@ export const T = 0.2; // wall thickness
 export const LH = 3; // level height
 export const ly = (l) => l * LH;
 // Wall tile per level (all tiles come straight from public/img/atlas.png; see src/textures.js).
-const STYLE = { 0: 'concrete', 1: 'plaster', 2: 'plaster', 3: 'streak' };
+const STYLE = { 0: 'concrete', 1: 'plaster', 2: 'plaster', 3: 'plaster' };
 
 export const walls = [];
 export const doors = [];
@@ -116,12 +116,12 @@ for (const s of stairs) {
   const z1 = s.z + s.len;
   const y0 = ly(s.low);
   // side walls / railings
-  walls.push({ kind: 'wall', level: s.low, x: s.x - 0.1, z: s.z + s.len / 2, w: 0.2, d: s.len, y0, h: 4, tex: 'darkwood' });
-  walls.push({ kind: 'wall', level: s.low, x: x1 + 0.1, z: s.z + s.len / 2, w: 0.2, d: s.len, y0, h: 4, tex: 'darkwood' });
+  walls.push({ kind: 'wall', level: s.low, x: s.x - 0.1, z: s.z + s.len / 2, w: 0.2, d: s.len, y0, h: 4, tex: 'plaster' });
+  walls.push({ kind: 'wall', level: s.low, x: x1 + 0.1, z: s.z + s.len / 2, w: 0.2, d: s.len, y0, h: 4, tex: 'plaster' });
   const lowZ = s.rise === 'S' ? s.z - 0.1 : z1 + 0.1; // cap at the low end, on the upper level (railing)
   const highZ = s.rise === 'S' ? z1 + 0.1 : s.z - 0.1; // cap at the high end, on the lower level
-  walls.push({ kind: 'wall', level: s.low + 1, x: s.x + s.w / 2, z: lowZ, w: s.w, d: 0.2, y0: y0 + LH, h: 1, tex: 'darkwood' });
-  walls.push({ kind: 'wall', level: s.low, x: s.x + s.w / 2, z: highZ, w: s.w, d: 0.2, y0, h: LH, tex: 'darkwood' });
+  walls.push({ kind: 'wall', level: s.low + 1, x: s.x + s.w / 2, z: lowZ, w: s.w, d: 0.2, y0: y0 + LH, h: 1, tex: 'plaster' });
+  walls.push({ kind: 'wall', level: s.low, x: s.x + s.w / 2, z: highZ, w: s.w, d: 0.2, y0, h: LH, tex: 'plaster' });
 }
 
 export function stairY(s, x, z) {
@@ -153,25 +153,25 @@ const R = (level, name, x0, z0, x1, z1, floor, ceil) => rooms.push({ level, name
 R(0, 'Basement', 2, 0, 18, 5, 'gray', 'concrete');
 R(0, 'Dirt Room', 2, 5, 7.4, 12, 'gray', 'concrete');
 R(0, 'Cellar stairs', 7.4, 5, 9.4, 12, 'gray', 'concrete');
-R(0, 'Sauna', 9.4, 5, 13, 12, 'planks', 'darkwood');
+R(0, 'Sauna', 9.4, 5, 13, 12, 'planks', 'gray');
 R(0, 'Garage', 13, 5, 18, 12, 'gray', 'concrete');
-R(1, 'Foyer', 7, 0, 13, 14, 'planks', 'darkwood');
-R(1, 'Study', 0, 0, 7, 7, 'planks', 'darkwood');
-R(1, 'Living Room', 0, 7, 7, 14, 'planks', 'darkwood');
-R(1, 'Kitchen', 13, 0, 20, 7, 'planks', 'darkwood');
-R(1, 'Dining Room', 13, 7, 20, 14, 'planks', 'darkwood');
-R(2, 'Upper Hall', 7, 0, 13, 14, 'planks', 'darkwood');
-R(2, 'Starting Bedroom', 0, 0, 7, 6, 'planks', 'darkwood');
-R(2, 'Bookshelf Room', 0, 6, 7, 9, 'planks', 'darkwood');
-R(2, 'Bathroom', 0, 9, 7, 14, 'gray', 'darkwood');
-R(2, 'Bedroom 1', 13, 0, 20, 5, 'planks', 'darkwood');
-R(2, 'Walk-In Closet', 13, 5, 20, 9, 'planks', 'darkwood');
-R(2, 'Bedroom 2', 13, 9, 20, 14, 'planks', 'darkwood');
-R(3, 'Attic Landing', 7, 0, 13, 14, 'planks', 'darkwood');
-R(3, 'Nursery', 0, 0, 7, 7, 'planks', 'darkwood');
-R(3, 'Mannequin Room', 0, 7, 7, 14, 'planks', 'darkwood');
-R(3, 'Jail', 13, 0, 20, 7, 'gray', 'darkwood');
-R(3, 'Special Room', 13, 7, 20, 14, 'planks', 'darkwood');
+R(1, 'Foyer', 7, 0, 13, 14, 'planks', 'gray');
+R(1, 'Study', 0, 0, 7, 7, 'planks', 'gray');
+R(1, 'Living Room', 0, 7, 7, 14, 'planks', 'gray');
+R(1, 'Kitchen', 13, 0, 20, 7, 'planks', 'gray');
+R(1, 'Dining Room', 13, 7, 20, 14, 'planks', 'gray');
+R(2, 'Upper Hall', 7, 0, 13, 14, 'planks', 'gray');
+R(2, 'Starting Bedroom', 0, 0, 7, 6, 'planks', 'gray');
+R(2, 'Bookshelf Room', 0, 6, 7, 9, 'planks', 'gray');
+R(2, 'Bathroom', 0, 9, 7, 14, 'gray', 'gray');
+R(2, 'Bedroom 1', 13, 0, 20, 5, 'planks', 'gray');
+R(2, 'Walk-In Closet', 13, 5, 20, 9, 'planks', 'gray');
+R(2, 'Bedroom 2', 13, 9, 20, 14, 'planks', 'gray');
+R(3, 'Attic Landing', 7, 0, 13, 14, 'planks', 'gray');
+R(3, 'Nursery', 0, 0, 7, 7, 'planks', 'gray');
+R(3, 'Mannequin Room', 0, 7, 7, 14, 'planks', 'gray');
+R(3, 'Jail', 13, 0, 20, 7, 'gray', 'gray');
+R(3, 'Special Room', 13, 7, 20, 14, 'planks', 'gray');
 
 // ---------- furniture ----------
 // hide: exit is the unit direction the player steps out toward.

@@ -134,7 +134,7 @@ export class World {
 
   buildFurniture() {
     for (const f of furniture) {
-      const m = scaledBox(f.w, f.h, f.d, this.mat('darkwood'), 1.5);
+      const m = scaledBox(f.w, f.h, f.d, this.mat('planks'), 1.5);
       m.position.set(f.x, ly(f.level) + f.elev + f.h / 2, f.z);
       this.scene.add(m);
       this.blockers.push(m);
