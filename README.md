@@ -23,7 +23,7 @@ npm run build    # static build in dist/
 
 ## Goal
 
-Brass Key (upstairs bathroom) -> cellar door -> Red Key (boiler room) -> study door -> Gold Key -> front door.
+Padlock Key (Bathroom, upper floor) -> cellar door -> Master Key (Sauna, basement) -> study door -> Front Door Key -> front door.
 
 ## How it works
 
@@ -34,4 +34,14 @@ Brass Key (upstairs bathroom) -> cellar door -> Red Key (boiler room) -> study d
 - `src/player.js` - movement, crouch, interaction, hiding, throwing.
 - `public/img/` - reference screenshot, the wall/floor texture atlas (sliced at runtime) and the stance icons.
 
-The layout is a from-memory approximation of Granny's house; it is meant to be edited.
+## The house
+
+Four levels, with room names taken from the Granny wiki (the geometry is our own, since the wiki has no floor plan):
+
+- **Attic:** Nursery, Mannequin Room, Jail, Special Room
+- **Upper floor:** Starting Bedroom, Bookshelf Room, Bathroom, Bedroom 1, Walk-In Closet, Bedroom 2
+- **Ground floor:** Foyer, Study, Living Room, Dining Room, Kitchen
+- **Basement:** Basement, Dirt Room, Sauna, Garage
+
+Not built yet: the secret area, abandoned house/sewers, spider cellar, backyard and shed.
+The layout is meant to be edited in `src/layout.js`.
