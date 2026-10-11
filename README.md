@@ -45,3 +45,8 @@ Four levels, with room names taken from the Granny wiki (the geometry is our own
 
 Not built yet: the secret area, abandoned house/sewers, spider cellar, backyard and shed.
 The layout is meant to be edited in `src/layout.js`.
+
+## Single-file build
+
+`npm run build && python3 scripts/make-single-file.py out.html` produces one self-contained HTML fragment
+(JS and images inlined). If the host refuses pointer lock, dragging with the mouse looks around instead.

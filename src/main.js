@@ -5,14 +5,14 @@ import { Player } from './player.js';
 import { Granny } from './granny.js';
 import { Sound } from './audio.js';
 import { KEYS, groundY } from './layout.js';
+import { img } from './assets.js';
 
 const $ = (id) => document.getElementById(id);
-const BASE = import.meta.env.BASE_URL;
 
 // ---------- UI helpers ----------
 let toastT = 0;
 const ui = {
-  setStance(crouch) { $('stanceImg').src = BASE + 'img/' + (crouch ? 'crouch.webp' : 'stand.png'); },
+  setStance(crouch) { $('stanceImg').src = img(crouch ? 'crouch.webp' : 'stand.png'); },
   setHp(hp) { $('hp').textContent = '♥'.repeat(Math.max(0, hp)); },
   setPrompt(t) { $('prompt').textContent = t; },
   setHidden(h) { $('hide').style.opacity = h ? 1 : 0; },
@@ -61,18 +61,21 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyF') game.throw();
 });
 addEventListener('keyup', (e) => input.keys.delete(e.code));
+let lockOK = true; // false when the host refuses pointer lock; then dragging the mouse looks around
+const tryLock = () => { try { const r = canvas.requestPointerLock?.(); r?.catch?.(() => { lockOK = false; }); } catch { lockOK = false; } };
+document.addEventListener('pointerlockerror', () => { lockOK = false; });
 document.addEventListener('mousemove', (e) => {
-  if (document.pointerLockElement !== canvas) return;
+  if (document.pointerLockElement !== canvas && !(!lockOK && e.buttons & 1)) return;
   input.lookX += e.movementX * 0.0022;
   input.lookY += e.movementY * 0.0022;
 });
 canvas.addEventListener('mousedown', () => {
   if (state !== 'play') return;
-  if (document.pointerLockElement !== canvas) canvas.requestPointerLock?.();
+  if (document.pointerLockElement !== canvas) { if (lockOK) tryLock(); }
   else game.throw();
 });
 document.addEventListener('pointerlockchange', () => {
-  if (document.pointerLockElement !== canvas && state === 'play' && !isTouch) setPaused(true);
+  if (document.pointerLockElement !== canvas && state === 'play' && !isTouch && lockOK) setPaused(true);
 });
 $('stance').addEventListener('pointerdown', (e) => { e.stopPropagation(); game?.player.toggleCrouch(); });
 
@@ -130,7 +133,7 @@ function startGame() {
     $('dead').classList.remove('show');
     $('won').classList.remove('show');
   }
-  if (!isTouch) canvas.requestPointerLock?.();
+  if (!isTouch) tryLock();
 }
 
 function buildGame(mats) {

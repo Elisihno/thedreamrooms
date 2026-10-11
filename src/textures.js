@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { img } from './assets.js';
 
 // Regions of public/img/atlas.png (250x250): [x, y, w, h]
 const TILES = {
@@ -23,14 +24,14 @@ const TINT = {
 
 export function loadMaterials() {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
+    const image = new Image();
+    image.onload = () => {
       const mats = {};
       for (const [name, [x, y, w, h]] of Object.entries(TILES)) {
         const inset = 2; // avoid bleeding from neighbouring tiles
         const c = document.createElement('canvas');
         c.width = c.height = 64;
-        c.getContext('2d').drawImage(img, x + inset, y + inset, w - inset * 2, h - inset * 2, 0, 0, 64, 64);
+        c.getContext('2d').drawImage(image, x + inset, y + inset, w - inset * 2, h - inset * 2, 0, 0, 64, 64);
         const tex = new THREE.CanvasTexture(c);
         tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
         tex.colorSpace = THREE.SRGBColorSpace;
@@ -40,7 +41,7 @@ export function loadMaterials() {
       }
       resolve(mats);
     };
-    img.onerror = reject;
-    img.src = import.meta.env.BASE_URL + 'img/atlas.png';
+    image.onerror = reject;
+    image.src = img('atlas.png');
   });
 }
