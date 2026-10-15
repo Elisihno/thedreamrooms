@@ -563,7 +563,7 @@ function stairsRun(run){
   const L=run.len,N=14,rw=L/N,riser=WH/N,st=MT("wood",0xb8b8b8,{emissive:0x3a3a3a}),dk=MT("wood",0x555555,{emissive:0x1c1c1c});
   if(run.dir==="d"){
     for(let i=0;i<N;i++){const top=-riser*(i+1);B(rw,top+WH,.96,(i+.5)*rw,-WH,.5,st,g);B(rw*.25,.018,.98,(i+.12)*rw,top,.5,dk,g)}
-    B(L,.03,1,L/2,-WH,.5,M.dark(),g);B(.04,WH,1,L,-WH,.5,MT("wood",0x555555,{emissive:0x181818}),g);
+    B(L,.03,1,L/2,-WH,.5,M.dark(),g);
     B(L,WH,.04,L/2,-WH,.02,mat(0x4a4a4a),g);B(L,WH,.04,L/2,-WH,.98,mat(0x4a4a4a),g);
     for(const z of[.07,.93]){const rail=C(.022,.022,Math.hypot(L,WH),L/2,0,z,M.woodD(),g,8);rail.position.y=.5-WH/2;rail.rotation.z=Math.PI/2-Math.atan2(WH,L);for(let i=1;i<N;i+=2)C(.012,.012,.42,(i+.5)*rw,-riser*(i+1),z,M.woodD(),g,6)}
   }else{
@@ -663,7 +663,7 @@ function buildLevel(l){
   for(const r of rugs){const m=new THREE.Mesh(new THREE.PlaneGeometry(r[2],r[3]),MT("rug",r[4]||0xb0b0b0,{bumpScale:.3}));m.rotation.x=-Math.PI/2;m.position.set(r[0],.006,r[1]);if(r[5])m.rotation.z=Math.PI/2;P2.add(m);const e=B(r[2]+.04,.006,r[3]+.04,r[0],.0,r[1],M.dark(),P2)}
   finalize(P2);g.add(P2);
   // stairs
-  for(const run of lv.runs){g.add(stairsRun(run));if(run.dir==="d"){const dk=B(.03,WH,.98,run.x0+run.len-.03,0,run.y+.5,mat(0x0a0a0a),g)}}
+  for(const run of lv.runs){g.add(stairsRun(run));if(run.dir==="d")B(.03,WH,.98,run.x0+run.len-.03,0,run.y+.5,mat(0x050505),g);else B(.03,2*WH,.98,run.x0+.03,0,run.y+.5,mat(0x050505),g);}
   // furniture
   for(const d of lv.dec){
     const b=BUILD[d.type]();finalize(b.g);d.b=b;d.openT=0;d.openTarget=0;d.open=false;
@@ -878,8 +878,8 @@ function update(dt){
   // stairs: walk down or up a flight and change floor at its end
   const run=runAt(CL,P.x,P.y);
   if(run&&!P.hid){
-    if(run.dir==="d"&&P.x>=run.x0+run.len-.14){changeLevel(CL+1);P.x=run.x0+run.len+.3;P.a=({1:Math.PI/2,2:-Math.PI/2,3:Math.PI/2})[CL]||0}
-    else if(run.dir==="u"&&P.x<=run.x0+.14){changeLevel(CL-1);P.x=run.x0-.3;P.a=Math.PI}
+    if(run.dir==="d"&&P.x>=run.x0+run.len-.55){changeLevel(CL+1);P.x=run.x0+run.len+.3;P.a=({1:Math.PI/2,2:-Math.PI/2,3:Math.PI/2})[CL]||0}
+    else if(run.dir==="u"&&P.x<=run.x0+.55){changeLevel(CL-1);P.x=run.x0-.3;P.a=Math.PI}
   }
 
   // mannequin
