@@ -272,7 +272,7 @@ const look={id:null,x:0};
 
 const dayNo=()=>maxLives-lives+1;
 function setLives(){livesEl.textContent=cfg.noDrac?"PRACTICE":"DAY "+dayNo()+" OF "+maxLives}
-function setList(){listEl.innerHTML=ITEMS.map(i=>"<li class='"+(i.got?"got":"")+"'>"+(i.got?"☑ ":"☐ ")+i.name+"</li>").join("")+"<li>Keys "+KEYS.map(k=>k.got?"☑":"☐").join(" ")+"</li>"}
+function setList(){listEl.innerHTML=ITEMS.map(i=>"<li class='"+(i.got?"got":"")+"'>"+(i.got?"☑ ":"☐ ")+i.name+"</li>").join("")+"<li>Keys "+KEYS.map(k=>k.used?"☑":k.got?"<img alt='key' style='width:22px;height:22px;vertical-align:-6px;image-rendering:pixelated' src='"+iconURL("doorkey")+"'>":"☐").join(" ")+"</li>"}
 function toast(msg,ms){toastEl.textContent=msg;toastEl.classList.add("on");toastT=(ms||3000)/1000}
 
 /* ---------- the 3D world ---------- */
@@ -571,8 +571,14 @@ BUILD.lockdoor=()=>{const g=grp();
   RB(.9,1.42,.07,.012,.45,.02,0,M.woodL(),piv,2);
   for(const x of[.25,.65])for(const y of[.1,.75])for(const s of[-1,1])RB(.3,.55,.03,.008,x,y,s*.04,M.wood(),piv,2);
   for(const s of[-1,1]){B(.1,.16,.02,.82,.62,s*.05,M.gold(),piv);Sp(.025,.82,.7,s*.07,M.gold(),piv)}
-  const lock=dyn(.82,.44,0,piv);
-  for(const s of[-1,1]){RB(.12,.1,.05,.012,0,0,s*.1,M.gold(),lock,2);Tor(.04,.012,0,.15,s*.1,M.gold(),lock)}
+  const lock=dyn(.82,.3,0,piv);
+  const steel=mat(0xcdcdcd,{shininess:150,specular:0xffffff}),iron=M.iron();
+  for(const s of[-1,1]){
+    B(.12,.03,.02,0,.2,s*.075,iron,lock);B(.04,.1,.02,0,.12,s*.075,iron,lock);
+    RB(.17,.15,.07,.025,0,0,s*.11,steel,lock,3);
+    const sh=new THREE.Mesh(new THREE.TorusGeometry(.045,.014,8,18,Math.PI),steel);sh.position.set(0,.15,s*.11);lock.add(sh);
+    C(.012,.012,.03,0,.05,s*.15,M.dark(),lock,8).rotation.x=Math.PI/2;B(.008,.04,.02,0,.03,s*.152,M.dark(),lock);
+  }
   return {g,anim:t=>{piv.rotation.y=-t*1.65},lock}};
 BUILD.box=()=>{const g=grp();RB(.52,.4,.46,.012,0,0,0,mat(0xa8a8a8),g,2);B(.52,.004,.07,0,.4,0,mat(0x7a7a7a),g);const f=B(.24,.012,.44,-.14,.4,0,mat(0xb6b6b6),g);f.rotation.z=.2;const f2=B(.24,.012,.44,.14,.4,0,mat(0xb6b6b6),g);f2.rotation.z=-.15;return {g}};
 BUILD.freezer=()=>{const g=grp();
@@ -588,6 +594,8 @@ BUILD.mannequin=()=>{const g=grp(),b=dyn(0,0,0,g);
   Lt([[0,0],[.09,0],[.12,.1],[.0,.1]],mat(0xd2d2d2),0,.43,0,b,18);
   return {g,b}};
 
+const ICONURL={};
+function iconURL(id){if(!ICONURL[id])iconTex(id);return ICONURL[id].toDataURL()}
 function iconTex(id){
   const c=document.createElement("canvas");c.width=c.height=64;const g=c.getContext("2d");g.imageSmoothingEnabled=false;g.scale(2,2);g.lineWidth=1.6;g.strokeStyle="#111";
   const poly=(col,pts)=>{g.fillStyle=col;g.beginPath();g.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)g.lineTo(pts[i],pts[i+1]);g.closePath();g.fill()};
@@ -603,6 +611,7 @@ function iconTex(id){
     poly("#a8a8a8",[18,6,28,6,31,16,28,26,18,26]);g.beginPath();g.moveTo(18,6);g.lineTo(28,6);g.lineTo(31,16);g.lineTo(28,26);g.lineTo(18,26);g.closePath();g.stroke();
     g.strokeStyle="rgba(0,0,0,.28)";g.lineWidth=.6;for(let y=8;y<26;y+=3){g.beginPath();g.moveTo(19,y);g.lineTo(29,y+.4);g.stroke()}
     g.globalCompositeOperation="destination-out";g.fillRect(21,11,6,9);g.globalCompositeOperation="source-over";g.strokeStyle="#111";g.lineWidth=1;g.strokeRect(21,11,6,9)}
+  ICONURL[id]=c;
   const tx=new THREE.CanvasTexture(c);tx.magFilter=THREE.NearestFilter;tx.minFilter=THREE.NearestFilter;return tx;
 }
 function itemMesh(id){
@@ -1119,7 +1128,7 @@ function win(){
 function newGame(){
   cfg=DIFF[diffKey];maxLives=cfg.lives;
   ITEMS.forEach(i=>i.got=false);
-  KEYS.forEach(k=>{k.got=false;k.used=false});
+  KEYS.forEach(k=>{k.got=false;k.used=false});KEYS[0].got=true;
   LV.forEach(l=>l.dec.forEach(d=>{if(d.type==="lockdoor"){d.unlocked=false;l.blocked[d.cell[1]*MW+d.cell[0]]=1;if(d.b&&d.b.lock)d.b.lock.visible=true}d.fallen=false;d.fallT=0;d.open=false;d.openT=0;d.openTarget=0;d.collectT=0;if(d.b&&d.b.anim)d.b.anim(0);if(d.itemMesh)d.itemMesh.visible=false}));
   BELL.held=false;BELL.onTable=true;BELL.l=BELL0.l;BELL.x=BELL0.x;BELL.y=BELL0.y;
   WK.forEach(w=>{w.broken=false;w.warned=false;w.crack.visible=true;w.hole.visible=false;w.debris.forEach(m=>LG[w.l].remove(m));w.debris=[]});camDrop=0;fall=null;
