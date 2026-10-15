@@ -280,11 +280,20 @@ def("howl",4,(c,o,t)=>{
 });
 
 /* ----- house ambience events ----- */
-def("creak",1.6,(c,o,t)=>{
-  const f0=rr(80,120),s=osc(c,"sawtooth",f0,t,1.5);s.frequency.linearRampToValueAtTime(f0*.6,t+1.3);
-  const bp=filt(c,"bandpass",400,7);bp.frequency.linearRampToValueAtTime(950,t+.7);bp.frequency.linearRampToValueAtTime(380,t+1.3);
-  const fl=osc(c,"square",rr(22,34),t,1.5),fa=gn(c,.4),g=gn(c,.5);chain(fl,fa,g.gain);
-  chain(s,bp,g,env(c,t,.15,1.2,1),o);
+def("creak",1.8,(c,o,t)=>{
+  // wood creak = stick-slip friction: a rapid, uneven train of tiny resonant pops that speeds up and slows down
+  const base=rr(430,620),len=rr(1.0,1.5);let x=0,i=0;
+  const out=gn(c,1);out.connect(o);
+  const body=filt(c,"bandpass",260,2.5);body.connect(out);
+  while(x<len){
+    const k=x/len,rate=10+34*Math.sin(Math.PI*k)*(.75+.25*Math.random()),gap=1/rate*rr(.6,1.5);
+    const f=base*(1+.55*Math.sin(Math.PI*k*.9))*rr(.93,1.07),tt=t+.02+x,v=(.25+.75*Math.sin(Math.PI*k))*rr(.4,1);
+    for(const [m,q,vol,d] of [[1,1,1,.022],[2.07,.6,.5,.014],[3.4,.35,.25,.01]]){
+      const s=osc(c,"sine",f*m,tt,d+.01);s.frequency.exponentialRampToValueAtTime(f*m*.86,tt+d);chain(s,env(c,tt,.0008,d,.55*vol*v*q),out)}
+    const n=nsrc(c,"white",tt,.012);chain(n,filt(c,"bandpass",f*1.6,3),env(c,tt,.0005,.01,.25*v),out);
+    if(i%5===0){const s=osc(c,"sine",rr(150,210),tt,.06);chain(s,env(c,tt,.001,.05,.25*v),body)}
+    x+=gap;i++;
+  }
 });
 def("drip",1,(c,o,t)=>{for(const [d,v] of [[0,.5],[.16,.2],[.3,.08]]){const s=osc(c,"sine",1500,t+d,.2);s.frequency.exponentialRampToValueAtTime(700,t+d+.08);chain(s,env(c,t+d,.002,.12,v),o)}});
 def("knock",1.4,(c,o,t)=>{for(const d of [0,.32,.58]){thump(c,o,t+d,130,70,.18,.9);const n=nsrc(c,"white",t+d,.08);chain(n,filt(c,"lowpass",600),env(c,t+d,.002,.06,.5),o)}});
