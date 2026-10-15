@@ -94,7 +94,8 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 #tmain{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;transition:opacity .5s}
 #title.choosing #tmain{opacity:0;pointer-events:none}
 #title>#choose{position:absolute!important;left:0;right:0;bottom:0;box-sizing:border-box;padding:0 max(16px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:7px;opacity:0;pointer-events:none;transition:opacity .6s}
-#title.choosing>#choose{opacity:1;pointer-events:auto;transition-delay:.7s}
+#title.choosing>#choose{opacity:1;transition-delay:.7s}
+#title.choosing.ready>#choose{pointer-events:auto}
 #choose h2{margin:0;font:400 16px var(--display);letter-spacing:.14em;color:var(--ink);text-shadow:0 0 10px #000}
 .modes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%;max-width:440px}
 .modes button{font:400 14px var(--display);letter-spacing:.02em;color:var(--ink);background:rgba(0,0,0,.7);border:1px solid var(--dim);padding:10px 2px;min-height:40px;cursor:pointer;touch-action:manipulation}
@@ -1193,16 +1194,17 @@ function tap(el,fn){
 }
 tap(dialog,()=>{if(state==="intro")nextDialog()});
 tap(actBtn,doAct);
-function toTitle(){titleEl.classList.remove("choosing");T3.target=0;T3.k=0;state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;if(T3.resize)T3.resize();dangerEl.style.opacity=0;view.style.transform="";hideOv.hidden=true;CL=1}
+function toTitle(){titleEl.classList.remove("choosing","ready");T3.target=0;T3.k=0;state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;if(T3.resize)T3.resize();dangerEl.style.opacity=0;view.style.transform="";hideOv.hidden=true;CL=1}
 const ROWS=["Days","Dracula speed","Sees you from","Gives up after","Stamina","Light","Wakes after"];
 const TBL={practice:["No limit","None","-","-","Long","Bright","-"],easy:["7","Slower than you","Close","2 sec","Long","Bright","6 sec"],normal:["5","Normal","Normal","3 sec","Normal","Normal","3 sec"],hard:["3","Faster","Far","5 sec","Short","Dark","1 sec"]};
 function renderChoose(){$("fx2").innerHTML=ROWS.map((r,i)=>"<div><b>"+r+"</b><span>"+TBL[diffKey][i]+"</span></div>").join("")}
 function setDiff(k){diffKey=k;document.querySelectorAll("#modes [data-d]").forEach(n=>n.classList.toggle("sel",n.dataset.d===k));renderChoose()}
 tap($("modes"),e=>{const n=e.target.closest&&e.target.closest("[data-d]");if(n)setDiff(n.dataset.d)});
 setDiff("normal");
-tap($("play"),()=>{if(state!=="menu")return;if(!AC)initAudio();titleEl.classList.add("choosing");T3.target=1});
-tap($("back"),()=>{titleEl.classList.remove("choosing");T3.target=0});
-tap($("begin"),()=>{if(state!=="menu")return;titleEl.classList.remove("choosing");T3.target=0;newGame();startIntro()});
+let chooseAt=0,readyTimer=0;
+tap($("play"),()=>{if(state!=="menu"||titleEl.classList.contains("choosing"))return;if(!AC)initAudio();titleEl.classList.add("choosing");T3.target=1;chooseAt=performance.now();clearTimeout(readyTimer);readyTimer=setTimeout(()=>{if(titleEl.classList.contains("choosing"))titleEl.classList.add("ready")},1300)});
+tap($("back"),()=>{if(!titleEl.classList.contains("ready"))return;clearTimeout(readyTimer);titleEl.classList.remove("choosing","ready");T3.target=0});
+tap($("begin"),()=>{if(state!=="menu"||!titleEl.classList.contains("ready")||performance.now()-chooseAt<1300)return;clearTimeout(readyTimer);titleEl.classList.remove("choosing","ready");T3.target=0;newGame();startIntro()});
 tap($("sbtn"),()=>{
   if(state==="over"||state==="win")toTitle();
   else if(state==="caught"){screenEl.hidden=true;dangerEl.style.opacity=0;resetPlayer();resetDracula(5);state="play"}
