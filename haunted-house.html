@@ -626,20 +626,16 @@ function itemMesh(id){
 
 /* ----- the key you hold in front of you ----- */
 function buildHeldKey(){
-  const g=new THREE.Group(),k=new THREE.Group();k.scale.setScalar(.075);g.add(k);
+  const g=new THREE.Group(),k=new THREE.Group();k.scale.setScalar(.085);g.add(k);
   const hs=new THREE.Shape();hs.moveTo(0,-.5);hs.lineTo(.7,-.5);hs.lineTo(1.0,0);hs.lineTo(.7,.5);hs.lineTo(0,.5);hs.closePath();
   const hole=new THREE.Path();hole.moveTo(.22,-.2);hole.lineTo(.22,.2);hole.lineTo(.6,.2);hole.lineTo(.6,-.2);hole.closePath();hs.holes.push(hole);
   const hm=new THREE.Mesh(new THREE.ExtrudeGeometry(hs,{depth:.24,bevelEnabled:true,bevelSize:.025,bevelThickness:.025,bevelSegments:2}),MT("wood",0xcfcfcf,{shininess:30}));hm.position.z=-.12;k.add(hm);
   const bp=[[0,.22],[-1.55,.22],[-1.75,.04],[-1.65,-.1],[-1.4,-.1],[-1.3,-.32],[-1.15,-.1],[-1.0,-.3],[-.85,-.12],[-.6,-.12],[-.45,-.3],[-.3,-.1],[0,-.1]];
   const bs=new THREE.Shape();bs.moveTo(bp[0][0],bp[0][1]);for(let i=1;i<bp.length;i++)bs.lineTo(bp[i][0],bp[i][1]);bs.closePath();
   const bm=new THREE.Mesh(new THREE.ExtrudeGeometry(bs,{depth:.1,bevelEnabled:true,bevelSize:.02,bevelThickness:.02,bevelSegments:1}),mat(0xd6d6d6,{shininess:140,specular:0xffffff}));bm.position.z=-.05;k.add(bm);
-  const skin=mat(0xcfcfcf,{shininess:20}),hand=new THREE.Group();g.add(hand);
-  const palm=new THREE.Mesh(new THREE.SphereGeometry(.05,14,10),skin);palm.scale.set(1.1,.8,.9);palm.position.set(.03,-.075,-.005);hand.add(palm);
-  for(let i=0;i<3;i++){const f=new THREE.Mesh(new THREE.CylinderGeometry(.011,.011,.05,8),skin);f.position.set(.005+i*.027,-.035,.035);f.rotation.z=.15;hand.add(f)}
-  const th=new THREE.Mesh(new THREE.CylinderGeometry(.012,.014,.05,8),skin);th.position.set(.075,-.045,.02);th.rotation.z=-.7;hand.add(th);
-  const arm=new THREE.Mesh(new THREE.CylinderGeometry(.04,.05,.5,12),mat(0x3a3a3a,{shininess:8}));arm.position.set(.12,-.32,.02);arm.rotation.z=.45;hand.add(arm);
-  g.position.set(.07,-.1,-.4);g.rotation.set(.1,-.3,.3);g.visible=false;
-  return {g,base:g.position.clone()};
+  k.rotation.y=-Math.PI/2+.28;
+  g.position.set(.05,-.08,-.3);g.rotation.set(.3,0,-.5);g.visible=false;
+  return {g,base:g.position.clone(),roll:-.5};
 }
 /* ----- stairs: a real flight of steps between two walls ----- */
 function stairsRun(run){
@@ -838,9 +834,9 @@ function render(){
   {const hk=R3.held,holding=KEYS.some(q=>q.got&&!q.used)&&(state==="play"||state==="intro")&&!P.hid&&!(wake.on&&wake.t<2.5);
     hk.g.visible=holding;
     if(holding){
-      const sw=Math.sin(P.bob)*.006,sx=Math.cos(P.bob*.5)*.004;let z=hk.base.z,rx=.1;
-      if(keyAnim>0){keyAnim-=dt;const q=1-Math.max(0,keyAnim)/.9;z-=.22*Math.sin(Math.min(1,q)*Math.PI);rx=.1+q*Math.PI*1.1}
-      hk.g.position.set(hk.base.x+sx,hk.base.y+sw,z);hk.g.rotation.x=rx;
+      const sw=Math.sin(P.bob)*.006,sx=Math.cos(P.bob*.5)*.004;let z=hk.base.z,tw=0;
+      if(keyAnim>0){keyAnim-=dt;const q=1-Math.max(0,keyAnim)/.9;z-=.2*Math.sin(Math.min(1,q)*Math.PI);tw=q*Math.PI*2}
+      hk.g.position.set(hk.base.x+sx,hk.base.y+sw,z);hk.g.rotation.set(.3+Math.sin(time*1.3)*.015,0,hk.roll+Math.sin(time*.9)*.04+tw);
     }}
   animWorld(dt);
   for(const it of COLLECT){if(!it.mesh)continue;it.mesh.visible=!it.got&&it.l===CL;it.gl.visible=it.mesh.visible;if(it.mesh.visible){const by=.3+Math.sin(time*2+it.x)*.04;it.mesh.position.y=by;it.gl.position.y=by}}
