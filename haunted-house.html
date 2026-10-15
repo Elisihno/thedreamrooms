@@ -54,6 +54,22 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 .screen button{pointer-events:auto;font:400 20px var(--display);letter-spacing:.14em;color:#000;background:var(--ink);border:0;padding:14px 28px;cursor:pointer}
 .screen button:focus-visible,#run:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .how{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--dim)}
+#title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:10px;box-sizing:border-box;padding:max(18px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(18px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(#000 0,rgba(0,0,0,.6) 18%,rgba(0,0,0,0) 38%,rgba(0,0,0,0) 50%,rgba(0,0,0,.88) 70%,#000 100%);overflow:hidden}
+#title[hidden]{display:none}
+#moon{position:absolute;top:-8%;right:-25%;width:95%;height:62%;background:radial-gradient(ellipse at 62% 28%,rgba(255,255,255,.5),transparent 60%);pointer-events:none}
+#title h1{position:relative;margin:0;text-align:center;font:400 clamp(30px,9vw,52px)/1 var(--display);letter-spacing:.04em;text-wrap:balance}
+#title .tag{position:relative;margin:0;text-align:center;font-size:14px;color:#cfcfcf;max-width:34ch}
+#figure{position:relative;flex:1;min-height:90px;width:100%;pointer-events:none}
+#figure canvas{position:absolute;left:50%;bottom:0;height:100%;width:auto;transform:translateX(-50%)}
+.diffs{position:relative;display:flex;gap:8px;width:100%;max-width:420px}
+.diffs button{flex:1;font:400 16px var(--display);letter-spacing:.1em;color:var(--ink);background:rgba(0,0,0,.6);border:1px solid var(--dim);padding:10px 4px;cursor:pointer;touch-action:manipulation}
+.diffs button.on{background:var(--ink);color:#000;border-color:var(--ink)}
+#fx{position:relative;width:100%;max-width:420px;box-sizing:border-box;border:1px solid var(--line);background:var(--panel);padding:8px 12px;font-size:13px;line-height:1.5}
+#fx b{display:block;font:400 14px var(--display);letter-spacing:.12em;color:var(--dim);margin-bottom:2px}
+#fx ul{margin:0;padding-left:16px}
+#play{position:relative;width:100%;max-width:420px;font:400 22px var(--display);letter-spacing:.18em;color:#000;background:var(--ink);border:0;padding:14px;cursor:pointer;touch-action:manipulation}
+#play:focus-visible,.diffs button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.screen button{touch-action:manipulation}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 
@@ -75,7 +91,21 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 
   <div id="dialog" hidden><b>GRANNY</b><p id="dtext"></p><small>tap to continue</small></div>
 
-  <div class="screen" id="screen">
+  <div id="title">
+    <div id="moon"></div>
+    <h1>Granny's<br>Haunted House</h1>
+    <p class="tag">Fetch Granny's five lost things before Dracula finds you.</p>
+    <div id="figure"><canvas id="fig" width="400" height="720"></canvas></div>
+    <div class="diffs" id="diffs">
+      <button type="button" data-d="easy">Easy</button>
+      <button type="button" data-d="normal" class="on">Normal</button>
+      <button type="button" data-d="hard">Hard</button>
+    </div>
+    <div id="fx"></div>
+    <button type="button" id="play">PLAY</button>
+  </div>
+
+  <div class="screen" id="screen" hidden>
     <h1 id="stitle">Granny's<br>Haunted House</h1>
     <div class="rule"></div>
     <p id="stext">Granny has lost five things in a house that belongs to Count Dracula. Find them in the dark and bring them home.</p>
@@ -199,7 +229,7 @@ const $=id=>document.getElementById(id);
 const stage=$("stage"),view=$("view"),vctx=view.getContext("2d");
 const hud=$("hud"),toastEl=$("toast"),listEl=$("list"),livesEl=$("lives"),stamEl=$("stam").firstElementChild;
 const mini=$("mini"),mctx=mini.getContext("2d");
-const screenEl=$("screen"),dialog=$("dialog"),dtext=$("dtext"),runBtn=$("run"),joyEl=$("joy"),joyKnob=joyEl.firstElementChild,hint=$("hint"),dangerEl=$("danger");
+const titleEl=$("title"),screenEl=$("screen"),dialog=$("dialog"),dtext=$("dtext"),runBtn=$("run"),joyEl=$("joy"),joyKnob=joyEl.firstElementChild,hint=$("hint"),dangerEl=$("danger");
 
 /* grain */
 (()=>{const c=document.createElement("canvas");c.width=c.height=96;const g=c.getContext("2d"),im=g.createImageData(96,96);for(let i=0;i<96*96;i++){const v=Math.random()*255;im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v;im.data[i*4+3]=255}g.putImageData(im,0,0);$("grain").style.backgroundImage="url("+c.toDataURL()+")"})();
@@ -208,12 +238,18 @@ const screenEl=$("screen"),dialog=$("dialog"),dtext=$("dtext"),runBtn=$("run"),j
 let state="menu"; // menu | intro | play | caught | win | over
 const P={x:START.x,y:START.y,a:START.a,stam:100,tired:false,regenT:0,bob:0};
 const D={x:DRAC_START.x,y:DRAC_START.y,mode:"patrol",path:[],repath:0,lose:0,last:null,wait:0,stun:0,bob:0,heard:false};
+const DIFF={
+ easy:{name:"Easy",lives:5,speed:.8,see:.7,lose:1.8,stam:.7,light:1.3,stun:6,fx:["5 lives","Dracula moves 20% slower","Dracula spots you from much closer","He gives up the chase after 2 seconds","Sprinting tires you out slower","The house is brighter","Dracula sleeps 6 seconds at the start"]},
+ normal:{name:"Normal",lives:3,speed:1,see:1,lose:3,stam:1,light:1,stun:3,fx:["3 lives","Dracula at normal speed","Normal sight distance","He gives up the chase after 3 seconds","Normal stamina","Normal darkness","Dracula sleeps 3 seconds at the start"]},
+ hard:{name:"Hard",lives:2,speed:1.22,see:1.3,lose:5.5,stam:1.45,light:.78,stun:1,fx:["2 lives","Dracula moves 22% faster","Dracula spots you from far away","He chases for 5 seconds after losing sight","Sprinting tires you out much faster","The house is much darker","Dracula is awake almost right away"]}
+};
+let cfg=DIFF.normal,maxLives=3,diffKey="normal";
 let lives=3,carried=0,time=0,flash=0,flashT=6,beatT=0,toastT=0,grannyCool=0,runHeld=false;
 const keys={};
 const joy={id:null,sx:0,sy:0,x:0,y:0};
 const look={id:null,x:0};
 
-function setLives(){livesEl.textContent="♥".repeat(lives)+"♡".repeat(3-lives)}
+function setLives(){livesEl.textContent="♥".repeat(lives)+"♡".repeat(Math.max(0,maxLives-lives))}
 function setList(){listEl.innerHTML=ITEMS.map(i=>"<li class='"+(i.got?"got":"")+"'>"+(i.got?"☑ ":"☐ ")+i.name+"</li>").join("")}
 function toast(msg,ms){toastEl.textContent=msg;toastEl.classList.add("on");toastT=(ms||3000)/1000}
 
@@ -243,7 +279,7 @@ function render(){
   const f=W/(2*PLANE);
   const dx=Math.cos(P.a),dy=Math.sin(P.a),rx=-dy,ry=dx;
   const half=Math.round(H/2+Math.sin(P.bob)*H*.008);
-  const gain=Math.min(1.8,1+flash*1.4);
+  const gain=Math.min(1.9,(1+flash*1.4)*(state==='menu'?1.15:cfg.light));
   const rlx=dx-rx*PLANE,rly=dy-ry*PLANE;
   const sx=2*rx*PLANE/W,sy=2*ry*PLANE/W;
 
@@ -302,9 +338,11 @@ function render(){
   }
   // sprites
   const list=[];
+  if(state!=='menu'){
   list.push({x:GRANNY.x,y:GRANNY.y,s:SPR.granny,h:.85,z:0,glow:.35});
   for(const it of ITEMS)if(!it.got)list.push({x:it.x,y:it.y,s:SPR[it.id],h:.32,z:.14+Math.sin(time*2+it.x)*.04,glow:.9});
   if(D.stun<=0||Math.floor(time*8)%2)list.push({x:D.x,y:D.y,s:SPR.drac,h:1.2,z:Math.sin(D.bob)*.02,glow:0,dracula:true});
+  }
   for(const s of list){const rx2=s.x-P.x,ry2=s.y-P.y;s.depth=rx2*dx+ry2*dy;s.lat=rx2*rx+ry2*ry}
   list.sort((a,b)=>b.depth-a.depth);
   for(const s of list){
@@ -387,7 +425,7 @@ function update(dt){
   const wantRun=(runHeld||keys.ShiftLeft||keys.ShiftRight)&&mag>.1;
   const running=wantRun&&!P.tired&&P.stam>0;
   const spd=running?3.7:2.2;
-  if(running){P.stam-=26*dt;P.regenT=1;if(P.stam<=0){P.stam=0;P.tired=true}}
+  if(running){P.stam-=26*cfg.stam*dt;P.regenT=1;if(P.stam<=0){P.stam=0;P.tired=true}}
   else{P.regenT-=dt;if(P.regenT<=0)P.stam=Math.min(100,P.stam+20*dt);if(P.tired&&P.stam>30)P.tired=false}
   stamEl.style.width=P.stam+"%";stamEl.style.opacity=P.tired?.4:1;
   const dx=Math.cos(P.a),dy=Math.sin(P.a);
@@ -432,30 +470,30 @@ function updateDracula(dt,running,mag){
   if(D.stun>0){D.stun-=dt;return}
   const dx=P.x-D.x,dy=P.y-D.y,dist=Math.hypot(dx,dy);
   const los=dist<14&&lineClear(D.x,D.y,P.x,P.y);
-  const range=running?12:(mag<.5?5:8);
+  const range=(running?12:(mag<.5?5:8))*cfg.see;
   if(los&&dist<range){
     if(D.mode!=="chase"){D.mode="chase";D.repath=0;sfx.growl();buzz(120);toast("He has seen you. RUN!",1800)}
     D.last=[Math.floor(P.x),Math.floor(P.y)];D.lose=0;
   }else if(D.mode==="chase"){
-    D.lose+=dt;if(D.lose>3){D.mode="search";D.path=[];D.repath=0;D.wait=0}
+    D.lose+=dt;if(D.lose>cfg.lose){D.mode="search";D.path=[];D.repath=0;D.wait=0}
   }
   D.repath-=dt;
   const base=carried;
-  let speed=1.2+base*.12;
+  let speed=(1.2+base*.12)*cfg.speed;
   if(D.mode==="chase"){
-    speed=2.3+base*.16;
+    speed=(2.3+base*.16)*cfg.speed;
     if(los&&dist<1.6){const s=speed*dt;D.x+=dx/dist*s;D.y+=dy/dist*s;D.path=[]}
     else{
       if(D.repath<=0){D.path=bfs(Math.floor(D.x),Math.floor(D.y),Math.floor(P.x),Math.floor(P.y));D.repath=.35}
       follow(dt,speed);
     }
   }else if(D.mode==="search"){
-    speed=1.7+base*.1;
+    speed=(1.7+base*.1)*cfg.speed;
     if(D.repath<=0&&D.last){D.path=bfs(Math.floor(D.x),Math.floor(D.y),D.last[0],D.last[1]);D.repath=.6}
     const done=follow(dt,speed);
     if(done){D.wait+=dt;if(D.wait>2.5){D.mode="patrol";D.path=[];D.wait=0}}
   }else{
-    speed=1.2+base*.12;
+    speed=(1.2+base*.12)*cfg.speed;
     if(!D.path.length){const c=randomCell();D.path=bfs(Math.floor(D.x),Math.floor(D.y),c[0],c[1])}
     follow(dt,speed);
   }
@@ -479,17 +517,18 @@ function caught(){
   if(state!=="play")return;
   lives--;setLives();sfx.caught();buzz([200,80,200]);
   state="caught";dangerEl.style.opacity=1;joy.id=null;joyEl.style.display="none";runHeld=false;
-  if(lives>0)showScreen("He caught<br>you","Dracula drags you through the dark and drops you at Granny's door. You keep what you found. "+lives+(lives===1?" life":" lives")+" left.","Try again",false);
-  else{state="over";showScreen("Dracula<br>wins","The house goes quiet. Granny is still waiting for her things.","Start over",false)}
+  if(lives>0)showScreen("He caught<br>you","Dracula drags you through the dark and drops you at Granny's door. You keep what you found. "+lives+(lives===1?" life":" lives")+" left.","Keep going",false);
+  else{state="over";showScreen("Dracula<br>wins","The house goes quiet. Granny is still waiting for her things.","Back to title",false)}
 }
 function win(){
   state="win";sfx.win();joy.id=null;joyEl.style.display="none";runHeld=false;
   const m=Math.floor(time/60),s=Math.floor(time%60);
-  showScreen("Granny is<br>very pleased","\"Bless you, dearie. Now we can have tea.\" Dracula slinks off to his coffin. You finished in "+m+":"+String(s).padStart(2,"0")+" with "+lives+(lives===1?" life":" lives")+" to spare.","Play again",false);
+  showScreen("Granny is<br>very pleased","\"Bless you, dearie. Now we can have tea.\" Dracula slinks off to his coffin. You finished in "+m+":"+String(s).padStart(2,"0")+" with "+lives+(lives===1?" life":" lives")+" to spare.","Back to title",false);
 }
 function newGame(){
-  ITEMS.forEach(i=>i.got=false);carried=0;lives=3;time=0;flashT=6;P.bob=0;
-  resetPlayer();resetDracula(0);setList();setLives();hint.style.opacity=1;toastEl.classList.remove("on");
+  cfg=DIFF[diffKey];maxLives=cfg.lives;
+  ITEMS.forEach(i=>i.got=false);carried=0;lives=maxLives;time=0;flashT=6;P.bob=0;
+  resetPlayer();resetDracula(cfg.stun);setList();setLives();hint.style.opacity=1;toastEl.classList.remove("on");
 }
 const INTRO=[
  "Oh, there you are, dearie. Come in, come in. Mind the creaky floor.",
@@ -498,16 +537,29 @@ const INTRO=[
  "And dearie? Don't let him catch you. Run if you must, but not for long."
 ];
 let di=0;
-function startIntro(){state="intro";di=0;screenEl.hidden=true;hud.hidden=true;dialog.hidden=false;dtext.textContent=INTRO[0]}
+function startIntro(){state="intro";di=0;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=true;dialog.hidden=false;dtext.textContent=INTRO[0]}
 function nextDialog(){
   di++;
-  if(di>=INTRO.length){dialog.hidden=true;hud.hidden=false;state="play";resetDracula(3);return}
+  if(di>=INTRO.length){dialog.hidden=true;hud.hidden=false;state="play";return}
   dtext.textContent=INTRO[di];
 }
-dialog.addEventListener("click",()=>{if(state==="intro")nextDialog()});
-$("sbtn").addEventListener("click",()=>{
-  if(!AC)initAudio();
-  if(state==="menu"||state==="over"||state==="win"){newGame();startIntro()}
+function tap(el,fn){
+  let t0=0;
+  const h=e=>{const n=performance.now();if(n-t0<400)return;t0=n;fn(e)};
+  el.addEventListener("pointerup",h);el.addEventListener("click",h);
+}
+tap(dialog,()=>{if(state==="intro")nextDialog()});
+function toTitle(){state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;dangerEl.style.opacity=0;view.style.transform=""}
+function setDiff(k){
+  diffKey=k;
+  document.querySelectorAll("#diffs button").forEach(b=>b.classList.toggle("on",b.dataset.d===k));
+  const d=DIFF[k];$("fx").innerHTML="<b>"+d.name.toUpperCase()+" MODE</b><ul>"+d.fx.map(s=>"<li>"+s+"</li>").join("")+"</ul>";
+}
+document.querySelectorAll("#diffs button").forEach(b=>tap(b,()=>setDiff(b.dataset.d)));
+setDiff("normal");
+tap($("play"),()=>{if(state!=="menu")return;if(!AC)initAudio();newGame();startIntro()});
+tap($("sbtn"),()=>{
+  if(state==="over"||state==="win")toTitle();
   else if(state==="caught"){screenEl.hidden=true;dangerEl.style.opacity=0;resetPlayer();resetDracula(5);state="play"}
 });
 
@@ -551,6 +603,44 @@ window.addEventListener("mousemove",e=>{if(mdrag&&state==="play"){P.a+=(e.client
 document.addEventListener("contextmenu",e=>e.preventDefault());
 window.addEventListener("resize",resize);
 
+/* ---------- title figure: Dracula in the room, chin raised, looking up and to the right ---------- */
+function drawFigure(){
+  const c=$("fig"),g=c.getContext("2d");g.setTransform(2,0,0,2,0,0);g.clearRect(0,0,200,360);
+  const P2=(col,pts)=>{g.fillStyle=col;g.beginPath();g.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)g.lineTo(pts[i],pts[i+1]);g.closePath();g.fill()};
+  // cape
+  P2("#050505",[72,92,128,92,150,150,196,352,4,352,50,150]);
+  const lg=g.createLinearGradient(0,110,0,352);lg.addColorStop(0,"#6b6b6b");lg.addColorStop(1,"#1c1c1c");
+  P2(lg,[84,100,116,100,160,352,40,352]);
+  // standing collar
+  P2("#050505",[56,30,82,96,58,110]);P2("#050505",[152,24,120,96,150,112]);
+  // suit and shirt
+  P2("#141414",[80,96,120,96,126,352,74,352]);
+  P2("#ececec",[100,98,88,170,112,170]);
+  P2("#7a7a7a",[100,104,95,122,105,122]);
+  g.fillStyle="#d8d8d8";g.beginPath();g.arc(100,132,4,0,7);g.fill();
+  // hands
+  g.fillStyle="#cfcfcf";g.fillRect(64,238,12,22);g.fillRect(124,238,12,22);
+  g.strokeStyle="#cfcfcf";g.lineWidth=2;for(let i=0;i<4;i++){g.beginPath();g.moveTo(65+i*3,260);g.lineTo(64+i*3,272);g.moveTo(125+i*3,260);g.lineTo(126+i*3,272);g.stroke()}
+  // neck + head, rotated so the chin lifts toward the upper right
+  g.save();g.translate(102,92);g.rotate(-.3);g.translate(-102,-92);
+  g.fillStyle="#bcbcbc";g.fillRect(92,70,20,28);
+  g.fillStyle="#d9d9d9";g.beginPath();g.ellipse(106,52,25,33,0,0,7);g.fill();
+  // nose and chin point right
+  P2("#d9d9d9",[128,48,144,64,128,68]);
+  g.beginPath();g.ellipse(120,82,13,9,0,0,7);g.fill();
+  // ear
+  g.fillStyle="#bcbcbc";g.beginPath();g.ellipse(84,56,5,9,0,0,7);g.fill();
+  // hair with widow's peak
+  P2("#050505",[78,40,86,14,110,6,130,16,132,36,124,30,114,38,104,24,92,36]);
+  // brow, glowing eye, mouth, fang
+  g.strokeStyle="#111";g.lineWidth=3;g.beginPath();g.moveTo(106,42);g.lineTo(130,36);g.stroke();
+  g.fillStyle="#222";g.fillRect(108,44,22,10);
+  g.shadowColor="#fff";g.shadowBlur=16;g.fillStyle="#fff";g.fillRect(114,46,12,5);g.shadowBlur=0;
+  g.strokeStyle="#333";g.lineWidth=2;g.beginPath();g.moveTo(110,80);g.lineTo(132,76);g.stroke();
+  P2("#fff",[121,78,125,77,123,86]);
+  g.restore();
+}
+
 /* ---------- boot ---------- */
 let last=0;
 function frame(t){
@@ -558,11 +648,11 @@ function frame(t){
   const dt=Math.min(.05,(t-last)/1000||0);last=t;
   if(!wallTex)return;
   if(state==="play")update(dt);
-  else if(state==="menu"||state==="over"||state==="win"){time+=dt;P.a=START.a+Math.sin(time*.25)*.6;P.bob+=dt;flash=Math.max(0,flash-dt*3)}
+  else if(state==="menu"){time+=dt;P.x=1.45;P.y=2.5;P.a=Math.sin(time*.3)*.18;P.bob=time*.7;flash=Math.max(0,flash-dt*3);flashT-=dt;if(flashT<=0){flash=1;flashT=7+Math.random()*8}}
   render();
   if(state==="play")drawMini();
 }
-resize();setList();setLives();
+resize();setList();setLives();drawFigure();
 Promise.all([loadTex(WALL_SRC),loadTex(FLOOR_SRC)]).then(r=>{wallTex=r[0];floorTex=r[1]});
 requestAnimationFrame(frame);
 })();
