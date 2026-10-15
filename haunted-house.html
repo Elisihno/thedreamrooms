@@ -86,6 +86,8 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 #more{position:relative;color:#c4c4c4;font-size:14px;text-align:center;padding-bottom:2px}
 #act{pointer-events:auto;position:absolute;right:calc(max(14px,env(safe-area-inset-right,0px)) + 92px);bottom:max(24px,env(safe-area-inset-bottom,0px));min-width:78px;height:78px;padding:0 10px;border-radius:39px;border:2px solid var(--ink);background:rgba(0,0,0,.55);color:var(--ink);font:400 14px var(--display);letter-spacing:.08em;touch-action:manipulation}
 #act[hidden]{display:none}
+#dropbtn{pointer-events:auto;position:absolute;left:max(14px,env(safe-area-inset-left,0px));bottom:max(24px,env(safe-area-inset-bottom,0px));height:44px;padding:0 14px;border:2px solid var(--ink);background:rgba(0,0,0,.6);color:var(--ink);font:400 14px var(--display);letter-spacing:.1em;touch-action:manipulation}
+#dropbtn[hidden]{display:none}
 #lvlname{font-size:11px;letter-spacing:.14em;color:var(--dim);text-shadow:0 0 6px #000}
 #hideov{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 68% 10% at 50% 46%,rgba(0,0,0,0) 0%,rgba(0,0,0,.5) 55%,#000 100%)}
 #hideov[hidden]{display:none}
@@ -130,6 +132,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
     <div id="joy"><i></i></div>
     <div id="stam"><i></i></div>
     <button id="act" type="button" hidden>HIDE</button>
+    <button id="dropbtn" type="button" hidden>DROP [Click]</button>
     <button id="run" type="button">RUN</button>
     <div id="hint">Left thumb walks. Right thumb looks.</div>
   </div>
@@ -204,7 +207,8 @@ for(const d of LD.dec){
 for(const s of LD.stairs)LV[s[0]].stairs.push({x:s[1],y:s[2],dir:s[3]>s[0]?"d":"u",to:s[3]});
 LV.forEach(lv=>{lv.runs=[];for(const s of lv.stairs){let r=lv.runs.find(q=>q.y===s.y&&q.dir===s.dir);if(!r){r={y:s.y,x0:s.x,len:0,dir:s.dir,to:s.to};lv.runs.push(r)}r.x0=Math.min(r.x0,s.x);r.len++}});
 const ITEMS=LD.items.map(a=>({l:a[0],id:a[1],name:a[2],x:a[3]+.5,y:a[4]+.5,got:false}));
-const KEYS=(LD.keys||[]).map(a=>({l:a[0],id:"doorkey",kid:a[1],name:a[2],x:a[3]+.5,y:a[4]+.5,got:false,used:false,door:a[5],isKey:true}));
+const KEYS=(LD.keys||[]).map(a=>({l:a[0],id:"doorkey",kid:a[1],name:a[2],x:a[3]+.5,y:a[4]+.5,got:false,held:false,used:false,noPick:false,ol:a[0],ox:a[3]+.5,oy:a[4]+.5,door:a[5],isKey:true}));
+const heldKey=()=>KEYS.find(k=>k.held);
 const COLLECT=ITEMS.concat(KEYS);
 const BELL0={l:1,x:8.5,y:3.5};
 const BELL={held:false,onTable:true,l:1,x:8.5,y:3.5,cool:0};
@@ -251,7 +255,7 @@ const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
 const $=id=>document.getElementById(id);
 const stage=$("stage"),view=$("view");
 const hud=$("hud"),toastEl=$("toast"),listEl=$("list"),livesEl=$("lives"),stamEl=$("stam").firstElementChild;
-const titleEl=$("title"),screenEl=$("screen"),dialog=$("dialog"),dtext=$("dtext"),runBtn=$("run"),actBtn=$("act"),joyEl=$("joy"),joyKnob=joyEl.firstElementChild,hint=$("hint"),dangerEl=$("danger"),hideOv=$("hideov"),fadeEl=$("fade"),daytxtEl=$("daytxt"),lvlEl=$("lvlname");
+const dropBtn=$("dropbtn"),titleEl=$("title"),screenEl=$("screen"),dialog=$("dialog"),dtext=$("dtext"),runBtn=$("run"),actBtn=$("act"),joyEl=$("joy"),joyKnob=joyEl.firstElementChild,hint=$("hint"),dangerEl=$("danger"),hideOv=$("hideov"),fadeEl=$("fade"),daytxtEl=$("daytxt"),lvlEl=$("lvlname");
 
 (()=>{const c=document.createElement("canvas");c.width=c.height=96;const g=c.getContext("2d"),im=g.createImageData(96,96);for(let i=0;i<96*96;i++){const v=Math.random()*255;im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v;im.data[i*4+3]=255}g.putImageData(im,0,0);$("grain").style.backgroundImage="url("+c.toDataURL()+")"})();
 
@@ -273,7 +277,7 @@ const look={id:null,x:0};
 
 const dayNo=()=>maxLives-lives+1;
 function setLives(){livesEl.textContent=cfg.noDrac?"PRACTICE":"DAY "+dayNo()+" OF "+maxLives}
-function setList(){listEl.innerHTML=ITEMS.map(i=>"<li class='"+(i.got?"got":"")+"'>"+(i.got?"☑ ":"☐ ")+i.name+"</li>").join("")+"<li>Keys "+KEYS.map(k=>k.used?"☑":k.got?"<img alt='key' style='width:22px;height:22px;vertical-align:-6px;image-rendering:pixelated' src='"+iconURL("doorkey")+"'>":"☐").join(" ")+"</li>"}
+function setList(){listEl.innerHTML=ITEMS.map(i=>"<li class='"+(i.got?"got":"")+"'>"+(i.got?"☑ ":"☐ ")+i.name+"</li>").join("")+"<li>Keys "+KEYS.map(k=>k.used?"☑":k.held?"<img alt='key' style='width:22px;height:22px;vertical-align:-6px;image-rendering:pixelated' src='"+iconURL("doorkey")+"'>":"☐").join(" ")+"</li>"}
 function toast(msg,ms){toastEl.textContent=msg;toastEl.classList.add("on");toastT=(ms||3000)/1000}
 
 /* ---------- the 3D world ---------- */
@@ -832,7 +836,7 @@ function render(){
   R3.spot.intensity=1.4*lt;R3.near.intensity=.55*lt;R3.amb.intensity=.2*Math.min(1.3,lt)+flash*1.1;
   R3.scene.fog.density=state==="menu"?.17:(.17/Math.max(.7,lt*.95));
   for(const d of LV[CL].dec)if(d.b.hideHide)d.obj.visible=!(P.hid===d);
-  {const hk=R3.held,holding=KEYS.some(q=>q.got&&!q.used)&&(state==="play"||state==="intro")&&!P.hid&&!(wake.on&&wake.t<2.5);
+  {const hk=R3.held,holding=!!heldKey()&&(state==="play"||state==="intro")&&!P.hid&&!(wake.on&&wake.t<2.5);
     hk.g.visible=holding;
     if(holding){
       const sw=Math.sin(P.bob)*.006,sx=Math.cos(P.bob*.5)*.004;let z=hk.base.z,tw=0;
@@ -840,7 +844,7 @@ function render(){
       hk.g.position.set(hk.base.x+sx,hk.base.y+sw,z);hk.g.rotation.set(.3+Math.sin(time*1.3)*.015,0,hk.roll+Math.sin(time*.9)*.04+tw);
     }}
   animWorld(dt);
-  for(const it of COLLECT){if(!it.mesh)continue;it.mesh.visible=!it.got&&it.l===CL;it.gl.visible=it.mesh.visible;if(it.mesh.visible){const by=.3+Math.sin(time*2+it.x)*.04;it.mesh.position.y=by;it.gl.position.y=by}}
+  for(const it of COLLECT){if(!it.mesh)continue;it.mesh.visible=!it.got&&it.l===CL;it.gl.visible=it.mesh.visible;if(it.mesh.visible){const by=.3+Math.sin(time*2+it.x)*.04;it.mesh.position.set(it.x,by,it.y);it.gl.position.set(it.x,by,it.y)}}
   {let best=null,bd=7;for(const rn of LV[CL].runs){const d=Math.hypot(rn.x0+rn.len/2-P.x,rn.y+.5-P.y);if(d<bd){bd=d;best=rn}}if(best){R3.sl.position.set(best.x0+best.len/2,best.dir==="d"?.9:1.1,best.y+.5);R3.sl.intensity=.9}else R3.sl.intensity=0}
   R3.bell.visible=!BELL.held&&!BELL.onTable&&BELL.l===CL;if(R3.bell.visible)R3.bell.position.set(BELL.x,0,BELL.y);
   const dv=D.lvl===CL&&(D.stun<=0||Math.floor(time*8)%2===0);
@@ -929,9 +933,9 @@ function doAct(){
   else if(a.kind==="door"){
     const d=a.d,bi=d.cell[1]*MW+d.cell[0];
     if(!d.unlocked){
-      const k=KEYS.find(q=>q.got&&!q.used&&q.door===CL);
-      if(k){k.used=true;d.unlocked=true;d.b.lock.visible=false;d.open=true;d.openTarget=1;LV[CL].blocked[bi]=0;sfx.open();setList();keyAnim=.9;toast("The "+k.name+" turns. The door is unlocked.",2800)}
-      else if(KEYS.some(q=>q.got&&!q.used))toast("None of your keys fit this lock.",2400);
+      const k=heldKey()&&heldKey().door===CL?heldKey():null;
+      if(k){k.used=true;k.held=false;dropBtn.hidden=true;d.unlocked=true;d.b.lock.visible=false;d.open=true;d.openTarget=1;LV[CL].blocked[bi]=0;sfx.open();setList();keyAnim=.9;toast("The "+k.name+" turns. The door is unlocked.",2800)}
+      else if(heldKey())toast("This key doesn't fit this lock.",2400);
       else toast("The door is locked. Find its key.",2600);
     }else if(d.open){
       if(Math.hypot(P.x-d.cx,P.y-d.cy)<.8){toast("Something is in the way.",1200)}else{d.open=false;d.openTarget=0;LV[CL].blocked[bi]=1;sfx.open()}
@@ -984,9 +988,12 @@ function update(dt){
   // relics and keys lying around
   for(const it of COLLECT){
     if(it.got||it.l!==CL)continue;
-    if(Math.hypot(it.x-P.x,it.y-P.y)<.75){
+    const dk=Math.hypot(it.x-P.x,it.y-P.y);
+    if(it.isKey&&it.noPick){if(dk>1.2)it.noPick=false;continue}
+    if(dk<.75){
+      if(it.isKey&&heldKey()){if(!it.warnT||time-it.warnT>6){it.warnT=time;toast("You can only carry one key. Tap DROP to put yours down first.",3200)}continue}
       it.got=true;sfx.pick();buzz(40);
-      if(it.isKey){setList();toast("Found: "+it.name+" ("+KEYS.filter(k=>k.got).length+" of 3 keys)",3000)}
+      if(it.isKey){it.held=true;setList();toast("Picked up the "+it.name,2400)}
       else{carried++;setList();toast("Found: "+it.name+" ("+carried+" of 5)");
         if(carried===1)setTimeout(()=>{if(state==="play")toast("A cold wind. Something has woken up.",3200)},3400)}
     }
@@ -1010,6 +1017,7 @@ function update(dt){
       d.fallen=true;sfx.crash();buzz([80,40,120]);toast("The mannequin crashes to the floor!",2600);alertDracula(CL,d.cx,d.cy);
     }
   }
+  dropBtn.hidden=!heldKey();
   // action button
   actT=nearestAct();
   if(actT){actBtn.hidden=false;if(actBtn.dataset.l!==actT.label){actBtn.textContent=actT.label;actBtn.dataset.l=actT.label}}else actBtn.hidden=true;
@@ -1149,7 +1157,7 @@ function win(){
 function newGame(){
   cfg=DIFF[diffKey];maxLives=cfg.lives;
   ITEMS.forEach(i=>i.got=false);
-  KEYS.forEach(k=>{k.got=false;k.used=false});KEYS[0].got=true;
+  KEYS.forEach(k=>{k.got=false;k.held=false;k.used=false;k.noPick=false;k.l=k.ol;k.x=k.ox;k.y=k.oy;if(k.mesh){LG[k.l].add(k.mesh);LG[k.l].add(k.gl)}});KEYS[0].got=true;KEYS[0].held=true;
   LV.forEach(l=>l.dec.forEach(d=>{if(d.type==="lockdoor"){d.unlocked=false;l.blocked[d.cell[1]*MW+d.cell[0]]=1;if(d.b&&d.b.lock)d.b.lock.visible=true}d.fallen=false;d.fallT=0;d.open=false;d.openT=0;d.openTarget=0;d.collectT=0;if(d.b&&d.b.anim)d.b.anim(0);if(d.itemMesh)d.itemMesh.visible=false}));
   BELL.held=false;BELL.onTable=true;BELL.l=BELL0.l;BELL.x=BELL0.x;BELL.y=BELL0.y;
   WK.forEach(w=>{w.broken=false;w.warned=false;w.crack.visible=true;w.hole.visible=false;w.debris.forEach(m=>LG[w.l].remove(m));w.debris=[]});camDrop=0;fall=null;
@@ -1194,6 +1202,13 @@ function tap(el,fn){
 }
 tap(dialog,()=>{if(state==="intro")nextDialog()});
 tap(actBtn,doAct);
+function dropKey(){
+  if(state!=="play")return;const k=heldKey();if(!k)return;
+  k.held=false;k.got=false;k.noPick=true;k.l=CL;k.x=P.x;k.y=P.y;
+  if(k.mesh){LG[CL].add(k.mesh);LG[CL].add(k.gl)}
+  sfx.hide();setList();dropBtn.hidden=true;toast("You dropped the "+k.name+".",2000);
+}
+tap(dropBtn,dropKey);
 function toTitle(){titleEl.classList.remove("choosing","ready");T3.target=0;T3.k=0;state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;if(T3.resize)T3.resize();dangerEl.style.opacity=0;view.style.transform="";hideOv.hidden=true;CL=1}
 const ROWS=["Days","Dracula speed","Sees you from","Gives up after","Stamina","Light","Wakes after"];
 const TBL={practice:["No limit","None","-","-","Long","Bright","-"],easy:["7","Slower than you","Close","2 sec","Long","Bright","6 sec"],normal:["5","Normal","Normal","3 sec","Normal","Normal","3 sec"],hard:["3","Faster","Far","5 sec","Short","Dark","1 sec"]};
