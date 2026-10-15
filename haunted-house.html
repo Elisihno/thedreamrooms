@@ -1368,7 +1368,7 @@ function win(){
 function newGame(){
   cfg=DIFF[diffKey];maxLives=cfg.lives;
   ITEMS.forEach(i=>i.got=false);
-  KEYS.forEach(k=>{k.got=false;k.held=false;k.used=false;k.noPick=false;k.l=k.ol;k.x=k.ox;k.y=k.oy;if(k.mesh){LG[k.l].add(k.mesh);LG[k.l].add(k.gl)}});KEYS[0].got=true;KEYS[0].held=true;
+  KEYS.forEach(k=>{k.got=false;k.held=false;k.used=false;k.noPick=false;k.l=k.ol;k.x=k.ox;k.y=k.oy;if(k.mesh){LG[k.l].add(k.mesh);LG[k.l].add(k.gl)}});
   LV.forEach(l=>l.dec.forEach(d=>{if(d.type==="lockdoor"){d.unlocked=false;l.blocked[d.cell[1]*MW+d.cell[0]]=1;if(d.b&&d.b.lock)d.b.lock.visible=true}d.fallen=false;d.fallT=0;d.open=false;d.openT=0;d.openTarget=0;d.collectT=0;if(d.b&&d.b.anim)d.b.anim(0);if(d.itemMesh)d.itemMesh.visible=false}));
   BELL.held=false;BELL.onTable=true;BELL.l=BELL0.l;BELL.x=BELL0.x;BELL.y=BELL0.y;
   WK.forEach(w=>{w.broken=false;w.warned=false;w.crack.visible=true;w.hole.visible=false;w.debris.forEach(m=>LG[w.l].remove(m));w.debris=[]});camDrop=0;fall=null;
