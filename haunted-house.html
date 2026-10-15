@@ -638,7 +638,7 @@ function buildLevel(l){
     const contiguous=wallAt(fc.x+along[0],fc.y+along[1])&&wallAt(fc.x-along[0],fc.y-along[1]);
     const hash=(fc.x*73+fc.y*151+l*37)%23;
     const cx=fc.x+.5+nx*.5,cz=fc.y+.5+nz*.5;
-    if(!contiguous)continue;
+    if(!contiguous||fc.x>=27)continue;
     // keep clear of furniture
     let clear=true;for(let k=-1;k<=1;k++){if(dec.has((ax+along[0]*k)+","+(ay+along[1]*k)))clear=false}
     if(!clear)continue;
@@ -663,7 +663,7 @@ function buildLevel(l){
   for(const r of rugs){const m=new THREE.Mesh(new THREE.PlaneGeometry(r[2],r[3]),MT("rug",r[4]||0xb0b0b0,{bumpScale:.3}));m.rotation.x=-Math.PI/2;m.position.set(r[0],.006,r[1]);if(r[5])m.rotation.z=Math.PI/2;P2.add(m);const e=B(r[2]+.04,.006,r[3]+.04,r[0],.0,r[1],M.dark(),P2)}
   finalize(P2);g.add(P2);
   // stairs
-  for(const run of lv.runs)g.add(stairsRun(run));
+  for(const run of lv.runs){g.add(stairsRun(run));if(run.dir==="d"){const dk=B(.03,WH,.98,run.x0+run.len-.03,0,run.y+.5,mat(0x0a0a0a),g)}}
   // furniture
   for(const d of lv.dec){
     const b=BUILD[d.type]();finalize(b.g);d.b=b;d.openT=0;d.openTarget=0;d.open=false;
