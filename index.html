@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Dream Rooms – Slender Woods</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: "Courier New", monospace; color: #ddd; }
+  canvas#game { display: block; width: 100vw; height: 100vh; }
+  #static { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; image-rendering: pixelated; }
+  #vignette { position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,.85) 100%); }
+  #hud { position: fixed; left: 20px; top: 16px; font-size: 18px; letter-spacing: 2px; text-shadow: 0 0 6px #000; pointer-events: none; }
+  #stamina { margin-top: 8px; width: 140px; height: 5px; background: rgba(255,255,255,.15); }
+  #stamina > div { height: 100%; width: 100%; background: #bbb; }
+  #prompt { position: fixed; bottom: 14%; width: 100%; text-align: center; font-size: 18px; opacity: 0; transition: opacity .15s; text-shadow: 0 0 6px #000; pointer-events: none; }
+  #msg { position: fixed; top: 22%; width: 100%; text-align: center; font-size: 20px; opacity: 0; transition: opacity 1s; text-shadow: 0 0 8px #000; pointer-events: none; }
+  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.88); text-align: center; cursor: pointer; padding: 0 24px; }
+  .screen h1 { font-size: clamp(28px, 6vw, 64px); letter-spacing: 8px; margin: 0 0 10px; font-weight: normal; }
+  .screen p { max-width: 560px; line-height: 1.6; color: #aaa; margin: 6px 0; }
+  .screen .go { margin-top: 22px; color: #fff; animation: blink 1.4s infinite; }
+  .screen kbd { border: 1px solid #666; padding: 1px 6px; border-radius: 3px; color: #ddd; }
+  #dead h1 { color: #a00; }
+  #dead, #won { display: none; }
+  @keyframes blink { 50% { opacity: .25; } }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<canvas id="static" width="192" height="108"></canvas>
+<div id="vignette"></div>
+<div id="hud"><div id="pages">PAGES 0 / 8</div><div id="stamina"><div></div></div></div>
+<div id="prompt">[E] collect page</div>
+<div id="msg"></div>
+
+<div id="start" class="screen">
+  <h1>SLENDER WOODS</h1>
+  <p>You wake up in a forest at night. Find all <b>8 pages</b> scattered through the trees.</p>
+  <p>Something is out there. <b>Don't stare at it for too long.</b> The more pages you take, the closer and faster it gets.</p>
+  <p><kbd>W A S D</kbd> move &nbsp; <kbd>Shift</kbd> sprint &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>E</kbd> collect &nbsp; <kbd>F</kbd> flashlight</p>
+  <p class="go">click to begin</p>
+</div>
+<div id="dead" class="screen"><h1>IT FOUND YOU</h1><p class="go">click to try again</p></div>
+<div id="won" class="screen"><h1>YOU ESCAPED</h1><p>For now…</p><p class="go">click to play again</p></div>
+
+<script type="module">
+import * as THREE from './lib/three.module.min.js';
+
+/* ---------------------------------------------------------------- config */
+const TOTAL_PAGES = 8;
+const WORLD_RADIUS = 100;       // trees extend a bit past the walkable area
+const WALK_LIMIT = 96;
+const PLAYER_R = 0.45;
+const EYE = 1.7;
+const WALK = 3.4, SPRINT = 6.2;
+
+/* ---------------------------------------------------------------- rng */
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------------------------------------------------------------- renderer / scene */
+const canvas = document.getElementById('game');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+
+const FOG_COLOR = 0x070b0d;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(FOG_COLOR);
+scene.fog = new THREE.FogExp2(FOG_COLOR, 0.034);
+
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 200);
+camera.rotation.order = 'YXZ';
+scene.add(camera);
+
+scene.add(new THREE.HemisphereLight(0x4a5f88, 0x141c12, 1.5));
+const moon = new THREE.DirectionalLight(0x7088b8, 0.9);
+moon.position.set(-30, 60, 20);
+scene.add(moon);
+
+const flashlight = new THREE.SpotLight(0xfff2cc, 55, 55, Math.PI / 6, 0.45, 1.6);
+flashlight.position.set(0.15, -0.1, 0);
+flashlight.target.position.set(0, 0, -5);
+camera.add(flashlight, flashlight.target);
+
+/* ---------------------------------------------------------------- textures */
+const loader = new THREE.TextureLoader();
+const barkTex = loader.load('./assets/bark.jpg');
+barkTex.wrapS = barkTex.wrapT = THREE.RepeatWrapping;
+barkTex.colorSpace = THREE.SRGBColorSpace;
+barkTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+barkTex.repeat.set(2, 3);
+
+function makeGroundTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'); const r = mulberry32(7);
+  g.fillStyle = '#1b2414'; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 5000; i++) {
+    const v = 20 + r() * 40;
+    g.fillStyle = `rgba(${v * .8},${v * 1.1},${v * .6},${.25 + r() * .5})`;
+    g.fillRect(r() * 256, r() * 256, 1 + r() * 3, 1 + r() * 3);
+  }
+  for (let i = 0; i < 160; i++) { // dead leaves
+    g.fillStyle = `rgba(${60 + r() * 40},${35 + r() * 20},10,.5)`;
+    g.beginPath(); g.ellipse(r() * 256, r() * 256, 2 + r() * 3, 1 + r() * 2, r() * 3, 0, 7); g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(120, 120); t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(600, 600),
+  new THREE.MeshStandardMaterial({ map: makeGroundTexture(), roughness: 1 }));
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+/* ---------------------------------------------------------------- forest */
+const trees = [];  // {x, z, r, h}
+function buildForest(seed) {
+  const rnd = mulberry32(seed);
+  const cell = 4, grid = new Map();
+  const key = (x, z) => Math.floor(x / cell) + ',' + Math.floor(z / cell);
+  let tries = 0;
+  while (trees.length < 950 && tries++ < 20000) {
+    const a = rnd() * Math.PI * 2, d = 6 + Math.sqrt(rnd()) * (WORLD_RADIUS + 14);
+    const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    const r = 0.35 + rnd() * 0.45, h = 9 + rnd() * 8;
+    const gx = Math.floor(x / cell), gz = Math.floor(z / cell);
+    let ok = true;
+    for (let i = -1; i <= 1 && ok; i++) for (let j = -1; j <= 1 && ok; j++) {
+      for (const t of grid.get((gx + i) + ',' + (gz + j)) || []) {
+        if (Math.hypot(t.x - x, t.z - z) < 2.4 + t.r + r) { ok = false; break; }
+      }
+    }
+    if (!ok) continue;
+    const t = { x, z, r, h, dead: rnd() < 0.45 };
+    trees.push(t);
+    const k = key(x, z); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(t);
+  }
+
+  const trunkGeo = new THREE.CylinderGeometry(0.72, 1, 1, 10, 1, true);
+  trunkGeo.translate(0, 0.5, 0);
+  const trunkMat = new THREE.MeshStandardMaterial({ map: barkTex, color: 0xb3a07a, roughness: 1, side: THREE.DoubleSide });
+  const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, trees.length);
+  const canopy = trees.filter(t => !t.dead);
+  const coneGeo = new THREE.ConeGeometry(1, 1, 7); coneGeo.translate(0, 0.5, 0);
+  const cones = new THREE.InstancedMesh(coneGeo, new THREE.MeshStandardMaterial({ color: 0x0f2412, roughness: 1 }), canopy.length * 2);
+
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3(), e = new THREE.Euler();
+  trees.forEach((t, i) => {
+    q.setFromEuler(e.set((rnd() - .5) * .05, rnd() * 6.28, (rnd() - .5) * .05));
+    m.compose(p.set(t.x, 0, t.z), q, s.set(t.r, t.h, t.r)); trunks.setMatrixAt(i, m);
+  });
+  canopy.forEach((t, i) => {
+    for (let k = 0; k < 2; k++) {
+      const sz = k ? 3.4 : 2.4;
+      q.setFromEuler(e.set(0, rnd() * 6.28, 0));
+      m.compose(p.set(t.x, t.h * (0.62 + k * 0.28), t.z), q, s.set(sz, t.h * (k ? .38 : .5), sz));
+      cones.setMatrixAt(i * 2 + k, m);
+    }
+  });
+  scene.add(trunks, cones);
+}
+buildForest(1313);
+
+function pushOutOfTrees(pos, radius) {
+  for (const t of trees) {
+    const dx = pos.x - t.x, dz = pos.z - t.z;
+    if (Math.abs(dx) > 3 || Math.abs(dz) > 3) continue;
+    const min = t.r + radius, d2 = dx * dx + dz * dz;
+    if (d2 < min * min) {
+      const d = Math.sqrt(d2) || 0.0001;
+      pos.x = t.x + dx / d * min; pos.z = t.z + dz / d * min;
+    }
+  }
+}
+function lineBlocked(ax, az, bx, bz) { // is the segment A→B cut by a trunk?
+  const dx = bx - ax, dz = bz - az, len2 = dx * dx + dz * dz || 1;
+  for (const t of trees) {
+    let u = ((t.x - ax) * dx + (t.z - az) * dz) / len2;
+    if (u <= 0.02 || u >= 0.98) continue;
+    const cx = ax + dx * u - t.x, cz = az + dz * u - t.z;
+    if (cx * cx + cz * cz < t.r * t.r * 0.85) return true;
+  }
+  return false;
+}
+
+/* ---------------------------------------------------------------- pages */
+const pages = [];
+const PAGE_TEXT = ['ALWAYS WATCHING', 'NO EYES', "DON'T LOOK", 'LEAVE ME ALONE', 'HELP ME', 'IT FOLLOWS', 'BEHIND YOU', 'FIND THEM ALL'];
+function makePageTexture(i, rnd) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 360;
+  const g = c.getContext('2d');
+  g.fillStyle = '#d8d2c0'; g.fillRect(0, 0, 256, 360);
+  g.strokeStyle = '#222'; g.lineWidth = 3; g.lineCap = 'round';
+  for (let k = 0; k < 14; k++) { // scribbles
+    g.beginPath(); g.moveTo(rnd() * 256, rnd() * 360);
+    for (let n = 0; n < 5; n++) g.lineTo(rnd() * 256, rnd() * 360); g.globalAlpha = .35; g.stroke();
+  }
+  g.globalAlpha = 1; g.fillStyle = '#111'; g.font = 'bold 34px Courier New'; g.textAlign = 'center';
+  g.fillText(PAGE_TEXT[i], 128, 70);
+  // faceless figure
+  g.fillStyle = '#000'; g.fillRect(112, 150, 32, 130); g.fillRect(70, 160, 116, 8);
+  g.fillStyle = '#eee'; g.beginPath(); g.arc(128, 128, 20, 0, 7); g.fill();
+  g.fillStyle = '#900'; g.fillRect(126, 160, 4, 40);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function placePages(seed) {
+  const rnd = mulberry32(seed);
+  const spots = [];
+  const cand = trees.filter(t => Math.hypot(t.x, t.z) > 26 && Math.hypot(t.x, t.z) < WALK_LIMIT - 6);
+  while (spots.length < TOTAL_PAGES) {
+    const t = cand[Math.floor(rnd() * cand.length)];
+    if (spots.some(s => Math.hypot(s.x - t.x, s.z - t.z) < 28)) continue;
+    spots.push(t);
+  }
+  spots.forEach((t, i) => {
+    const a = rnd() * 6.28;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.63),
+      new THREE.MeshStandardMaterial({ map: makePageTexture(i, rnd), emissive: 0x777060, emissiveMap: null, emissiveIntensity: .35, side: THREE.DoubleSide }));
+    const off = t.r * 0.95 + 0.04;
+    mesh.position.set(t.x + Math.cos(a) * off, 1.55 + rnd() * .3, t.z + Math.sin(a) * off);
+    mesh.rotation.y = -a + Math.PI / 2;
+    mesh.rotation.z = (rnd() - .5) * .15;
+    mesh.userData.taken = false;
+    scene.add(mesh); pages.push(mesh);
+  });
+}
+placePages(99);
+
+/* ---------------------------------------------------------------- slender man */
+function buildSlender() {
+  const g = new THREE.Group();
+  const suit = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: .9, emissive: 0x040404 });
+  const skin = new THREE.MeshStandardMaterial({ color: 0xe9e6dc, roughness: .8, emissive: 0x3a3a38 });
+  const add = (geo, mat, x, y, z, rx = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.x = rx; m.rotation.z = rz; g.add(m); return m; };
+  add(new THREE.BoxGeometry(.2, 1.1, .2), suit, -.13, .55, 0);
+  add(new THREE.BoxGeometry(.2, 1.1, .2), suit, .13, .55, 0);
+  add(new THREE.BoxGeometry(.52, 1.15, .3), suit, 0, 1.65, 0);
+  add(new THREE.BoxGeometry(.06, .55, .02), new THREE.MeshStandardMaterial({ color: 0x8a0000, emissive: 0x200000 }), 0, 1.75, .16);
+  const head = add(new THREE.SphereGeometry(.17, 16, 12), skin, 0, 2.45, 0); head.scale.set(.9, 1.2, .95);
+  add(new THREE.CylinderGeometry(.06, .07, .2), skin, 0, 2.27, 0);
+  g.userData.arms = [-1, 1].map(s => {
+    const arm = new THREE.Group(); arm.position.set(s * .33, 2.15, 0);
+    const up = new THREE.Mesh(new THREE.BoxGeometry(.1, 1.3, .1), suit); up.position.y = -.65; arm.add(up);
+    arm.rotation.z = s * .12; g.add(arm); return arm;
+  });
+  g.scale.setScalar(1.15);
+  return g;
+}
+const slender = buildSlender();
+slender.visible = false;
+scene.add(slender);
+const sl = { pos: new THREE.Vector3(0, 0, -30), timer: 0, stare: 0, seen: false, dist: 99, hideTimer: 0 };
+
+/* ---------------------------------------------------------------- audio (procedural) */
+let actx, audio = {};
+function startAudio() {
+  if (actx) return;
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    const noiseBuf = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const noise = (filterType, freq, gain) => {
+      const src = actx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+      const f = actx.createBiquadFilter(); f.type = filterType; f.frequency.value = freq;
+      const gn = actx.createGain(); gn.gain.value = gain;
+      src.connect(f).connect(gn).connect(actx.destination); src.start(); return { f, gn };
+    };
+    audio.wind = noise('lowpass', 420, 0.18);
+    audio.static = noise('bandpass', 2600, 0);
+    const o = actx.createOscillator(), o2 = actx.createOscillator(), dg = actx.createGain();
+    o.type = 'sine'; o.frequency.value = 43; o2.type = 'sawtooth'; o2.frequency.value = 44.5;
+    dg.gain.value = 0.05; o.connect(dg); o2.connect(dg); dg.connect(actx.destination); o.start(); o2.start();
+    audio.drone = dg; audio.noiseBuf = noiseBuf;
+  } catch (e) { actx = null; }
+}
+function blip(freq, dur = .25, type = 'triangle', vol = .15) {
+  if (!actx) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, actx.currentTime); o.frequency.exponentialRampToValueAtTime(freq * .4, actx.currentTime + dur);
+  g.gain.setValueAtTime(vol, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + dur);
+  o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + dur);
+}
+function stepSound() {
+  if (!actx) return;
+  const s = actx.createBufferSource(); s.buffer = audio.noiseBuf;
+  const f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300;
+  const g = actx.createGain(); g.gain.setValueAtTime(.12, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + .12);
+  s.connect(f).connect(g).connect(actx.destination); s.start(actx.currentTime, Math.random()); s.stop(actx.currentTime + .13);
+}
+
+/* ---------------------------------------------------------------- game state */
+const player = { pos: new THREE.Vector3(0, 0, 0), yaw: 0, pitch: 0, stamina: 1, bob: 0, stepPhase: 0 };
+let collected = 0, state = 'menu', torchOn = true, flick = 0, lastTime = performance.now();
+const keys = {};
+const el = id => document.getElementById(id);
+
+function showMsg(text, ms = 3000) {
+  const m = el('msg'); m.textContent = text; m.style.opacity = 1;
+  clearTimeout(showMsg.t); showMsg.t = setTimeout(() => m.style.opacity = 0, ms);
+}
+function resetGame() {
+  player.pos.set(0, 0, 0); player.yaw = 0; player.pitch = 0; player.stamina = 1;
+  collected = 0; el('pages').textContent = `PAGES 0 / ${TOTAL_PAGES}`;
+  pages.forEach(p => { p.visible = true; p.userData.taken = false; });
+  sl.stare = 0; sl.timer = 6; sl.pos.set(0, 0, -45); slender.visible = false;
+}
+
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'KeyF' && state === 'play') { torchOn = !torchOn; blip(900, .06, 'square', .06); }
+  if (e.code === 'KeyE' && state === 'play') tryCollect();
+});
+addEventListener('keyup', e => keys[e.code] = false);
+addEventListener('mousemove', e => {
+  if (state !== 'play' || document.pointerLockElement !== canvas) return;
+  player.yaw -= e.movementX * 0.0022;
+  player.pitch = Math.max(-1.4, Math.min(1.4, player.pitch - e.movementY * 0.0022));
+});
+function begin() {
+  startAudio(); if (actx && actx.state === 'suspended') actx.resume();
+  ['start', 'dead', 'won'].forEach(i => el(i).style.display = 'none');
+  if (state !== 'play') resetGame();
+  state = 'play';
+  canvas.requestPointerLock?.();
+  showMsg('Find the pages.', 3500);
+}
+['start', 'dead', 'won'].forEach(id => el(id).addEventListener('click', begin));
+canvas.addEventListener('click', () => { if (state === 'play' && document.pointerLockElement !== canvas) canvas.requestPointerLock?.(); });
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+});
+
+function forwardVec() { return new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)); }
+
+function nearestPage() {
+  let best = null, bd = 2.6;
+  const eye = new THREE.Vector3(player.pos.x, EYE, player.pos.z);
+  const look = new THREE.Vector3(); camera.getWorldDirection(look);
+  for (const p of pages) {
+    if (p.userData.taken) continue;
+    const to = p.position.clone().sub(eye), d = to.length();
+    if (d < bd && to.normalize().dot(look) > 0.55) { best = p; bd = d; }
+  }
+  return best;
+}
+function tryCollect() {
+  const p = nearestPage(); if (!p) return;
+  p.userData.taken = true; p.visible = false; collected++;
+  el('pages').textContent = `PAGES ${collected} / ${TOTAL_PAGES}`;
+  blip(520, .4, 'triangle', .2); blip(310, .6, 'sawtooth', .08);
+  sl.timer = Math.min(sl.timer, 1.5);          // he reacts to every page
+  if (collected >= TOTAL_PAGES) { win(); return; }
+  showMsg(collected >= 6 ? "It's right behind you…" : collected >= 3 ? 'It is getting closer.' : 'One down.');
+}
+
+function endGame(kind) {
+  state = kind; document.exitPointerLock?.();
+  el(kind === 'won' ? 'won' : 'dead').style.display = 'flex';
+  el('static').style.opacity = kind === 'dead' ? 1 : 0;
+  el('prompt').style.opacity = 0;
+}
+function win() { blip(660, 1.2, 'sine', .2); endGame('won'); }
+function die() {
+  if (actx) { // jump-scare screech
+    const s = actx.createBufferSource(); s.buffer = audio.noiseBuf; s.loop = true;
+    const g = actx.createGain(); g.gain.value = .5; g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + 1.6);
+    s.connect(g).connect(actx.destination); s.start(); s.stop(actx.currentTime + 1.6);
+  }
+  endGame('dead');
+}
+
+/* ---------------------------------------------------------------- slender ai */
+function slenderDifficulty() { return collected / TOTAL_PAGES; }   // 0..1
+function teleportSlender() {
+  const diff = slenderDifficulty();
+  const dist = 30 - diff * 20 + Math.random() * 6;                    // 30..36 → 10..16
+  for (let tries = 0; tries < 20; tries++) {
+    const a = Math.random() * Math.PI * 2;
+    const x = player.pos.x + Math.cos(a) * dist, z = player.pos.z + Math.sin(a) * dist;
+    if (Math.hypot(x, z) > WALK_LIMIT + 4) continue;
+    const probe = new THREE.Vector3(x, 0, z);
+    const before = probe.clone(); pushOutOfTrees(probe, 0.8);
+    if (before.distanceTo(probe) > 0.01) continue;
+    sl.pos.copy(probe); return;
+  }
+}
+function updateSlender(dt) {
+  const diff = slenderDifficulty();
+  const toS = new THREE.Vector3(sl.pos.x - player.pos.x, 0, sl.pos.z - player.pos.z);
+  sl.dist = toS.length();
+  const dirTo = toS.clone().normalize();
+  const dot = forwardVec().dot(dirTo);
+  // Real camera pitch is irrelevant at this scale; use a horizontal view cone (a little wider than the lens).
+  const inCone = dot > Math.cos(THREE.MathUtils.degToRad(camera.fov * camera.aspect / 2 * 0.95));
+  const visible = slender.visible && inCone && sl.dist < 42 && !lineBlocked(player.pos.x, player.pos.z, sl.pos.x, sl.pos.z);
+
+  slender.visible = true;
+  sl.timer -= dt;
+  if (visible) {
+    // looking at him freezes him but fills the stare meter
+    const closeness = 1 - Math.min(sl.dist, 30) / 30;
+    sl.stare += dt * (0.10 + closeness * 0.55 + diff * 0.12);
+    sl.hideTimer = 0;
+  } else {
+    sl.stare = Math.max(0, sl.stare - dt * 0.35);
+    // creep toward the player while unseen
+    const speed = 0.7 + diff * 2.4;
+    if (sl.dist > 3.2) sl.pos.addScaledVector(dirTo, -speed * dt);
+    if (sl.timer <= 0) {
+      teleportSlender();
+      sl.timer = Math.max(2.5, 9 - diff * 6.5) + Math.random() * 3;
+    }
+  }
+  if (sl.pos.lengthSq() > (WALK_LIMIT + 6) ** 2) sl.pos.setLength(WALK_LIMIT + 6);
+
+  slender.position.set(sl.pos.x, 0, sl.pos.z);
+  slender.rotation.y = Math.atan2(player.pos.x - sl.pos.x, player.pos.z - sl.pos.z);
+  const t = performance.now() / 1000;
+  slender.userData.arms.forEach((a, i) => a.rotation.x = Math.sin(t * 1.3 + i * 2) * .06);
+  slender.rotation.z = Math.sin(t * .7) * .012;
+
+  // consequences
+  if (sl.stare >= 1 || (visible && sl.dist < 2.0) || sl.dist < 1.3) die();
+
+  // feedback: static + audio
+  const intensity = Math.min(1, Math.max(sl.stare * 1.1, visible ? (1 - sl.dist / 25) * 0.5 : (1 - sl.dist / 14) * 0.25, 0));
+  el('static').style.opacity = Math.min(0.95, intensity * 0.9 + (Math.random() < intensity * .15 ? .25 : 0));
+  if (audio.static) audio.static.gn.gain.value = intensity * .22;
+  if (audio.drone) audio.drone.gain.value = .05 + diff * .06 + intensity * .1;
+  flick = intensity;
+}
+
+/* ---------------------------------------------------------------- static overlay */
+const sctx = el('static').getContext('2d'); const simg = sctx.createImageData(192, 108);
+let sf = 0;
+function drawStatic() {
+  if (++sf % 2) return;
+  const d = simg.data;
+  for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 30 + Math.random() * 90; }
+  sctx.putImageData(simg, 0, 0);
+}
+
+/* ---------------------------------------------------------------- main loop */
+function update(dt) {
+  // movement
+  const f = forwardVec();
+  const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+  const mv = new THREE.Vector3();
+  if (keys.KeyW || keys.ArrowUp) mv.add(f);
+  if (keys.KeyS || keys.ArrowDown) mv.sub(f);
+  if (keys.KeyD || keys.ArrowRight) mv.add(right);
+  if (keys.KeyA || keys.ArrowLeft) mv.sub(right);
+  const moving = mv.lengthSq() > 0;
+  const wantSprint = (keys.ShiftLeft || keys.ShiftRight) && moving && player.stamina > 0.02;
+  if (wantSprint) player.stamina = Math.max(0, player.stamina - dt * 0.22);
+  else player.stamina = Math.min(1, player.stamina + dt * (moving ? 0.1 : 0.25));
+  if (player.stamina < 0.02) keys.ShiftLeft = keys.ShiftRight = false; // force a breather
+  if (moving) {
+    mv.normalize().multiplyScalar((wantSprint ? SPRINT : WALK) * dt);
+    player.pos.add(mv); pushOutOfTrees(player.pos, PLAYER_R);
+    if (player.pos.length() > WALK_LIMIT) player.pos.setLength(WALK_LIMIT);
+    player.bob += dt * (wantSprint ? 12 : 8);
+    const ph = Math.floor(player.bob / Math.PI); if (ph !== player.stepPhase) { player.stepPhase = ph; stepSound(); }
+  }
+  camera.position.set(player.pos.x, EYE + (moving ? Math.sin(player.bob) * 0.045 : 0), player.pos.z);
+  camera.rotation.set(player.pitch, player.yaw, 0);
+
+  // flashlight (flickers when the thing is near)
+  const flickerOff = flick > 0.3 && Math.random() < flick * 0.12;
+  flashlight.intensity = torchOn && !flickerOff ? 55 : 0;
+
+  updateSlender(dt);
+
+  const np = nearestPage(); el('prompt').style.opacity = np ? 1 : 0;
+  el('stamina').firstElementChild.style.width = (player.stamina * 100) + '%';
+}
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - lastTime) / 1000); lastTime = now;
+  if (state === 'play') {
+    if (document.pointerLockElement !== canvas && !navigator.webdriver) { /* paused until relocked */ }
+    update(dt);
+  } else if (state === 'menu') {
+    const t = now / 1000; camera.position.set(Math.sin(t * .1) * 3, EYE, Math.cos(t * .1) * 3); camera.rotation.set(0, t * .1 + Math.PI, 0);
+  }
+  if (state === 'play' || state === 'dead') drawStatic();
+  renderer.render(scene, camera);
+}
+resetGame();
+slender.visible = false;
+requestAnimationFrame(loop);
+
+// handy for debugging / automated checks
+window.__game = { player, sl, pages, trees, get collected() { return collected; }, get state() { return state; }, begin, tryCollect };
+</script>
+</body>
+</html>
