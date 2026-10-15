@@ -552,6 +552,17 @@ BUILD.mannequin=()=>{const g=grp(),b=dyn(0,0,0,g);
   Lt([[0,0],[.09,0],[.12,.1],[.0,.1]],mat(0xd2d2d2),0,.43,0,b,18);
   return {g,b}};
 
+function iconTex(id){
+  const c=document.createElement("canvas");c.width=c.height=64;const g=c.getContext("2d");g.imageSmoothingEnabled=false;g.scale(2,2);g.lineWidth=1.6;g.strokeStyle="#111";
+  const poly=(col,pts)=>{g.fillStyle=col;g.beginPath();g.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)g.lineTo(pts[i],pts[i+1]);g.closePath();g.fill()};
+  const ell=(col,x,y,rx,ry)=>{g.fillStyle=col;g.beginPath();g.ellipse(x,y,rx,ry,0,0,7);g.fill()};
+  if(id==="cross"){g.fillStyle="#f4f4f4";g.fillRect(13,3,6,27);g.strokeRect(13,3,6,27);g.fillRect(6,9,20,6);g.strokeRect(6,9,20,6);g.fillRect(14,4,4,25);g.fillRect(7,10,18,4)}
+  else if(id==="garlic"){poly("#f0f0f0",[16,2,12,12,20,12]);ell("#f4f4f4",16,20,10,9);g.beginPath();g.ellipse(16,20,10,9,0,0,7);g.stroke();g.strokeStyle="#888";g.lineWidth=1;g.beginPath();g.moveTo(16,12);g.quadraticCurveTo(11,20,16,29);g.moveTo(16,12);g.quadraticCurveTo(21,20,16,29);g.stroke();g.strokeStyle="#ddd";g.beginPath();g.moveTo(13,29);g.lineTo(12,32);g.moveTo(16,29);g.lineTo(16,32);g.moveTo(19,29);g.lineTo(20,32);g.stroke()}
+  else if(id==="water"){g.fillStyle="#fafafa";g.fillRect(13,5,6,9);g.strokeRect(13,5,6,9);g.beginPath();g.arc(16,21,9,0,7);g.fillStyle="#dcdcdc";g.fill();g.stroke();g.fillStyle="#7a7a7a";g.beginPath();g.arc(16,23,7,.1,Math.PI-.1);g.fill();g.fillStyle="#222";g.fillRect(12,2,8,4);g.fillStyle="#fff";g.fillRect(15,15,2,8);g.fillRect(12,18,8,2)}
+  else if(id==="stake"){poly("#d9d9d9",[3,29,23,4,28,8,9,31]);g.beginPath();g.moveTo(3,29);g.lineTo(23,4);g.lineTo(28,8);g.lineTo(9,31);g.closePath();g.stroke();poly("#fff",[3,29,7,26,6,30])}
+  else if(id==="key"){g.lineWidth=4.4;g.beginPath();g.arc(9,11,6,0,7);g.stroke();g.strokeStyle="#fafafa";g.lineWidth=2.4;g.beginPath();g.arc(9,11,6,0,7);g.stroke();g.fillStyle="#fafafa";g.fillRect(13,10,17,3.5);g.fillRect(23,13,3,6);g.fillRect(28,13,3,5)}
+  const tx=new THREE.CanvasTexture(c);tx.magFilter=THREE.NearestFilter;tx.minFilter=THREE.NearestFilter;return tx;
+}
 function itemMesh(id){
   const g=new THREE.Group(),w=mat(0xf4f4f4,{shininess:70,specular:0x888888});
   if(id==="cross"){RB(.045,.26,.035,.01,0,0,0,w,g,2);RB(.16,.045,.035,.01,0,.14,0,w,g,2);Sp(.02,0,.26,0,w,g)}
@@ -684,7 +695,7 @@ function buildLevel(l){
     holder.rotation.y=Math.atan2(fx,fz);
     if(d.holds){const m=itemMesh(d.holds.id);m.position.set(0,.3,0);m.visible=false;holder.add(m);d.itemMesh=m;if(d.type==="coffin"||d.type==="trunk")m.position.set(0,.2,0);if(d.type==="nightstand"||d.type==="desk"||d.type==="counter")m.position.set(0,.3,.2)}
   }
-  for(const it of ITEMS)if(it.l===l){const m=itemMesh(it.id);m.scale.setScalar(1.5);m.position.set(it.x,.16,it.y);g.add(m);glow(0,.1,0,.42,m,.32);it.mesh=m}
+  for(const it of ITEMS)if(it.l===l){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:iconTex(it.id),transparent:true,alphaTest:.3}));sp.scale.set(.38,.38,1);sp.position.set(it.x,.3,it.y);g.add(sp);it.mesh=sp;it.gl=glow(it.x,.3,it.y,.55,g,.3)}
   g.visible=false;R3.scene.add(g);LG[l]=g;
 }
 const WEAK=[[0,20,12],[0,10,16],[1,15,6],[1,22,16],[2,7,17],[2,15,6]];
@@ -754,7 +765,7 @@ function render(){
   R3.scene.fog.density=state==="menu"?.17:(.17/Math.max(.7,lt*.95));
   for(const d of LV[CL].dec)if(d.b.hideHide)d.obj.visible=!(P.hid===d);
   animWorld(dt);
-  for(const it of ITEMS){if(!it.mesh)continue;it.mesh.visible=!it.got&&it.l===CL;if(it.mesh.visible){it.mesh.rotation.y+=dt*1.1;it.mesh.position.y=.16+Math.sin(time*2+it.x)*.03}}
+  for(const it of ITEMS){if(!it.mesh)continue;it.mesh.visible=!it.got&&it.l===CL;it.gl.visible=it.mesh.visible;if(it.mesh.visible){const by=.3+Math.sin(time*2+it.x)*.04;it.mesh.position.y=by;it.gl.position.y=by}}
   {let best=null,bd=7;for(const rn of LV[CL].runs){const d=Math.hypot(rn.x0+rn.len/2-P.x,rn.y+.5-P.y);if(d<bd){bd=d;best=rn}}if(best){R3.sl.position.set(best.x0+best.len/2,best.dir==="d"?.9:1.1,best.y+.5);R3.sl.intensity=.9}else R3.sl.intensity=0}
   R3.bell.visible=!BELL.held&&!BELL.onTable&&BELL.l===CL;if(R3.bell.visible)R3.bell.position.set(BELL.x,0,BELL.y);
   const dv=D.lvl===CL&&(D.stun<=0||Math.floor(time*8)%2===0);
