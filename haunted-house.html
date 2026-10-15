@@ -86,7 +86,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 #more{position:relative;color:#c4c4c4;font-size:14px;text-align:center;padding-bottom:2px}
 #act{pointer-events:auto;position:absolute;right:calc(max(14px,env(safe-area-inset-right,0px)) + 92px);bottom:max(24px,env(safe-area-inset-bottom,0px));min-width:78px;height:78px;padding:0 10px;border-radius:39px;border:2px solid var(--ink);background:rgba(0,0,0,.55);color:var(--ink);font:400 14px var(--display);letter-spacing:.08em;touch-action:manipulation}
 #act[hidden]{display:none}
-#dropbtn{pointer-events:auto;position:absolute;left:max(14px,env(safe-area-inset-left,0px));bottom:max(24px,env(safe-area-inset-bottom,0px));height:44px;padding:0 14px;border:2px solid var(--ink);background:rgba(0,0,0,.6);color:var(--ink);font:400 14px var(--display);letter-spacing:.1em;touch-action:manipulation}
+#dropbtn{pointer-events:auto;display:block;width:100%;box-sizing:border-box;margin:0 0 8px;height:34px;padding:0 10px;border:1px solid var(--ink);background:rgba(255,255,255,.12);color:var(--ink);font:400 13px var(--display);letter-spacing:.08em;touch-action:manipulation}
 #dropbtn[hidden]{display:none}
 #lvlname{font-size:11px;letter-spacing:.14em;color:var(--dim);text-shadow:0 0 6px #000}
 #hideov{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 68% 10% at 50% 46%,rgba(0,0,0,0) 0%,rgba(0,0,0,.5) 55%,#000 100%)}
@@ -126,13 +126,12 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
   <div id="daytxt"></div>
 
   <div class="hud" id="hud" hidden>
-    <div id="quest"><h2>Relics</h2><ul id="list"></ul></div>
+    <div id="quest"><button id="dropbtn" type="button" hidden>DROP [Click]</button><h2>Relics</h2><ul id="list"></ul></div>
     <div id="side"><div id="lvlname">UPPER FLOOR</div><div id="lives"></div></div>
     <div id="toast"></div>
     <div id="joy"><i></i></div>
     <div id="stam"><i></i></div>
     <button id="act" type="button" hidden>HIDE</button>
-    <button id="dropbtn" type="button" hidden>DROP [Click]</button>
     <button id="run" type="button">RUN</button>
     <div id="hint">Left thumb walks. Right thumb looks.</div>
   </div>
