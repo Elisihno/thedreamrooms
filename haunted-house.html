@@ -171,7 +171,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 "use strict";
 
 /* ---------- the house: four floors ---------- */
-const LD={"rows":[["#####################################","#####################################","#####################################","##.......#..................ddd######","##.......#................###########","##.......#................###########","##.......#...........#....###########","##.......#................###########","##.......#...#............###########","##.......#................###########","##.......#........#.......###########","##.......#........#.......###########","##....#...........#.......###########","##................#.......###########","##...........#....#.......###########","##................#.......###########","##................#.......###########","##................#.......###########","##................#.......###########","#####################################","#####################################","#####################################"],["#####################################","#####################################","##........#........#.......####....##","##........#........#.......#uuu....##","##........#........#.......####....##","##.........................####....##","##.........................####.#####","##........#........#.......####.#####","##........#........#.......####.#####","##........#........#.......####.#####","#####..#######..######..#######.#####","##..............................#####","##..............................#####","#####..#######..######..#######.#####","##........#........#.......####.#####","##........#........#.......####.#####","##.........................####.#####","##.........................####.#####","##........#........#.......####.#####","##........#........#........ddd######","##........#........#.......##########","#####################################"],["#####################################","#####################################","##..........#........#.....##########","##..........#........#......ddd######","##..........#........#.....####.#####","##.........................####.#####","##.........................####.#####","##..........#........#.....####.#####","##..........#........#.....####.#####","##..........#........#.....####.#####","######..########..######..#####.#####","##..............................#####","##..............................#####","#####..######..######..########.#####","##........#......#.........####.#####","##........#......#.........####.#####","##.........................####.#####","##.........................####....##","##........#......#.........####....##","##........#......#.........#uuu....##","##........#......#.........####....##","#####################################"],["#####################################","#####################################","##........#........#.......####....##","##........#........#.......#uuu....##","##........#........#.......####....##","##.........................####....##","##.........................####.#####","##........#........#.......####.#####","##........#........#.......####.#####","##........#........#.......####.#####","#####..#######..######..#######.#####","##..............................#####","##..............................#####","#####..######..######..##############","##........#.....#..........##########","##........#.....#..........##########","##.........................##########","##.........................##########","##........#.....#..........##########","##........#.....#..........##########","##........#.....#..........##########","#####################################"]],"dec":[[0,"freezer",4,16],[0,"mannequin",22,14],[0,"trunk",6,4],[0,"trunk",24,17],[0,"box",12,4],[0,"box",15,16],[0,"box",5,8],[1,"bed",3,3],[1,"tablebell",8,3],[1,"wardrobe",2,8],[1,"nightstand",5,2],[1,"sink",12,2],[1,"sink",14,2],[1,"toilet",12,8],[1,"bathtub",17,4],[1,"bigbed",23,4],[1,"nightstand",21,3],[1,"nightstand",25,3],[1,"wardrobe",26,8],[1,"bed2",3,19],[1,"dresser",8,15],[1,"shelf",12,14],[1,"shelf",15,14],[1,"shelf",17,14],[1,"desk",15,18],[1,"clock",21,14],[2,"sofa",4,3],[2,"sofa",4,8],[2,"fireplace",6,2],[2,"ctable",6,6],[2,"armchair",9,8],[2,"counter",14,2],[2,"counter",16,2],[2,"counter",18,2],[2,"fridge",20,3],[2,"island",16,6],[2,"counter",14,8],[2,"dtable",24,5],[2,"cabinet",26,8],[2,"chair",22,3],[2,"desk",4,16],[2,"shelf",2,15],[2,"shelf",8,14],[2,"shelf",11,14],[2,"shelf",12,14],[2,"barrel",16,19],[2,"frontdoor",22,20],[2,"clock",18,14],[3,"boiler",3,3],[3,"barrelh",8,8],[3,"crate",3,8],[3,"rack",12,3],[3,"rack",14,3],[3,"rack",16,3],[3,"barrelh",17,8],[3,"barrel",12,8],[3,"coffin",22,4],[3,"coffin",25,4],[3,"candle",21,2],[3,"candle",26,2],[3,"candle",23,8],[3,"torture",4,16],[3,"table",8,17],[3,"crate",3,19],[3,"candle",11,15],[3,"casket",23,17],[3,"candle",21,15],[3,"candle",25,15],[3,"candle",21,19],[3,"candle",25,19]],"items":[[0,"cross","Crucifix",25,18],[1,"water","Holy water",26,9],[2,"garlic","Garlic",16,20],[2,"stake","Wooden stake",2,20],[3,"key","Silver key",26,9]],"stairs":[[0,28,3,1],[0,29,3,1],[0,30,3,1],[1,28,3,0],[1,29,3,0],[1,30,3,0],[1,28,19,2],[1,29,19,2],[1,30,19,2],[2,28,3,3],[2,29,3,3],[2,30,3,3],[2,28,19,1],[2,29,19,1],[2,30,19,1],[3,28,3,2],[3,29,3,2],[3,30,3,2]],"W":37,"H":22};
+const LD={"rows":[["#####################################","#####################################","#####################################","##.......#..................ddd######","##.......#................###########","##.......#................###########","##.......#...........#....###########","##.......#................###########","##.......#...#............###########","##.......#................###########","##.......#........#.......###########","##.......#........#.......###########","##....#...........#.......###########","##................#.......###########","##...........#....#.......###########","##................#.......###########","##................#.......###########","##................#.......###########","##................#.......###########","#####################################","#####################################","#####################################"],["#####################################","#####################################","##........#........#.......####....##","##........#........#.......#uuu....##","##........#........#.......####....##","##.........................####....##","##.........................#..#.#####","##........#........#..........#.#####","##........#........#.......#..#.#####","##........#........#.......####.#####","#####..#######..######..#######.#####","##..............................#####","##..............................#####","#####..#######..######..#######.#####","##........#........#.......####.#####","##........#........#.......####.#####","##.........................####.#####","##.........................####.#####","##........#........#.......####.#####","##........#........#........ddd######","##........#........#.......##########","#####################################"],["#####################################","#####################################","##..........#........#.....##########","##..........#........#......ddd######","##..........#........#.....####.#####","##.........................####.#####","##.........................#..#.#####","##..........#........#........#.#####","##..........#........#.....#..#.#####","##..........#........#.....####.#####","######..########..######..#####.#####","##..............................#####","##..............................#####","#####..######..######..########.#####","##........#......#.........####.#####","##........#......#.........####.#####","##.........................####.#####","##.........................####....##","##........#......#.........####....##","##........#......#.........#uuu....##","##........#......#.........####....##","#####################################"],["#####################################","#####################################","##........#........#.......####....##","##........#........#.......#uuu....##","##........#........#.......####....##","##.........................####....##","##.........................#..#.#####","##........#........#..........#.#####","##........#........#.......#..#.#####","##........#........#.......####.#####","#####..#######..######..#######.#####","##..............................#####","##..............................#####","#####..######..######..##############","##........#.....#..........##########","##........#.....#..........##########","##.........................##########","##.........................##########","##........#.....#..........##########","##........#.....#..........##########","##........#.....#..........##########","#####################################"]],"dec":[[0,"freezer",4,16],[0,"mannequin",22,14],[0,"trunk",6,4],[0,"trunk",24,17],[0,"box",12,4],[0,"box",15,16],[0,"box",5,8],[1,"bed",3,3],[1,"tablebell",8,3],[1,"wardrobe",2,8],[1,"nightstand",5,2],[1,"sink",12,2],[1,"sink",14,2],[1,"toilet",12,8],[1,"bathtub",17,4],[1,"bigbed",23,4],[1,"nightstand",21,3],[1,"nightstand",25,3],[1,"wardrobe",26,9],[1,"bed2",3,19],[1,"dresser",8,15],[1,"shelf",12,14],[1,"shelf",15,14],[1,"shelf",17,14],[1,"desk",15,18],[1,"clock",21,14],[2,"sofa",4,3],[2,"sofa",4,8],[2,"fireplace",6,2],[2,"ctable",6,6],[2,"armchair",9,8],[2,"counter",14,2],[2,"counter",16,2],[2,"counter",18,2],[2,"fridge",20,3],[2,"island",16,6],[2,"counter",14,8],[2,"dtable",24,5],[2,"cabinet",26,9],[2,"chair",22,3],[2,"desk",4,16],[2,"shelf",2,15],[2,"shelf",8,14],[2,"shelf",11,14],[2,"shelf",12,14],[2,"barrel",16,19],[2,"frontdoor",22,20],[2,"clock",18,14],[3,"boiler",3,3],[3,"barrelh",8,8],[3,"crate",3,8],[3,"rack",12,3],[3,"rack",14,3],[3,"rack",16,3],[3,"barrelh",17,8],[3,"barrel",12,8],[3,"coffin",22,4],[3,"coffin",25,4],[3,"candle",21,2],[3,"candle",26,2],[3,"candle",23,8],[3,"torture",4,16],[3,"table",8,17],[3,"crate",3,19],[3,"candle",11,15],[3,"casket",23,17],[3,"candle",21,15],[3,"candle",25,15],[3,"candle",21,19],[3,"candle",25,19],[1,"lockdoor",27,7],[1,"shelf",28,6],[1,"box",28,8],[2,"lockdoor",27,7],[2,"shelf",28,6],[2,"box",28,8],[3,"lockdoor",27,7],[3,"shelf",28,6],[3,"box",28,8]],"items":[[0,"cross","Crucifix",25,18],[1,"water","Holy water",29,8],[2,"garlic","Garlic",16,20],[2,"stake","Wooden stake",29,8],[3,"bible","Holy Bible",29,8]],"keys":[[0,"k1","Bedroom closet key",3,18,1],[1,"k2","Dining room key",18,20,2],[2,"k3","Vault key",26,14,3]],"stairs":[[0,28,3,1],[0,29,3,1],[0,30,3,1],[1,28,3,0],[1,29,3,0],[1,30,3,0],[1,28,19,2],[1,29,19,2],[1,30,19,2],[2,28,3,3],[2,29,3,3],[2,30,3,3],[2,28,19,1],[2,29,19,1],[2,30,19,1],[3,28,3,2],[3,29,3,2],[3,30,3,2]],"W":37,"H":22};
 const MW=LD.W,MH=LD.H;
 const FLOORS=["Attic","Upper floor","Ground floor","Basement"];
 const LCFG=[
@@ -192,7 +192,7 @@ const DEC={
  dtable:{h:.85,hide:1,label:"table"},cabinet:{h:1.15},chair:{h:.72},
  barrel:{h:.8},barrelh:{h:.8,spr:"barrel",hide:1,label:"barrel"},
  frontdoor:{h:1.2},boiler:{h:1.35},crate:{h:.5},rack:{h:1.05},coffin:{h:.6},candle:{h:.45,glow:.9},
- torture:{h:.95},table:{h:.7},casket:{h:.75,casket:1}
+ torture:{h:.95},table:{h:.7},casket:{h:.75,casket:1},lockdoor:{h:1.5}
 };
 const LV=[0,1,2,3].map(i=>({rows:LD.rows[i],blocked:new Uint8Array(MW*MH),dec:[],stairs:[]}));
 for(const d of LD.dec){
@@ -203,6 +203,8 @@ for(const d of LD.dec){
 for(const s of LD.stairs)LV[s[0]].stairs.push({x:s[1],y:s[2],dir:s[3]>s[0]?"d":"u",to:s[3]});
 LV.forEach(lv=>{lv.runs=[];for(const s of lv.stairs){let r=lv.runs.find(q=>q.y===s.y&&q.dir===s.dir);if(!r){r={y:s.y,x0:s.x,len:0,dir:s.dir,to:s.to};lv.runs.push(r)}r.x0=Math.min(r.x0,s.x);r.len++}});
 const ITEMS=LD.items.map(a=>({l:a[0],id:a[1],name:a[2],x:a[3]+.5,y:a[4]+.5,got:false}));
+const KEYS=(LD.keys||[]).map(a=>({l:a[0],id:"doorkey",kid:a[1],name:a[2],x:a[3]+.5,y:a[4]+.5,got:false,used:false,door:a[5],isKey:true}));
+const COLLECT=ITEMS.concat(KEYS);
 const BELL0={l:1,x:8.5,y:3.5};
 const BELL={held:false,onTable:true,l:1,x:8.5,y:3.5,cool:0};
 const START={l:1,x:5.5,y:6.5,a:.8};
@@ -270,7 +272,7 @@ const look={id:null,x:0};
 
 const dayNo=()=>maxLives-lives+1;
 function setLives(){livesEl.textContent=cfg.noDrac?"PRACTICE":"DAY "+dayNo()+" OF "+maxLives}
-function setList(){listEl.innerHTML=ITEMS.map(i=>"<li class='"+(i.got?"got":"")+"'>"+(i.got?"☑ ":"☐ ")+i.name+"</li>").join("")}
+function setList(){listEl.innerHTML=ITEMS.map(i=>"<li class='"+(i.got?"got":"")+"'>"+(i.got?"☑ ":"☐ ")+i.name+"</li>").join("")+"<li>Keys "+KEYS.map(k=>k.got?"☑":"☐").join(" ")+"</li>"}
 function toast(msg,ms){toastEl.textContent=msg;toastEl.classList.add("on");toastT=(ms||3000)/1000}
 
 /* ---------- the 3D world ---------- */
@@ -563,6 +565,15 @@ BUILD.trunk=()=>{const g=grp();
   for(const x of[-.2,.2]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.215,.215,.05,16,1,false,0,Math.PI),M.iron());b.rotation.z=Math.PI/2;b.rotation.y=Math.PI/2;b.position.set(x,0,.21);lid.add(b)}
   RB(.06,.07,.03,.008,0,-.02,.42,M.gold(),lid);
   return {g,anim:t=>{lid.rotation.x=-t*1.7},open:1,loud:1,label:"OPEN TRUNK"}};
+BUILD.lockdoor=()=>{const g=grp();
+  B(.09,1.5,.14,-.5,0,0,M.woodD(),g);B(.09,1.5,.14,.5,0,0,M.woodD(),g);B(1.1,.09,.14,0,1.5,0,M.woodD(),g);
+  const piv=dyn(-.46,0,0,g);
+  RB(.9,1.42,.07,.012,.45,.02,0,M.woodL(),piv,2);
+  for(const x of[.25,.65])for(const y of[.1,.75])for(const s of[-1,1])RB(.3,.55,.03,.008,x,y,s*.04,M.wood(),piv,2);
+  for(const s of[-1,1]){B(.1,.16,.02,.82,.62,s*.05,M.gold(),piv);Sp(.025,.82,.7,s*.07,M.gold(),piv)}
+  const lock=dyn(.82,.44,0,piv);
+  for(const s of[-1,1]){RB(.12,.1,.05,.012,0,0,s*.1,M.gold(),lock,2);Tor(.04,.012,0,.15,s*.1,M.gold(),lock)}
+  return {g,anim:t=>{piv.rotation.y=-t*1.65},lock}};
 BUILD.box=()=>{const g=grp();RB(.52,.4,.46,.012,0,0,0,mat(0xa8a8a8),g,2);B(.52,.004,.07,0,.4,0,mat(0x7a7a7a),g);const f=B(.24,.012,.44,-.14,.4,0,mat(0xb6b6b6),g);f.rotation.z=.2;const f2=B(.24,.012,.44,.14,.4,0,mat(0xb6b6b6),g);f2.rotation.z=-.15;return {g}};
 BUILD.freezer=()=>{const g=grp();
   RB(.64,1.04,.6,.04,0,.02,0,mat(0xdedede,{shininess:90,specular:0x777777}),g,3);RB(.56,.9,.03,.012,0,.08,.31,mat(0xe8e8e8,{shininess:90,specular:0x777777}),g,2);
@@ -586,6 +597,12 @@ function iconTex(id){
   else if(id==="water"){g.fillStyle="#fafafa";g.fillRect(13,5,6,9);g.strokeRect(13,5,6,9);g.beginPath();g.arc(16,21,9,0,7);g.fillStyle="#dcdcdc";g.fill();g.stroke();g.fillStyle="#7a7a7a";g.beginPath();g.arc(16,23,7,.1,Math.PI-.1);g.fill();g.fillStyle="#222";g.fillRect(12,2,8,4);g.fillStyle="#fff";g.fillRect(15,15,2,8);g.fillRect(12,18,8,2)}
   else if(id==="stake"){poly("#d9d9d9",[3,29,23,4,28,8,9,31]);g.beginPath();g.moveTo(3,29);g.lineTo(23,4);g.lineTo(28,8);g.lineTo(9,31);g.closePath();g.stroke();poly("#fff",[3,29,7,26,6,30])}
   else if(id==="key"){g.lineWidth=4.4;g.beginPath();g.arc(9,11,6,0,7);g.stroke();g.strokeStyle="#fafafa";g.lineWidth=2.4;g.beginPath();g.arc(9,11,6,0,7);g.stroke();g.fillStyle="#fafafa";g.fillRect(13,10,17,3.5);g.fillRect(23,13,3,6);g.fillRect(28,13,3,5)}
+  else if(id==="bible"){g.fillStyle="#cfcfcf";g.fillRect(6,4,20,25);g.strokeRect(6,4,20,25);g.fillStyle="#444";g.fillRect(6,4,4,25);g.fillStyle="#111";g.fillRect(16,9,2,12);g.fillRect(12,13,10,2);g.fillStyle="#eee";g.fillRect(23,6,2,21)}
+  else if(id==="doorkey"){
+    poly("#d6d6d6",[2,14,5,11,18,11,18,21,14,21,12,24,9,20,7,22,5,19,2,19]);g.lineWidth=1.2;g.strokeStyle="#111";g.beginPath();g.moveTo(2,14);g.lineTo(5,11);g.lineTo(18,11);g.lineTo(18,21);g.lineTo(14,21);g.lineTo(12,24);g.lineTo(9,20);g.lineTo(7,22);g.lineTo(5,19);g.lineTo(2,19);g.closePath();g.stroke();
+    poly("#a8a8a8",[18,6,28,6,31,16,28,26,18,26]);g.beginPath();g.moveTo(18,6);g.lineTo(28,6);g.lineTo(31,16);g.lineTo(28,26);g.lineTo(18,26);g.closePath();g.stroke();
+    g.strokeStyle="rgba(0,0,0,.28)";g.lineWidth=.6;for(let y=8;y<26;y+=3){g.beginPath();g.moveTo(19,y);g.lineTo(29,y+.4);g.stroke()}
+    g.globalCompositeOperation="destination-out";g.fillRect(21,11,6,9);g.globalCompositeOperation="source-over";g.strokeStyle="#111";g.lineWidth=1;g.strokeRect(21,11,6,9)}
   const tx=new THREE.CanvasTexture(c);tx.magFilter=THREE.NearestFilter;tx.minFilter=THREE.NearestFilter;return tx;
 }
 function itemMesh(id){
@@ -718,9 +735,10 @@ function buildLevel(l){
     let fx=0,fz=1;
     for(const n of[[0,-1],[1,0],[0,1],[-1,0]]){const wx=d.cell[0]+n[0],wy=d.cell[1]+n[1];if(wy>=0&&wy<MH&&wx>=0&&wx<MW&&rows[wy].charCodeAt(wx)===35){fx=-n[0];fz=-n[1];break}}
     holder.rotation.y=Math.atan2(fx,fz);
+    if(d.type==="lockdoor"){holder.rotation.y=Math.PI/2;d.unlocked=false}
     if(d.holds){const m=itemMesh(d.holds.id);m.position.set(0,.3,0);m.visible=false;holder.add(m);d.itemMesh=m;if(d.type==="coffin"||d.type==="trunk")m.position.set(0,.2,0);if(d.type==="nightstand"||d.type==="desk"||d.type==="counter")m.position.set(0,.3,.2)}
   }
-  for(const it of ITEMS)if(it.l===l){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:iconTex(it.id),transparent:true,alphaTest:.3}));sp.scale.set(.38,.38,1);sp.position.set(it.x,.3,it.y);g.add(sp);it.mesh=sp;it.gl=glow(it.x,.3,it.y,.55,g,.3)}
+  for(const it of COLLECT)if(it.l===l){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:iconTex(it.id),transparent:true,alphaTest:.3}));sp.scale.set(it.isKey?.5:.38,it.isKey?.5:.38,1);sp.position.set(it.x,.3,it.y);g.add(sp);it.mesh=sp;it.gl=glow(it.x,.3,it.y,.55,g,.3)}
   g.visible=false;R3.scene.add(g);LG[l]=g;
 }
 const WEAK=[[0,20,12],[0,10,16],[1,15,6],[1,22,16],[2,7,17],[2,15,6]];
@@ -792,7 +810,7 @@ function render(){
   R3.scene.fog.density=state==="menu"?.17:(.17/Math.max(.7,lt*.95));
   for(const d of LV[CL].dec)if(d.b.hideHide)d.obj.visible=!(P.hid===d);
   animWorld(dt);
-  for(const it of ITEMS){if(!it.mesh)continue;it.mesh.visible=!it.got&&it.l===CL;it.gl.visible=it.mesh.visible;if(it.mesh.visible){const by=.3+Math.sin(time*2+it.x)*.04;it.mesh.position.y=by;it.gl.position.y=by}}
+  for(const it of COLLECT){if(!it.mesh)continue;it.mesh.visible=!it.got&&it.l===CL;it.gl.visible=it.mesh.visible;if(it.mesh.visible){const by=.3+Math.sin(time*2+it.x)*.04;it.mesh.position.y=by;it.gl.position.y=by}}
   {let best=null,bd=7;for(const rn of LV[CL].runs){const d=Math.hypot(rn.x0+rn.len/2-P.x,rn.y+.5-P.y);if(d<bd){bd=d;best=rn}}if(best){R3.sl.position.set(best.x0+best.len/2,best.dir==="d"?.9:1.1,best.y+.5);R3.sl.intensity=.9}else R3.sl.intensity=0}
   R3.bell.visible=!BELL.held&&!BELL.onTable&&BELL.l===CL;if(R3.bell.visible)R3.bell.position.set(BELL.x,0,BELL.y);
   const dv=D.lvl===CL&&(D.stun<=0||Math.floor(time*8)%2===0);
@@ -850,12 +868,13 @@ function nearestAct(){
   if(P.hid)return {kind:"out",label:"GET OUT"};
   let best=null,bd=1.8;
   for(const d of LV[CL].dec){
-    const ok=d.def.hide||d.def.casket||(d.type==="tablebell"&&BELL.onTable)||d.b.open;
+    const ok=d.def.hide||d.def.casket||d.type==="lockdoor"||(d.type==="tablebell"&&BELL.onTable)||d.b.open;
     if(!ok)continue;
-    const dist=Math.hypot(d.cx-P.x,d.cy-P.y);
+    const dist=Math.hypot(d.cx-P.x,d.cy-P.y)-(d.type==="lockdoor"?.55:0);
     if(dist<bd){
       bd=dist;let kind,label;
-      if(d.def.hide){kind="hide";label="HIDE"}
+      if(d.type==="lockdoor"){kind="door";label=d.unlocked?(d.open?"CLOSE":"OPEN"):"UNLOCK"}
+      else if(d.def.hide){kind="hide";label="HIDE"}
       else if(d.def.casket){kind="casket";label="OPEN CASKET"}
       else if(d.type==="tablebell"){kind="takebell";label="TAKE BELL"}
       else{kind="open";label=d.open?"CLOSE":d.b.label}
@@ -876,6 +895,17 @@ function doAct(){
     P.px=P.x;P.py=P.y;P.x=d.cx;P.y=d.cy;P.hid=d;P.hidFind=0;hideOv.hidden=false;sfx.hide();
     if(seen){D.sawHide=true;D.mode="search";D.last=[CL,d.cell[0],d.cell[1]];D.path=[];D.repath=0;D.wait=0;toast("He saw you hide!",1800)}
     else{D.sawHide=false;toast("Hiding in the "+d.def.label+". Stay still.",2200)}
+  }
+  else if(a.kind==="door"){
+    const d=a.d,bi=d.cell[1]*MW+d.cell[0];
+    if(!d.unlocked){
+      const k=KEYS.find(q=>q.got&&!q.used&&q.door===CL);
+      if(k){k.used=true;d.unlocked=true;d.b.lock.visible=false;d.open=true;d.openTarget=1;LV[CL].blocked[bi]=0;sfx.open();setList();toast("The "+k.name+" turns. The door is unlocked.",2800)}
+      else if(KEYS.some(q=>q.got&&!q.used))toast("None of your keys fit this lock.",2400);
+      else toast("The door is locked. Find its key.",2600);
+    }else if(d.open){
+      if(Math.hypot(P.x-d.cx,P.y-d.cy)<.8){toast("Something is in the way.",1200)}else{d.open=false;d.openTarget=0;LV[CL].blocked[bi]=1;sfx.open()}
+    }else{d.open=true;d.openTarget=1;LV[CL].blocked[bi]=0;sfx.open()}
   }
   else if(a.kind==="open")openThing(a.d);
   else if(a.kind==="takebell"){BELL.held=true;BELL.onTable=false;toast("You took the bell. Drop it far away to lure Dracula.",3000)}
@@ -921,13 +951,14 @@ function update(dt){
     else if(run.dir==="u"&&P.x<=run.x0+.55){changeLevel(CL-1);P.x=run.x0-.3;P.a=Math.PI}
   }
 
-  // relics lying around
-  for(const it of ITEMS){
+  // relics and keys lying around
+  for(const it of COLLECT){
     if(it.got||it.l!==CL)continue;
     if(Math.hypot(it.x-P.x,it.y-P.y)<.75){
-      it.got=true;carried++;sfx.pick();buzz(40);setList();
-      toast("Found: "+it.name+" ("+carried+" of 5)");
-      if(carried===1)setTimeout(()=>{if(state==="play")toast("A cold wind. Something has woken up.",3200)},3400);
+      it.got=true;sfx.pick();buzz(40);
+      if(it.isKey){setList();toast("Found: "+it.name+" ("+KEYS.filter(k=>k.got).length+" of 3 keys)",3000)}
+      else{carried++;setList();toast("Found: "+it.name+" ("+carried+" of 5)");
+        if(carried===1)setTimeout(()=>{if(state==="play")toast("A cold wind. Something has woken up.",3200)},3400)}
     }
   }
   // stair hints
@@ -1088,7 +1119,8 @@ function win(){
 function newGame(){
   cfg=DIFF[diffKey];maxLives=cfg.lives;
   ITEMS.forEach(i=>i.got=false);
-  LV.forEach(l=>l.dec.forEach(d=>{d.fallen=false;d.fallT=0;d.open=false;d.openT=0;d.openTarget=0;d.collectT=0;if(d.b&&d.b.anim)d.b.anim(0);if(d.itemMesh)d.itemMesh.visible=false}));
+  KEYS.forEach(k=>{k.got=false;k.used=false});
+  LV.forEach(l=>l.dec.forEach(d=>{if(d.type==="lockdoor"){d.unlocked=false;l.blocked[d.cell[1]*MW+d.cell[0]]=1;if(d.b&&d.b.lock)d.b.lock.visible=true}d.fallen=false;d.fallT=0;d.open=false;d.openT=0;d.openTarget=0;d.collectT=0;if(d.b&&d.b.anim)d.b.anim(0);if(d.itemMesh)d.itemMesh.visible=false}));
   BELL.held=false;BELL.onTable=true;BELL.l=BELL0.l;BELL.x=BELL0.x;BELL.y=BELL0.y;
   WK.forEach(w=>{w.broken=false;w.warned=false;w.crack.visible=true;w.hole.visible=false;w.debris.forEach(m=>LG[w.l].remove(m));w.debris=[]});camDrop=0;fall=null;
   carried=0;lives=maxLives;time=0;flashT=6;P.bob=0;
@@ -1096,13 +1128,13 @@ function newGame(){
 }
 const INTRO=[
  "You wake up in a bedroom on the upper floor of Count Dracula's house. Every door out is sealed.",
- "The only way out is the locked casket in the basement. Its five seals break with five relics, lying hidden in the dark corners of the house. They shimmer faintly when you get close.",
+ "The only way out is the locked casket in the basement. Its five seals break with five relics, lying hidden in the dark corners of the house. Three of them are locked away in closets behind doors, and the keys are hidden somewhere else in the house.",
  "Walk up to furniture and tap the button beside RUN to open it. When he hunts you, hide in beds, bathtubs, freezers and barrels. Drop the bell from your table to lure him away.",
  "You have a few days. Each time he catches you, a day passes and you wake up back in bed. Stairs join the attic, upper floor, ground floor and basement. A lit candle marks each stairwell; the stairs to the attic are at the far east end of the upper hall. Stay quiet and don't knock anything over. Some floorboards are rotten and will give way under you."
 ];
 const INTRO_P=[
  "Practice mode. Dracula is not in the house, so take your time.",
- "Walk every floor, open drawers, wardrobes, trunks and coffins, and find the five relics. Try the hiding spots and the bell too.",
+ "Walk every floor, open drawers, wardrobes, trunks and coffins, and find the five relics. Three are locked in closets: find their keys first. Try the hiding spots and the bell too.",
  "Stairs join the attic, upper floor, ground floor and basement. Some floorboards are rotten and will give way. When you have all five relics, open the casket in the basement."
 ];
 let INTRO_CUR=INTRO,di=0;
@@ -1417,6 +1449,6 @@ function frame(t){
 resize();setList();setLives();drawFigure();initTitle3D();
 Promise.all([loadImg(WALL_SRC),loadImg(FLOOR_SRC)]).then(r=>{wallTex=1;const ok=r[0]&&r[1]&&initWorld(r[0],r[1]);if(!ok)$("play").textContent="3D FAILED TO LOAD"});
 requestAnimationFrame(frame);
-if(location.hash==="#debug")window.__g={wake,bfs3,updateBite,updateFall,WK,LG,get R3(){return R3},P,D,LV,ITEMS,BELL,DEC,update,render,doAct,nearestAct,openThing,tp:(l,x,y,a)=>{CL=l;P.x=x;P.y=y;if(a!=null)P.a=a;lvlEl.textContent=FLOORS[l].toUpperCase()},begin:k=>{if(k)diffKey=k;newGame();dialog.hidden=true;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=false;state="play"},get CL(){return CL},get state(){return state},get carried(){return carried},giveAll:()=>{ITEMS.forEach(i=>i.got=true);carried=5;setList()}};
+if(location.hash==="#debug")window.__g={KEYS,wake,bfs3,updateBite,updateFall,WK,LG,get R3(){return R3},P,D,LV,ITEMS,BELL,DEC,update,render,doAct,nearestAct,openThing,tp:(l,x,y,a)=>{CL=l;P.x=x;P.y=y;if(a!=null)P.a=a;lvlEl.textContent=FLOORS[l].toUpperCase()},begin:k=>{if(k)diffKey=k;newGame();dialog.hidden=true;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=false;state="play"},get CL(){return CL},get state(){return state},get carried(){return carried},giveAll:()=>{ITEMS.forEach(i=>i.got=true);carried=5;setList()}};
 })();
 </script>
