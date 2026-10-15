@@ -94,6 +94,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 #dtab button:focus-visible{outline:2px solid #fff;outline-offset:-2px}
 #fx ul{margin:0;padding-left:16px;columns:2;column-gap:14px;font-size:12px;line-height:1.45}
 #fx li{break-inside:avoid}
+#partbtn{position:relative;width:100%;max-width:420px;font:400 15px var(--display);letter-spacing:.14em;color:var(--ink);background:rgba(0,0,0,.55);border:1px solid var(--dim);padding:10px;cursor:pointer;touch-action:manipulation}
 #play{position:relative;width:100%;max-width:420px;font:400 22px var(--display);letter-spacing:.18em;color:#000;background:var(--ink);border:0;padding:14px;cursor:pointer;touch-action:manipulation}
 #play:focus-visible,.diffs button:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .screen button{touch-action:manipulation}
@@ -157,6 +158,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
     <div id="tmain">
       <h1>Dracula's<br>Haunted House</h1>
       <button type="button" id="play">PLAY</button>
+      <button type="button" id="partbtn">PART 2: THE CASTLE</button>
     </div>
     <div id="figure"><canvas id="fig" width="400" height="720"></canvas></div>
     <div id="choose">
@@ -1442,6 +1444,7 @@ function setDiff(k){diffKey=k;document.querySelectorAll("#modes [data-d]").forEa
 tap($("modes"),e=>{const n=e.target.closest&&e.target.closest("[data-d]");if(n){setDiff(n.dataset.d);sfx.ui()}});
 setDiff("normal");
 let chooseAt=0,readyTimer=0;
+tap($("partbtn"),()=>{location.href="castle.html"});
 tap($("play"),()=>{if(state!=="menu"||titleEl.classList.contains("choosing"))return;if(!AC)initAudio();titleEl.classList.add("choosing");T3.target=1;chooseAt=performance.now();clearTimeout(readyTimer);readyTimer=setTimeout(()=>{if(titleEl.classList.contains("choosing"))titleEl.classList.add("ready")},1300)});
 tap($("back"),()=>{if(!titleEl.classList.contains("ready"))return;clearTimeout(readyTimer);titleEl.classList.remove("choosing","ready");T3.target=0});
 tap($("begin"),()=>{if(state!=="menu"||!titleEl.classList.contains("ready")||performance.now()-chooseAt<1300)return;clearTimeout(readyTimer);titleEl.classList.remove("choosing","ready");T3.target=0;newGame();startIntro()});
