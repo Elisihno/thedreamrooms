@@ -5,30 +5,53 @@
 <title>The Dream Rooms – Slender Woods</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: "Courier New", monospace; color: #ddd; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: "Courier New", monospace; color: #ddd;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   canvas#game { display: block; width: 100vw; height: 100vh; }
   #static { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; image-rendering: pixelated; }
   #vignette { position: fixed; inset: 0; pointer-events: none;
     background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,.85) 100%); }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; }
-  #hud { position: fixed; left: 20px; top: 16px; font-size: 18px; letter-spacing: 2px; text-shadow: 0 0 6px #000; pointer-events: none; }
-  #stamina { margin-top: 8px; width: 140px; height: 5px; background: rgba(255,255,255,.15); }
-  #stamina > div { height: 100%; width: 100%; background: #bbb; }
-  #prompt { position: fixed; bottom: 14%; width: 100%; text-align: center; font-size: 18px; opacity: 0; transition: opacity .15s; text-shadow: 0 0 6px #000; pointer-events: none; }
-  #msg { position: fixed; top: 22%; width: 100%; text-align: center; font-size: 20px; opacity: 0; transition: opacity 1s; text-shadow: 0 0 8px #000; pointer-events: none; }
+  #hud { position: fixed; left: 16px; top: 12px; width: min(48vw, 360px); font-size: 14px; letter-spacing: 1px; text-shadow: 0 0 6px #000;
+    pointer-events: none; display: flex; flex-direction: column; gap: 6px; }
+  #obj { display: flex; flex-direction: column; gap: 2px; }
+  #obj .k { font-size: 11px; color: #8a8a8a; letter-spacing: 3px; }
+  #objtext { font-size: 15px; color: #eee; line-height: 1.3; }
+  #hint { font-size: 15px; color: #e8c36a; }
+  .bar { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #999; letter-spacing: 2px; }
+  .bar span { width: 62px; }
+  .bar i { display: block; flex: 1; height: 5px; background: rgba(255,255,255,.15); }
+  .bar b { display: block; height: 100%; width: 100%; background: #bbb; }
+  #bat b { background: #e8c36a; }
+  #safe { font-size: 11px; color: #ffb347; letter-spacing: 3px; opacity: 0; transition: opacity .4s; }
+  #prompt { position: fixed; bottom: 26%; width: 100%; text-align: center; font-size: 18px; opacity: 0; transition: opacity .15s; text-shadow: 0 0 6px #000; pointer-events: none; }
+  #msg { position: fixed; top: 20%; width: 100%; text-align: center; font-size: 20px; opacity: 0; transition: opacity 1s; text-shadow: 0 0 8px #000; pointer-events: none; }
+  #sub { position: fixed; left: 50%; transform: translateX(-50%); bottom: 5%; width: min(64vw, 720px); text-align: center; font-size: 17px; line-height: 1.4;
+    text-shadow: 0 0 8px #000, 0 0 3px #000; opacity: 0; transition: opacity .4s; pointer-events: none; }
+  #sub.radio { color: #8fe3c8; } #sub.whisper { color: #e06666; font-style: italic; letter-spacing: 2px; } #sub.thought { color: #eee; font-style: italic; }
   .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: rgba(0,0,0,.88); text-align: center; cursor: pointer; padding: 0 24px; }
   .screen h1 { font-size: clamp(28px, 6vw, 64px); letter-spacing: 8px; margin: 0 0 10px; font-weight: normal; }
-  .screen p { max-width: 560px; line-height: 1.6; color: #aaa; margin: 6px 0; }
+  .screen p { max-width: 580px; line-height: 1.6; color: #aaa; margin: 6px 0; }
   .screen .go { margin-top: 22px; color: #fff; animation: blink 1.4s infinite; }
   .screen kbd { border: 1px solid #666; padding: 1px 6px; border-radius: 3px; color: #ddd; }
   #dead h1 { color: #a00; }
-  #dead, #won { display: none; }
-  html, body { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #dead, #won, #note { display: none; }
+  #won { background: #f5f3ee; }
+  #won .endline { color: #2a2a2a; } #won .endline.big { color: #111; } #won .endline.stats { color: #777; } #won .go { color: #222; }
+  #note { background: rgba(0,0,0,.72); z-index: 20; }
+  .paper { max-width: min(92vw, 560px); max-height: 82vh; overflow: auto; background: #e9e0c8; color: #2b2218; padding: 20px 26px; text-align: left;
+    font-family: Georgia, "Times New Roman", serif; box-shadow: 0 8px 40px #000; transform: rotate(-.5deg); }
+  .paper h2 { font-size: 14px; letter-spacing: 3px; margin: 0 0 12px; font-weight: bold; color: #5a3a1a; text-transform: uppercase; }
+  .paper .body { white-space: pre-wrap; font-size: 16px; line-height: 1.5; min-height: 120px; }
+  .paper .more { margin: 14px 0 0; font-size: 12px; letter-spacing: 2px; color: #7a6a50; text-align: right; opacity: 0; transition: opacity .3s; }
+  .endline { opacity: 0; animation: fadein 1.8s forwards; margin: 8px 0; max-width: 560px; line-height: 1.6; color: #cfc8b8; }
+  .endline.big { font-size: clamp(26px, 5vw, 48px); letter-spacing: 8px; color: #fff; margin-top: 18px; }
+  .endline.stats { font-size: 13px; color: #888; letter-spacing: 2px; }
+  @keyframes fadein { to { opacity: 1; } }
   .touchhelp, #stick, .tbtn { display: none; }
   body.touch .kbhelp { display: none; }
   body.touch .touchhelp { display: block; }
-  body.touch #prompt { display: none; }
   #stick { position: fixed; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%;
     border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.06); pointer-events: none; }
   #knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(255,255,255,.4); }
@@ -48,33 +71,44 @@
 <canvas id="static" width="192" height="108"></canvas>
 <div id="vignette"></div>
 <div id="fade"></div>
-<div id="hud"><div id="pages">PAGES 0 / 8</div><div id="stamina"><div></div></div></div>
-<div id="prompt">[E] collect page</div>
+<div id="hud">
+  <div id="obj"><span class="k">OBJECTIVE</span><span id="objtext"></span><span id="hint"></span></div>
+  <div class="bar"><span>LIGHT</span><i id="bat"><b></b></i></div>
+  <div class="bar"><span>STAMINA</span><i id="stamina"><b></b></i></div>
+  <div id="safe">IN THE FIRELIGHT: SAFE</div>
+</div>
+<div id="prompt"></div>
 <div id="msg"></div>
+<div id="sub"></div>
 <div id="stick"><div id="knob"></div></div>
 <div id="btnE" class="tbtn">E</div><div id="btnS" class="tbtn">RUN</div><div id="btnF" class="tbtn">LIGHT</div>
 
+<div id="note" class="screen"><div class="paper"><h2></h2><div class="body"></div><p class="more" id="noteMore">tap to continue</p></div></div>
 <div id="start" class="screen">
   <h1>SLENDER WOODS</h1>
-  <p>You wake up in a forest at night. Find all <b>8 pages</b> scattered through the trees.</p>
-  <p>Something is out there. <b>Don't stare at it for too long.</b> The more pages you take, the closer and faster it gets.</p>
-  <p class="touchhelp">Left thumb: move &nbsp; Right thumb: look &nbsp; <b>E</b>: collect page &nbsp; <b>RUN</b>: hold to sprint &nbsp; <b>LIGHT</b>: flashlight. Landscape works best.</p>
-  <p class="kbhelp"><kbd>W A S D</kbd> move &nbsp; <kbd>Shift</kbd> sprint &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>E</kbd> collect &nbsp; <kbd>F</kbd> flashlight</p>
+  <p>Your little sister <b>Nora</b> vanished from Camp Dreamrooms in the middle of the night. Find her before the tall man finds you.</p>
+  <p>Follow her drawings. Search the cabin. Wake the old radio tower. Listen at the well. Open the door in the woods.</p>
+  <p>Stay in the firelight. Watch your battery. <b>Don't stare at him too long.</b></p>
+  <p class="touchhelp">Left thumb: move &nbsp; Right thumb: look &nbsp; <b>E</b>: interact &nbsp; <b>RUN</b>: hold to sprint &nbsp; <b>LIGHT</b>: flashlight. Landscape works best.</p>
+  <p class="kbhelp"><kbd>W A S D</kbd> move &nbsp; <kbd>Shift</kbd> sprint &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>E</kbd> interact &nbsp; <kbd>F</kbd> flashlight</p>
   <p class="go">click to begin</p>
 </div>
-<div id="dead" class="screen"><h1>IT FOUND YOU</h1><p class="go">click to try again</p></div>
-<div id="won" class="screen"><h1>YOU ESCAPED</h1><p>For now…</p><p class="go">click to play again</p></div>
+<div id="dead" class="screen"><h1>IT FOUND YOU</h1><p id="deadinfo"></p><p class="go">tap to wake up</p></div>
+<div id="won" class="screen"></div>
 
 <script type="module">
 import * as THREE from './lib/three.module.min.js';
 
 /* ---------------------------------------------------------------- config */
-const TOTAL_PAGES = 8;
 const WORLD_RADIUS = 100;       // trees extend a bit past the walkable area
 const WALK_LIMIT = 96;
 const PLAYER_R = 0.45;
 const EYE = 1.7;
 const WALK = 3.4, SPRINT = 6.2;
+// fixed landmarks the story moves between
+const L = { camp: { x: 0, z: 0 }, cabin: { x: -52, z: -38 }, tower: { x: 52, z: 40 }, well: { x: -18, z: 52 },
+            shrine: { x: 38, z: -58 }, gate: { x: -30, z: -88 } };
+const CLEAR = { camp: 10, cabin: 10, tower: 9, well: 6, shrine: 11, gate: 7 };
 
 /* ---------------------------------------------------------------- rng */
 function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
@@ -86,6 +120,8 @@ const canvas = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? 1.5 : 2));
 renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.9;
 
 const FOG_COLOR = 0x070b0d;
 const scene = new THREE.Scene();
@@ -96,7 +132,8 @@ const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 20
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 
-scene.add(new THREE.HemisphereLight(0x4a5f88, 0x141c12, 1.5));
+const hemi = new THREE.HemisphereLight(0x4a5f88, 0x141c12, 1.5);
+scene.add(hemi);
 const moon = new THREE.DirectionalLight(0x7088b8, 0.9);
 moon.position.set(-30, 60, 20);
 scene.add(moon);
@@ -155,7 +192,7 @@ function buildForest(seed) {
         if (Math.hypot(t.x - x, t.z - z) < 2.4 + t.r + r) { ok = false; break; }
       }
     }
-    if (!ok) continue;
+    if (!ok || Object.keys(L).some(k => Math.hypot(L[k].x - x, L[k].z - z) < CLEAR[k] + r)) continue;
     const t = { x, z, r, h, dead: rnd() < 0.45 };
     trees.push(t);
     const k = key(x, z); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(t);
@@ -196,8 +233,26 @@ function pushOutOfTrees(pos, radius) {
       pos.x = t.x + dx / d * min; pos.z = t.z + dz / d * min;
     }
   }
+  for (const b of boxes) {
+    const cx = Math.max(b.x0, Math.min(pos.x, b.x1)), cz = Math.max(b.z0, Math.min(pos.z, b.z1));
+    const dx = pos.x - cx, dz = pos.z - cz, d2 = dx * dx + dz * dz;
+    if (d2 >= radius * radius) continue;
+    if (d2 > 1e-8) { const k = radius / Math.sqrt(d2); pos.x = cx + dx * k; pos.z = cz + dz * k; }
+    else {
+      const l = pos.x - b.x0, r = b.x1 - pos.x, t = pos.z - b.z0, bt = b.z1 - pos.z, m = Math.min(l, r, t, bt);
+      if (m === l) pos.x = b.x0 - radius; else if (m === r) pos.x = b.x1 + radius; else if (m === t) pos.z = b.z0 - radius; else pos.z = b.z1 + radius;
+    }
+  }
 }
-function lineBlocked(ax, az, bx, bz) { // is the segment A→B cut by a trunk?
+function segHitsBox(ax, az, bx, bz, b) {
+  let t0 = 0, t1 = 1; const dx = bx - ax, dz = bz - az;
+  for (const [p, q, lo, hi] of [[dx, ax, b.x0, b.x1], [dz, az, b.z0, b.z1]]) {
+    if (Math.abs(p) < 1e-9) { if (q < lo || q > hi) return false; }
+    else { let u0 = (lo - q) / p, u1 = (hi - q) / p; if (u0 > u1) [u0, u1] = [u1, u0]; t0 = Math.max(t0, u0); t1 = Math.min(t1, u1); if (t0 > t1) return false; }
+  }
+  return true;
+}
+function lineBlocked(ax, az, bx, bz) { // is the segment A→B cut by a trunk or a wall?
   const dx = bx - ax, dz = bz - az, len2 = dx * dx + dz * dz || 1;
   for (const t of trees) {
     let u = ((t.x - ax) * dx + (t.z - az) * dz) / len2;
@@ -205,51 +260,203 @@ function lineBlocked(ax, az, bx, bz) { // is the segment A→B cut by a trunk?
     const cx = ax + dx * u - t.x, cz = az + dz * u - t.z;
     if (cx * cx + cz * cz < t.r * t.r * 0.85) return true;
   }
+  for (const b of boxes) if (segHitsBox(ax, az, bx, bz, b)) return true;
   return false;
 }
 
-/* ---------------------------------------------------------------- pages */
-const pages = [];
-const PAGE_TEXT = ['ALWAYS WATCHING', 'NO EYES', "DON'T LOOK", 'LEAVE ME ALONE', 'HELP ME', 'IT FOLLOWS', 'BEHIND YOU', 'FIND THEM ALL'];
-function makePageTexture(i, rnd) {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 360;
-  const g = c.getContext('2d');
-  g.fillStyle = '#d8d2c0'; g.fillRect(0, 0, 256, 360);
-  g.strokeStyle = '#222'; g.lineWidth = 3; g.lineCap = 'round';
-  for (let k = 0; k < 14; k++) { // scribbles
-    g.beginPath(); g.moveTo(rnd() * 256, rnd() * 360);
-    for (let n = 0; n < 5; n++) g.lineTo(rnd() * 256, rnd() * 360); g.globalAlpha = .35; g.stroke();
+/* ---------------------------------------------------------------- landmarks */
+const forestTrees = trees.slice();
+const boxes = [];      // axis-aligned wall colliders {x0,x1,z0,z1}
+const fires = [];      // safe zones {x,z,r,lit,light,flames,base,name}
+const things = [];     // interactables
+const batteries = [];  // auto pickups
+const stones = [];     // shrine stones
+const stdMat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 1, ...extra });
+const woodMat = new THREE.MeshStandardMaterial({ map: barkTex, color: 0x9c8660, roughness: 1 });
+function mesh(geo, mat, x, y, z, parent = scene) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; }
+function obstacle(x, z, r) { trees.push({ x, z, r, h: 0 }); }
+function addWall(x0, x1, z0, z1, h = 3) {
+  mesh(new THREE.BoxGeometry(x1 - x0, h, z1 - z0), woodMat, (x0 + x1) / 2, h / 2, (z0 + z1) / 2);
+  boxes.push({ x0, x1, z0, z1 });
+}
+function addThing(o) { o.r = o.r ?? 2.6; o.y = o.y ?? 1; o.done = false; things.push(o); return o; }
+
+function makeFire(x, z, name, r = 13) {
+  const grp = new THREE.Group(); grp.position.set(x, 0, z); scene.add(grp);
+  const logMat = stdMat(0x2a1a10);
+  for (let i = 0; i < 3; i++) { const lg = mesh(new THREE.CylinderGeometry(.09, .11, 1.1, 8), logMat, 0, .22, 0, grp); lg.rotation.order = 'YZX'; lg.rotation.set(0, i * 2.09, 1.15); }
+  for (let i = 0; i < 9; i++) { const a = i / 9 * 6.28; mesh(new THREE.SphereGeometry(.2, 8, 6), stdMat(0x55555a), Math.cos(a) * .85, .1, Math.sin(a) * .85, grp).scale.y = .7; }
+  const flames = [[0xff5a10, .38, 1.15], [0xff9a2a, .27, .85], [0xffd25a, .16, .55]].map(([c, rad, h]) =>
+    mesh(new THREE.ConeGeometry(rad, h, 8), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .92 }), 0, .25 + h / 2, 0, grp));
+  const light = new THREE.PointLight(0xff8a3c, 30, 30, 1.5); light.position.set(0, 1.3, 0); grp.add(light);
+  obstacle(x, z, .9);
+  const f = { x, z, r, lit: true, light, flames, base: 30, name, grp }; fires.push(f); return f;
+}
+
+function buildCamp() {
+  makeFire(L.camp.x, L.camp.z, 'campfire', 13);
+  [[-6, -3.5, .3, 0x6a4a2a], [5, -6, -.4, 0x3d5a3a]].forEach(([x, z, ry, c]) => {
+    const t = mesh(new THREE.ConeGeometry(2.3, 2.4, 4), stdMat(c), x, 1.2, z); t.rotation.y = Math.PI / 4 + ry; obstacle(x, z, 1.6);
+  });
+  [[2.4, 2.2], [-2.6, 1.6], [.4, -3]].forEach(([x, z]) => { const lg = mesh(new THREE.CylinderGeometry(.28, .28, 1.5, 8), stdMat(0x3a2a1a), x, .28, z); lg.rotation.z = Math.PI / 2; lg.rotation.y = Math.random() * 3; });
+  // Nora's walkie-talkie, hissing in the grass
+  mesh(new THREE.BoxGeometry(.12, .26, .05), stdMat(0x1a1a1e), 1.4, .13, 1.7).rotation.z = 1.4;
+  mesh(new THREE.SphereGeometry(.018, 8, 6), new THREE.MeshBasicMaterial({ color: 0x44ff66 }), 1.43, .17, 1.7);
+}
+
+function buildCabin() {
+  const cx = L.cabin.x, cz = L.cabin.z, W = 7, D = 5, H = 3, t = .3, gap = .85;
+  const x0 = cx - W / 2, x1 = cx + W / 2, z0 = cz - D / 2, z1 = cz + D / 2;
+  mesh(new THREE.BoxGeometry(W, .12, D), stdMat(0x3a2a1a), cx, .06, cz);
+  addWall(x0, x1, z0, z0 + t, H); addWall(x0, x1, z1 - t, z1, H); addWall(x0, x0 + t, z0, z1, H);
+  addWall(x1 - t, x1, z0, cz - gap, H); addWall(x1 - t, x1, cz + gap, z1, H);          // east wall, door gap faces the camp
+  mesh(new THREE.BoxGeometry(t, H - 2.3, gap * 2), woodMat, x1 - t / 2, 2.3 + (H - 2.3) / 2, cz);
+  [-1, 1].forEach(s => { const r = mesh(new THREE.BoxGeometry(W + .8, .16, D / 2 + .9), stdMat(0x2a1d14), cx, H + .75, cz + s * D / 4); r.rotation.x = s * .5; });
+  // table, lantern, shelf
+  mesh(new THREE.BoxGeometry(1.6, .1, .9), stdMat(0x4a3520), cx - 1.5, .9, cz);
+  mesh(new THREE.BoxGeometry(.12, .9, .12), stdMat(0x4a3520), cx - 1.5, .45, cz);
+  mesh(new THREE.BoxGeometry(.9, .08, 2.2), stdMat(0x4a3520), cx - 3, 1.1, cz - .6);
+  mesh(new THREE.BoxGeometry(.2, .28, .2), new THREE.MeshBasicMaterial({ color: 0xffd58a }), cx - 1.2, 1.1, cz - .25);
+  const lamp = new THREE.PointLight(0xffc470, 16, 18, 1.5); lamp.position.set(cx - 1.2, 1.7, cz - .25); scene.add(lamp);
+  fires.push({ x: cx, z: cz, r: 14, lit: true, light: lamp, flames: [], base: 16, name: 'cabin' });
+  const paper = mesh(new THREE.BoxGeometry(.34, .01, .24), stdMat(0xe9e0c8, { emissive: 0x554433 }), cx - 1.6, .96, cz + .2); paper.rotation.y = .3;
+  const book = mesh(new THREE.BoxGeometry(.3, .06, .22), stdMat(0x3a1a1a, { emissive: 0x1a0808 }), cx - 3, 1.17, cz - 1.2);
+  addThing({ kind: 'journal', x: cx - 1.6, y: 1.0, z: cz + .2, r: 3, big: true, mesh: paper,
+    label: () => "Read Nora's note", act: () => readJournal() });
+  addThing({ kind: 'lore', x: cx - 3, y: 1.15, z: cz - 1.2, r: 3, big: true, mesh: book,
+    label: () => story.lore ? "Read the ranger's log again" : "Read the ranger's log", act: () => readRanger() });
+  addBattery(cx + 1.4, cz - 1.7); addBattery(cx + 2.2, cz + 1.5);
+}
+
+function buildTower() {
+  const { x, z } = L.tower, steel = stdMat(0x6a7078, { metalness: .4, roughness: .6 }), H = 24;
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => mesh(new THREE.CylinderGeometry(.09, .13, H, 6), steel, x + sx * .8, H / 2, z + sz * .8));
+  for (let h = 3; h < H; h += 4) {
+    mesh(new THREE.BoxGeometry(1.7, .07, .07), steel, x, h, z - .8); mesh(new THREE.BoxGeometry(1.7, .07, .07), steel, x, h, z + .8);
+    mesh(new THREE.BoxGeometry(.07, .07, 1.7), steel, x - .8, h, z); mesh(new THREE.BoxGeometry(.07, .07, 1.7), steel, x + .8, h, z);
   }
-  g.globalAlpha = 1; g.fillStyle = '#111'; g.font = 'bold 34px Courier New'; g.textAlign = 'center';
-  g.fillText(PAGE_TEXT[i], 128, 70);
-  // faceless figure
-  g.fillStyle = '#000'; g.fillRect(112, 150, 32, 130); g.fillRect(70, 160, 116, 8);
-  g.fillStyle = '#eee'; g.beginPath(); g.arc(128, 128, 20, 0, 7); g.fill();
-  g.fillStyle = '#900'; g.fillRect(126, 160, 4, 40);
+  mesh(new THREE.CylinderGeometry(.05, .05, 4, 6), steel, x, H + 2, z);
+  const bulb = mesh(new THREE.SphereGeometry(.28, 10, 8), new THREE.MeshBasicMaterial({ color: 0x400808 }), x, H + 4.1, z);
+  obstacle(x, z, 1.4);
+  const gen = mesh(new THREE.BoxGeometry(1.8, 1.1, 1), stdMat(0x3c4a32), x - 4, .55, z);
+  mesh(new THREE.CylinderGeometry(.08, .08, 1, 8), stdMat(0x222222), x - 4.5, 1.6, z - .3);
+  mesh(new THREE.BoxGeometry(.5, .4, .1), new THREE.MeshBasicMaterial({ color: 0x220000 }), x - 4, .75, z + .52);
+  obstacle(x - 4, z, 1.1);
+  makeFire(x - 4, z + 5, 'radio tower', 13);
+  tower.bulb = bulb;
+  addThing({ kind: 'generator', x: x - 4, y: 1, z, r: 3.6, big: true, mesh: null, cond: () => story.ch >= 2,
+    label: () => story.fuel >= 3 ? 'Pour the fuel into the generator' : `Check the generator (fuel ${story.fuel}/3)`, act: () => useGenerator() });
+}
+const tower = { bulb: null };
+
+function buildWell() {
+  const { x, z } = L.well, stone = stdMat(0x6c6c72);
+  mesh(new THREE.CylinderGeometry(1.3, 1.4, 1, 16, 1, true), Object.assign(stone.clone(), { side: THREE.DoubleSide }), x, .5, z);
+  mesh(new THREE.TorusGeometry(1.35, .13, 8, 20), stone, x, 1.02, z).rotation.x = Math.PI / 2;
+  mesh(new THREE.CircleGeometry(1.25, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }), x, .55, z).rotation.x = -Math.PI / 2;
+  [-1.6, 1.6].forEach(s => mesh(new THREE.BoxGeometry(.16, 2.6, .16), stdMat(0x3a2a1a), x + s, 1.3, z));
+  mesh(new THREE.BoxGeometry(3.6, .16, .2), stdMat(0x3a2a1a), x, 2.6, z);
+  mesh(new THREE.ConeGeometry(2.4, 1, 4), stdMat(0x2a1d14), x, 3.2, z).rotation.y = Math.PI / 4;
+  obstacle(x, z, 1.7);
+  addThing({ kind: 'well', x, y: 1.1, z, r: 3.6, big: true, cond: () => story.ch >= 3,
+    label: () => story.ch >= 4 ? 'Listen into the well again' : 'Listen into the well', act: () => useWell() });
+}
+
+const STONE_COLORS = [{ name: 'Red', hex: 0xff3b30 }, { name: 'Blue', hex: 0x3b8bff }, { name: 'Yellow', hex: 0xffd60a }, { name: 'Green', hex: 0x32d74b }];
+function buildShrine() {
+  const { x, z } = L.shrine;
+  mesh(new THREE.BoxGeometry(1.4, .8, 1.4), stdMat(0x55555a), x, .4, z); obstacle(x, z, 1.1);
+  mesh(new THREE.BoxGeometry(.9, .06, .9), new THREE.MeshBasicMaterial({ color: 0xcfcfd8 }), x, .83, z);
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 4 + i * Math.PI / 2, sx = x + Math.cos(a) * 7, sz = z + Math.sin(a) * 7;
+    const grp = new THREE.Group(); grp.position.set(sx, 0, sz); grp.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a)); scene.add(grp);
+    mesh(new THREE.BoxGeometry(1.1, 2.9, .6), stdMat(0x4a4a50), 0, 1.45, 0, grp).rotation.z = (i - 1.5) * .02;
+    const rune = mesh(new THREE.PlaneGeometry(.6, .6), new THREE.MeshBasicMaterial({ color: STONE_COLORS[i].hex }), 0, 1.7, .31, grp);
+    obstacle(sx, sz, .75);
+    const s = { i, rune, thing: null }; stones.push(s);
+    s.thing = addThing({ kind: 'stone', x: sx, y: 1.5, z: sz, r: 3.2, big: true, cond: () => story.ch >= 3 && !story.frenzy,
+      label: () => story.ch >= 4 ? `Touch the ${STONE_COLORS[i].name.toLowerCase()} stone` : 'Touch the stone', act: () => touchStone(i) });
+  }
+}
+
+function buildGate() {
+  const { x, z } = L.gate, grp = new THREE.Group(); grp.position.set(x, 0, z);
+  grp.rotation.y = Math.atan2(L.shrine.x - x, L.shrine.z - z); scene.add(grp);
+  const st = stdMat(0x5a5a62);
+  [-2, 2].forEach(s => { mesh(new THREE.BoxGeometry(1, 5.4, 1), st, s, 2.7, 0, grp); obstacle(x + Math.cos(grp.rotation.y) * s, z - Math.sin(grp.rotation.y) * s, .7); });
+  mesh(new THREE.BoxGeometry(5.4, .9, 1.1), st, 0, 5.6, 0, grp);
+  const portal = mesh(new THREE.PlaneGeometry(3, 5), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide }), 0, 2.5, 0, grp);
+  const light = new THREE.PointLight(0xffffff, 0, 60, 1.2); light.position.set(0, 2.8, 1.5); grp.add(light);
+  gate.portal = portal; gate.light = light;
+}
+const gate = { portal: null, light: null };
+
+// ---- items that need scattered placement
+function pickSpots(n, rnd, { minD, maxD, apart, avoid = [], avoidApart = 15 }) {
+  const out = [];
+  const cand = forestTrees.filter(t => { const d = Math.hypot(t.x, t.z); return d > minD && d < maxD && Object.keys(L).every(k => Math.hypot(L[k].x - t.x, L[k].z - t.z) > CLEAR[k] + 6); });
+  let guard = 0;
+  while (out.length < n && guard++ < 4000) {
+    const t = cand[Math.floor(rnd() * cand.length)];
+    if (out.some(o => Math.hypot(o.x - t.x, o.z - t.z) < apart)) continue;
+    if (avoid.some(o => Math.hypot(o.x - t.x, o.z - t.z) < avoidApart)) continue;
+    out.push(t);
+  }
+  return out;
+}
+function wrapText(g, text, x, y, w, lh) {
+  let line = ''; for (const word of text.split(' ')) { const test = line + word + ' ';
+    if (g.measureText(test).width > w && line) { g.fillText(line, x, y); line = word + ' '; y += lh; } else line = test; }
+  g.fillText(line, x, y);
+}
+function drawingTexture(v) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 360; const g = c.getContext('2d');
+  g.fillStyle = '#e6dcc2'; g.fillRect(0, 0, 256, 360);
+  g.lineCap = 'round'; g.lineWidth = 4;
+  const line = (col, pts) => { g.strokeStyle = col; g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke(); };
+  const stick = (x, y, col, s = 1) => { g.strokeStyle = col; g.beginPath(); g.arc(x, y, 9 * s, 0, 7); g.stroke(); line(col, [[x, y + 9 * s], [x, y + 40 * s]]); line(col, [[x - 14 * s, y + 24 * s], [x + 14 * s, y + 24 * s]]); line(col, [[x, y + 40 * s], [x - 10 * s, y + 62 * s]]); line(col, [[x, y + 40 * s], [x + 10 * s, y + 62 * s]]); };
+  const tall = (x, y, s = 1) => { g.fillStyle = '#111'; g.fillRect(x - 7 * s, y + 20 * s, 14 * s, 90 * s); g.fillStyle = '#f4f4ee'; g.beginPath(); g.ellipse(x, y + 10 * s, 8 * s, 11 * s, 0, 0, 7); g.fill(); g.fillStyle = '#b00'; g.fillRect(x - s, y + 22 * s, 2 * s, 20 * s); };
+  g.fillStyle = '#ffd84a'; g.beginPath(); g.arc(205, 50, 20, 0, 7); g.fill();
+  g.fillStyle = '#3a2a22'; g.font = 'bold 15px Courier New'; g.textAlign = 'center';
+  if (v === 0) { stick(70, 150, '#c33'); stick(110, 150, '#36c'); tall(215, 130, .9); wrapText(g, 'THE TALL MAN WAS NICE AT FIRST', 128, 285, 210, 20); }
+  if (v === 1) { stick(80, 160, '#c33'); tall(170, 150, 1.4); for (let i = 0; i < 4; i++) { line('#3a6a2a', [[20 + i * 60, 140], [40 + i * 60, 90]]); line('#3a6a2a', [[20 + i * 60, 140], [30 + i * 60, 100]]); } wrapText(g, "HE ONLY MOVES WHEN YOU'RE NOT LOOKING", 128, 285, 210, 20); }
+  if (v === 2) { g.fillStyle = '#7a4a2a'; g.fillRect(70, 150, 110, 80); g.fillStyle = '#ffd84a'; g.fillRect(100, 175, 28, 28); g.fillStyle = '#5a2a1a'; g.beginPath(); g.moveTo(60, 150); g.lineTo(125, 105); g.lineTo(190, 150); g.fill();
+    g.fillStyle = '#ff7a1a'; g.beginPath(); g.moveTo(205, 235); g.lineTo(195, 205); g.lineTo(205, 185); g.lineTo(215, 205); g.fill(); line('#c33', [[40, 250], [100, 235], [90, 228]]); wrapText(g, 'FIRE KEEPS HIM AWAY. I AM AT THE CABIN. HURRY SAM', 128, 285, 210, 20); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-function placePages(seed) {
+function addBattery(x, z) {
+  const grp = new THREE.Group(); grp.position.set(x, .12, z); scene.add(grp);
+  const b = mesh(new THREE.CylinderGeometry(.05, .05, .2, 10), new THREE.MeshStandardMaterial({ color: 0x22aa44, emissive: 0x0e5a22, roughness: .5 }), 0, 0, 0, grp);
+  mesh(new THREE.CylinderGeometry(.025, .025, .04, 8), new THREE.MeshStandardMaterial({ color: 0xcccccc, emissive: 0x444444 }), 0, .12, 0, grp);
+  b.rotation.z = 1.4; grp.rotation.y = Math.random() * 6;
+  batteries.push({ grp, x, z, taken: false });
+}
+const fuelCans = [];
+function placeItems(seed) {
   const rnd = mulberry32(seed);
-  const spots = [];
-  const cand = trees.filter(t => Math.hypot(t.x, t.z) > 26 && Math.hypot(t.x, t.z) < WALK_LIMIT - 6);
-  while (spots.length < TOTAL_PAGES) {
-    const t = cand[Math.floor(rnd() * cand.length)];
-    if (spots.some(s => Math.hypot(s.x - t.x, s.z - t.z) < 28)) continue;
-    spots.push(t);
-  }
-  spots.forEach((t, i) => {
-    const a = rnd() * 6.28;
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.63),
-      new THREE.MeshStandardMaterial({ map: makePageTexture(i, rnd), emissive: 0x777060, emissiveMap: null, emissiveIntensity: .35, side: THREE.DoubleSide }));
-    const off = t.r * 0.95 + 0.04;
-    mesh.position.set(t.x + Math.cos(a) * off, 1.55 + rnd() * .3, t.z + Math.sin(a) * off);
-    mesh.rotation.y = -a + Math.PI / 2;
-    mesh.rotation.z = (rnd() - .5) * .15;
-    mesh.userData.taken = false;
-    scene.add(mesh); pages.push(mesh);
+  const dSpots = pickSpots(3, rnd, { minD: 22, maxD: 52, apart: 24 });
+  dSpots.forEach((t, i) => {
+    const a = rnd() * 6.28, off = t.r * 0.95 + 0.04;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(.45, .63), new THREE.MeshStandardMaterial({ map: drawingTexture(i), emissive: 0x777060, emissiveIntensity: .35, side: THREE.DoubleSide }));
+    m.position.set(t.x + Math.cos(a) * off, 1.5 + rnd() * .3, t.z + Math.sin(a) * off); m.rotation.y = -a + Math.PI / 2; m.rotation.z = (rnd() - .5) * .15; scene.add(m);
+    addThing({ kind: 'drawing', x: m.position.x, y: m.position.y, z: m.position.z, mesh: m, show: () => true,
+      label: () => "Take Nora's drawing", act: t2 => takeDrawing(t2) });
+  });
+  const fSpots = pickSpots(3, rnd, { minD: 30, maxD: 86, apart: 30, avoid: dSpots, avoidApart: 14 });
+  fSpots.forEach(t => {
+    const a = rnd() * 6.28, x = t.x + Math.cos(a) * (t.r + .6), z = t.z + Math.sin(a) * (t.r + .6);
+    const grp = new THREE.Group(); grp.position.set(x, .27, z); grp.rotation.y = rnd() * 6; grp.rotation.z = .12; scene.add(grp);
+    mesh(new THREE.BoxGeometry(.4, .54, .2), new THREE.MeshStandardMaterial({ color: 0xc02a1a, emissive: 0x3a0804, roughness: .6 }), 0, 0, 0, grp);
+    mesh(new THREE.BoxGeometry(.12, .1, .1), new THREE.MeshStandardMaterial({ color: 0xe8c020, emissive: 0x4a3a08 }), .1, .3, 0, grp);
+    grp.visible = false; fuelCans.push(grp);
+    addThing({ kind: 'fuel', x, y: .5, z, r: 2.6, mesh: grp, show: () => story.ch >= 2, cond: () => story.ch >= 2,
+      label: () => 'Pick up the fuel can', act: t2 => takeFuel(t2) });
+  });
+  pickSpots(10, rnd, { minD: 12, maxD: 88, apart: 18, avoid: fSpots.concat(dSpots), avoidApart: 8 }).forEach(t => {
+    const a = rnd() * 6.28; addBattery(t.x + Math.cos(a) * (t.r + .7), t.z + Math.sin(a) * (t.r + .7));
   });
 }
-placePages(99);
+buildCamp(); buildCabin(); buildTower(); buildWell(); buildShrine(); buildGate(); placeItems(99);
 
 /* ---------------------------------------------------------------- slender man */
 function buildSlender() {
@@ -363,28 +570,235 @@ function stepSound() {
 }
 
 /* ---------------------------------------------------------------- game state */
-const player = { pos: new THREE.Vector3(0, 0, 0), yaw: 0, pitch: 0, stamina: 1, bob: 0, stepPhase: 0 };
-let collected = 0, state = 'menu', torchOn = true, flick = 0, lastTime = performance.now();
+const player = { pos: new THREE.Vector3(0, 0, 0), yaw: 0, pitch: 0, stamina: 1, bob: 0, stepPhase: 0, battery: 1 };
+let state = 'menu', torchOn = true, flick = 0, glitch = 0, lastTime = performance.now();
 const keys = {};
 const el = id => document.getElementById(id);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+let story, checkpoint;
+function freshStory() {
+  return { ch: 0, drawings: 0, fuel: 0, fueled: false, lore: false, order: [0, 1, 2, 3].sort(() => Math.random() - .5), progress: 0,
+           lit: [false, false, false, false], frenzy: false, deaths: 0, time: 0, batteries: 0, evT: 25, inCabin: false };
+}
 
 function showMsg(text, ms = 3000) {
   const m = el('msg'); m.textContent = text; m.style.opacity = 1;
   clearTimeout(showMsg.t); showMsg.t = setTimeout(() => m.style.opacity = 0, ms);
 }
+
+/* ---- subtitles: thoughts, radio, whispers */
+const subQ = []; let subT = 0, subGap = 0;
+function say(text, kind = 'thought', ms) { subQ.push({ text, kind, ms: ms ?? Math.max(2800, text.length * 60) }); if (subQ.length > 4) subQ.shift(); }
+function radio(text) { radioSound(); say('NORA (radio): ' + text, 'radio'); }
+function tickSubs(dt) {
+  if (subT > 0) { subT -= dt; if (subT <= 0) { el('sub').style.opacity = 0; subGap = .5; } return; }
+  if (subGap > 0) { subGap -= dt; return; }
+  const n = subQ.shift(); if (!n) return;
+  const s = el('sub'); s.textContent = n.text; s.className = n.kind; s.style.opacity = 1; subT = n.ms / 1000;
+}
+function clearSubs() { subQ.length = 0; subT = 0; subGap = 0; el('sub').style.opacity = 0; }
+
+/* ---- paper notes (pause the game while you read) */
+let noteCb = null, noteFull = '', noteTimer = null, noteDone = true, noteAt = 0;
+function showNote(title, body, cb) {
+  state = 'read'; noteCb = cb; noteAt = performance.now(); noteFull = body; noteDone = false;
+  touch.mx = touch.my = 0; touch.sprint = false; el('stick').style.display = 'none'; el('prompt').style.opacity = 0;
+  const n = el('note'), b = n.querySelector('.body'); n.querySelector('h2').textContent = title; b.textContent = '';
+  el('noteMore').style.opacity = 0; n.style.display = 'flex';
+  let i = 0; clearInterval(noteTimer);
+  noteTimer = setInterval(() => { i += 2; b.textContent = body.slice(0, i); if (i >= body.length) finishNote(); }, 22);
+}
+function finishNote() { clearInterval(noteTimer); noteDone = true; el('note').querySelector('.body').textContent = noteFull; el('noteMore').style.opacity = 1; }
+function closeNote() {
+  if (state !== 'read' || performance.now() - noteAt < 450) return;
+  if (!noteDone) { finishNote(); return; }
+  el('note').style.display = 'none'; state = 'play';
+  const cb = noteCb; noteCb = null; if (cb) cb();
+}
+el('note').addEventListener('pointerup', closeNote);
+
+/* ---- the story */
+const INTRO = "3:12 AM. You wake beside the dying campfire.\n\nNora's tent is open. Empty. Her walkie-talkie lies in the grass, hissing static.\n\nSomewhere in the trees, something very tall is standing very still.\n\nFind your little sister.";
+const DRAWINGS = [
+  { title: 'A crayon drawing', body: "Two stick people holding hands under a yellow moon. That's Nora and me.\n\nFar away, at the edge of the paper, stands a third figure. Impossibly tall. Black suit. No face.\n\nUnder it, in wobbly letters:\nTHE TALL MAN WAS NICE AT FIRST." },
+  { title: 'A crayon drawing', body: "The same tall figure, much closer now. Every tree on the page leans toward the little girl.\n\nNora wrote:\nHE ONLY MOVES WHEN YOU ARE NOT LOOKING. BUT IF YOU LOOK AT HIM TOO LONG, HE GETS ANGRY.\nLOOK AWAY, SAM. COUNT TO THREE." },
+  { title: 'A crayon drawing', body: "A little cabin with one yellow window. Beside it, a flame with a smiley face.\n\nTHE FIRE KEEPS HIM AWAY. THE CABIN HAS A FIRE.\nI AM WAITING THERE.\nHURRY, SAM." }
+];
+function takeDrawing(t) {
+  t.done = true; story.drawings++; syncWorld(); blip(520, .4, 'triangle', .2);
+  const n = story.drawings; sl.timer = Math.min(sl.timer, 3);
+  showNote(DRAWINGS[n - 1].title, DRAWINGS[n - 1].body, () => {
+    if (n === 3 && story.ch < 1) {
+      story.ch = 1;
+      radio('...Sam? Sam, can you hear me? ...come to the cabin... please hurry...');
+      say('The cabin. She said she is waiting at the cabin.', 'thought');
+    }
+  });
+}
+function readJournal() {
+  story.ch = Math.max(story.ch, 2); syncWorld();
+  showNote("Nora's note", "Sam. I knew you'd come.\n\nHe took me to the radio tower, but I got away and hid. The tower's generator is out of fuel. If we light the beacon, people on the highway will see it.\n\nThere are 3 red fuel cans somewhere in the woods. Be careful. He will try to stop you.\n\nStay close to the fires. He can't cross the light.\n\nYour flashlight batteries won't last. Take any you find.\n\n- N.\n\nP.S. Don't look at him too long!!!", () => {
+    say('Three red fuel cans. Then the radio tower.', 'thought');
+    say('She was here. The lantern is still warm.', 'thought');
+  });
+}
+function readRanger() {
+  story.lore = true;
+  showNote("Ranger Hale's log, 1987", "Camp Dreamrooms closed today.\n\nEleven kids had the same dream three nights in a row: a forest with no end, and a tall man standing between the trees.\n\nI told the board it was nonsense. Then last night I dreamed it too. This morning every tree in the camp was facing the cabin.\n\nIf you are reading this: the woods are not a place. They are a room. And the door is always the farthest thing you can see.", () => {
+    say("Where am I? In heaven? ...No. Definitely not heaven.", 'thought');
+  });
+}
+function takeFuel(t) {
+  t.done = true; story.fuel++; syncWorld(); blip(200, .3, 'square', .1); sl.timer = Math.min(sl.timer, 4);
+  say(story.fuel < 3 ? `Fuel can ${story.fuel}/3. Heavy. It sloshes.` : 'That is all three. Back to the radio tower.', 'thought');
+}
+function useGenerator() {
+  if (story.fuel < 3) { say(`The generator is bone dry. Fuel: ${story.fuel}/3.`, 'thought'); return; }
+  story.fueled = true; story.ch = 3; syncWorld(); blip(90, 1.2, 'sawtooth', .3);
+  sl.timer = 0.5; sl.stare = 0;
+  say('You pour the fuel in. The generator coughs... then ROARS.', 'thought');
+  say('High above, a red light begins to blink.', 'thought');
+  setTimeout(() => radio('Sam! I can see the light! ...Come to the well. Quietly. He can hear the generator.'), 5500);
+}
+function useWell() {
+  const names = story.order.map(i => STONE_COLORS[i].name);
+  const first = story.ch < 4; story.ch = Math.max(story.ch, 4); syncWorld();
+  if (!first) { say('Nora: ' + names.join(', then ') + '.', 'radio'); return; }
+  showNote('The well', "You lean over the edge. Cold air. Darkness.\n\nFar below, a tiny voice echoes:\n\n\"Sam... I can't come up. The four stones in the circle. They open the door. Touch them in the order of my crayons:\n\n" + names.join(' - ') + "\n\nIf you get it wrong, he hears. If you get it right, the whole forest wakes up. And then you have to RUN.\"", () => {
+    say(`${names.join(', ')}.`, 'thought');
+    say('The stones are in a circle somewhere in the woods.', 'thought');
+  });
+}
+function touchStone(i) {
+  if (story.ch < 4) { say('The stone is cold and silent.', 'thought'); return; }
+  if (story.lit[i]) return;
+  if (story.order[story.progress] === i) {
+    story.lit[i] = true; story.progress++; syncWorld(); blip(380 + story.progress * 130, .6, 'sine', .22);
+    say(`The ${STONE_COLORS[i].name.toLowerCase()} stone hums.`, 'thought', 1800);
+    if (story.progress === 4) startFrenzy();
+  } else {
+    story.lit = [false, false, false, false]; story.progress = 0; syncWorld(); blip(70, .9, 'sawtooth', .3);
+    say('WRONG. The stones scream. He heard you.', 'whisper');
+    sl.stare = Math.max(sl.stare, .3); sl.timer = .6;
+    const a = Math.random() * 6.28; sl.pos.set(player.pos.x + Math.cos(a) * 9, 0, player.pos.z + Math.sin(a) * 9);
+  }
+}
+function setSky(red) {
+  const c = red ? 0x300808 : FOG_COLOR;
+  scene.fog.color.set(c); scene.background.set(c); scene.fog.density = red ? 0.04 : 0.034;
+  hemi.color.set(red ? 0x9a3a3a : 0x4a5f88); moon.color.set(red ? 0xcc4444 : 0x7088b8);
+}
+function startFrenzy() {
+  story.frenzy = true; story.ch = 5; setSky(true); syncWorld(); shakeT = 2.5;
+  fires.forEach(f => f.lit = false);
+  gate.portal.material.opacity = .9; gate.light.intensity = 90;
+  sl.timer = .3; sl.stare = 0;
+  blip(55, 2, 'sawtooth', .4);
+  showMsg('THE FOREST WAKES UP', 3500);
+  say('The ground shakes. The fires go out. Far away, a door of white light opens.', 'thought');
+  setTimeout(() => radio('RUN, SAM!!! THE DOOR! RUN!!!'), 2800);
+}
+let shakeT = 0;
+
+/* ---- world state sync */
+function syncWorld() {
+  things.forEach(t => { if (t.mesh && t.show) t.mesh.visible = !t.done && t.show(); });
+  stones.forEach((s, i) => { s.rune.material.color.set(STONE_COLORS[i].hex).multiplyScalar(story.lit[i] ? 1.3 : .2); });
+}
+function setCheckpoint(name, x, z, tx, tz) {
+  if (checkpoint && checkpoint.name === name) return;
+  checkpoint = { name, x, z, yaw: Math.atan2(-(tx - x), -(tz - z)) };
+  if (state === 'play' && story.time > 1) showMsg(`checkpoint: ${name}`, 2200);
+}
+const CHECKPOINTS = [
+  { name: 'campfire', x: 3, z: 3, tx: 0, tz: 0, at: L.camp, r: 14 },
+  { name: 'cabin', x: L.cabin.x + 5.4, z: L.cabin.z, tx: L.cabin.x, tz: L.cabin.z, at: L.cabin, r: 8 },
+  { name: 'radio tower', x: L.tower.x - 6.5, z: L.tower.z + 5, tx: L.tower.x - 4, tz: L.tower.z + 5, at: { x: L.tower.x - 4, z: L.tower.z + 5 }, r: 10 },
+  { name: 'old well', x: L.well.x + 3.5, z: L.well.z + 3.5, tx: L.well.x, tz: L.well.z, at: L.well, r: 8 },
+  { name: 'stone circle', x: L.shrine.x, z: L.shrine.z + 3, tx: L.shrine.x, tz: L.shrine.z, at: L.shrine, r: 12 }
+];
+function safeFire(x, z, pad = 0) { for (const f of fires) if (f.lit && Math.hypot(f.x - x, f.z - z) < f.r + pad) return f; return null; }
+
 function resetGame() {
-  player.pos.set(0, 0, 0); player.yaw = 0; player.pitch = 0; player.stamina = 1;
-  death = null; el('fade').style.opacity = 0; slender.userData.arms.forEach(a => a.rotation.x = 0); slender.userData.elbows.forEach(e => e.rotation.x = 0); slender.userData.legs.forEach(l => l.rotation.x = 0); sl.walk = 0;
-  collected = 0; el('pages').textContent = `PAGES 0 / ${TOTAL_PAGES}`;
-  pages.forEach(p => { p.visible = true; p.userData.taken = false; });
-  sl.stare = 0; sl.timer = 6; sl.pos.set(0, 0, -45); slender.visible = false;
+  story = freshStory(); checkpoint = null; setSky(false);
+  const c = CHECKPOINTS[0]; setCheckpoint(c.name, c.x, c.z, c.tx, c.tz);
+  player.pos.set(c.x, 0, c.z); player.yaw = checkpoint.yaw; player.pitch = 0; player.stamina = 1; player.battery = 1;
+  torchOn = true; glitch = 0; shakeT = 0;
+  death = null; el('fade').style.opacity = 0; el('fade').style.transition = 'none'; el('fade').style.background = '#000';
+  resetSlenderPose();
+  things.forEach(t => t.done = false);
+  batteries.forEach(b => { b.taken = false; b.grp.visible = true; });
+  fires.forEach(f => f.lit = true);
+  gate.portal.material.opacity = 0; gate.light.intensity = 0;
+  syncWorld(); clearSubs();
+  sl.stare = 0; sl.timer = 14; sl.pos.set(0, 0, -45); slender.visible = false;
+}
+function resetSlenderPose() {
+  slender.userData.arms.forEach(a => a.rotation.x = 0); slender.userData.elbows.forEach(e => e.rotation.x = 0);
+  slender.userData.legs.forEach(l => l.rotation.x = 0); sl.walk = 0;
+}
+function respawn() {
+  const c = story.frenzy ? CHECKPOINTS[4] : checkpoint;
+  player.pos.set(c.x, 0, c.z); player.yaw = c.yaw ?? Math.atan2(-(c.tx - c.x), -(c.tz - c.z)); player.pitch = 0; player.stamina = 1;
+  player.battery = Math.max(player.battery, .5); torchOn = true; glitch = 0;
+  death = null; el('fade').style.opacity = 0; el('fade').style.transition = 'none'; el('static').style.opacity = 0;
+  resetSlenderPose(); clearSubs();
+  const a = Math.random() * 6.28; sl.pos.set(player.pos.x + Math.cos(a) * 42, 0, player.pos.z + Math.sin(a) * 42);
+  if (sl.pos.length() > WALK_LIMIT + 4) sl.pos.setLength(WALK_LIMIT + 4);
+  sl.stare = 0; sl.timer = story.frenzy ? 4 : 8; slender.visible = false;
+  if (story.frenzy) { say('RUN. The door of light is still open!', 'whisper'); shakeT = 1.5; }
+  else say('You wake up by the light, heart pounding. Keep going.', 'thought');
+}
+
+/* ---- extra sounds + ambient events */
+function noiseBurst(freq, dur, vol, type = 'bandpass') {
+  if (!actx) return;
+  const s = actx.createBufferSource(); s.buffer = audio.noiseBuf;
+  const f = actx.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+  const g = actx.createGain(); g.gain.setValueAtTime(vol, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + dur);
+  s.connect(f).connect(g).connect(actx.destination); s.start(actx.currentTime, Math.random()); s.stop(actx.currentTime + dur);
+}
+function radioSound() { blip(1400, .07, 'square', .05); setTimeout(() => blip(1000, .07, 'square', .05), 110); noiseBurst(1800, .45, .12); }
+function crow() { [0, 220, 400].forEach(t => setTimeout(() => noiseBurst(1300, .16, .13), t)); }
+function scream() {
+  if (!actx) return;
+  const o = actx.createOscillator(), g = actx.createGain(), f = actx.createBiquadFilter(), n = actx.currentTime;
+  o.type = 'sawtooth'; f.type = 'lowpass'; f.frequency.value = 1400;
+  o.frequency.setValueAtTime(600, n); o.frequency.linearRampToValueAtTime(1100, n + .6); o.frequency.linearRampToValueAtTime(380, n + 1.4);
+  g.gain.setValueAtTime(.001, n); g.gain.linearRampToValueAtTime(.07, n + .3); g.gain.exponentialRampToValueAtTime(.001, n + 1.5);
+  o.connect(f).connect(g).connect(actx.destination); o.start(); o.stop(n + 1.5);
+}
+const WHISPERS = ['behind you', 'look... look... look...', 'he is watching', 'do not turn around', 'sam... sam... sam...', 'closer'];
+function hintsFor(ch) {
+  const common = ["Don't stare at him, Sam! Look away. Count to three.", 'Stay near the fires. He hates the light.'];
+  if (ch === 0) return ['...find my drawings... they show the way...'].concat(common);
+  if (ch === 1) return ['The cabin... there is a lantern. It is safe there.'].concat(common);
+  if (ch === 2) return ['The fuel cans are red. Look near the big trees.'].concat(common);
+  if (ch === 3) return ['The well... please... come to the well...'];
+  return ['The order, Sam! Remember the order!'];
+}
+function ambient(dt) {
+  if (story.frenzy) return;
+  story.evT -= dt; if (story.evT > 0) return;
+  story.evT = 22 + Math.random() * 25;
+  const r = Math.random();
+  if (r < .2) { crow(); say('(crows scatter somewhere in the dark)', 'thought'); }
+  else if (r < .4) { scream(); say(pick(['(a distant scream)', '(someone is calling your name)']), 'whisper'); }
+  else if (r < .6) say(pick(WHISPERS), 'whisper', 2200);
+  else if (r < .75) { glitch = 1.4; if (audio.static) audio.static.gn.gain.value = .3; }
+  else radio(pick(hintsFor(story.ch)));
 }
 
 addEventListener('keydown', e => {
   keys[e.code] = true;
-  if (e.code === 'KeyF' && state === 'play') { torchOn = !torchOn; blip(900, .06, 'square', .06); }
-  if (e.code === 'KeyE' && state === 'play') tryCollect();
+  if (state === 'read' && (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter')) { closeNote(); return; }
+  if (e.code === 'KeyF' && state === 'play') toggleTorch();
+  if (e.code === 'KeyE' && state === 'play') interact();
 });
+function toggleTorch() {
+  if (player.battery <= 0) { blip(300, .1, 'square', .05); say('The batteries are dead.', 'thought', 1800); return; }
+  torchOn = !torchOn; blip(900, .06, 'square', .06);
+}
 addEventListener('keyup', e => keys[e.code] = false);
 addEventListener('mousemove', e => {
   if (state !== 'play' || document.pointerLockElement !== canvas) return;
@@ -432,8 +846,8 @@ if (isTouch) {
     if (find(e.changedTouches, lookId)) lookId = null;
   };
   addEventListener('touchend', endTouch); addEventListener('touchcancel', endTouch);
-  el('btnE').addEventListener('pointerdown', () => { if (state === 'play') tryCollect(); });
-  el('btnF').addEventListener('pointerdown', () => { if (state === 'play') { torchOn = !torchOn; blip(900, .06, 'square', .06); } });
+  el('btnE').addEventListener('pointerdown', () => { if (state === 'play') interact(); });
+  el('btnF').addEventListener('pointerdown', () => { if (state === 'play') toggleTorch(); });
   const sp = v => () => { touch.sprint = v; };
   el('btnS').addEventListener('pointerdown', sp(true));
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => el('btnS').addEventListener(n, sp(false)));
@@ -442,13 +856,20 @@ if (isTouch) {
 function begin() {
   startAudio(); if (actx && actx.state === 'suspended') actx.resume();
   ['start', 'dead', 'won'].forEach(i => el(i).style.display = 'none');
-  if (state !== 'play') resetGame();
+  const wasDead = state === 'dead';
   state = 'play';
   canvas.requestPointerLock?.();
-  showMsg('Find the pages.', 3500);
+  if (wasDead) respawn(); else newGame();
+}
+function newGame() {
+  resetGame();
+  showNote('CAMP DREAMROOMS', INTRO, () => {
+    radio('...Sam? ...Sam, wake up... find my drawings... they show the way...');
+    say('Nora draws on everything. Her drawings must be nearby.', 'thought');
+  });
 }
 ['start', 'dead', 'won'].forEach(id => {
-  const tap = e => { e.preventDefault(); if (state !== 'play') begin(); };
+  const tap = e => { e.preventDefault(); if (state === 'menu' || state === 'dead' || state === 'won') begin(); };
   el(id).addEventListener('click', tap);
   el(id).addEventListener('pointerup', tap);
 });
@@ -460,40 +881,54 @@ addEventListener('resize', () => {
 
 function forwardVec() { return new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)); }
 
-function nearestPage() {
-  let best = null, bd = 2.6;
-  const eye = new THREE.Vector3(player.pos.x, EYE, player.pos.z);
-  const look = new THREE.Vector3(); camera.getWorldDirection(look);
-  for (const p of pages) {
-    if (p.userData.taken) continue;
-    const to = p.position.clone().sub(eye), d = to.length();
-    if (d < bd && to.normalize().dot(look) > 0.55) { best = p; bd = d; }
+function nearestThing() {
+  const eye = new THREE.Vector3(player.pos.x, EYE, player.pos.z), look = new THREE.Vector3(); camera.getWorldDirection(look);
+  let best = null, bd = 1e9;
+  for (const t of things) {
+    if (t.done || (t.cond && !t.cond())) continue;
+    const dx = t.x - eye.x, dy = t.y - eye.y, dz = t.z - eye.z, d = Math.hypot(dx, dy, dz);
+    if (d > t.r) continue;
+    if ((dx * look.x + dy * look.y + dz * look.z) / (d || 1) < (t.big ? 0.15 : 0.5)) continue;
+    if (d < bd) { bd = d; best = t; }
   }
   return best;
 }
-function tryCollect() {
-  const p = nearestPage(); if (!p) return;
-  p.userData.taken = true; p.visible = false; collected++;
-  el('pages').textContent = `PAGES ${collected} / ${TOTAL_PAGES}`;
-  blip(520, .4, 'triangle', .2); blip(310, .6, 'sawtooth', .08);
-  sl.timer = Math.min(sl.timer, 1.5);          // he reacts to every page
-  if (collected >= TOTAL_PAGES) { win(); return; }
-  showMsg(collected >= 6 ? "It's right behind you…" : collected >= 3 ? 'It is getting closer.' : 'One down.');
-}
+function interact() { if (state !== 'play') return; const t = nearestThing(); if (t) t.act(t); }
 
-function endGame(kind) {
-  state = kind; document.exitPointerLock?.();
-  el(kind === 'won' ? 'won' : 'dead').style.display = 'flex';
-  el('static').style.opacity = kind === 'dead' ? 1 : 0;
-  el('prompt').style.opacity = 0;
+function endGame() {
+  state = 'dead'; document.exitPointerLock?.();
+  const cp = checkpoint ? checkpoint.name : 'campfire';
+  el('deadinfo').textContent = story.frenzy ? `Deaths: ${story.deaths}. You wake at the stone circle. The door is still open. RUN.` : `Deaths: ${story.deaths}. You wake up by the ${cp}. Your progress is safe.`;
+  el('dead').style.display = 'flex'; el('static').style.opacity = 1; el('prompt').style.opacity = 0;
 }
-function win() { blip(660, 1.2, 'sine', .2); endGame('won'); }
+function ending() {
+  if (state !== 'play') return;
+  state = 'ending'; document.exitPointerLock?.(); el('prompt').style.opacity = 0; el('static').style.opacity = 0; clearSubs();
+  const f = el('fade'); f.style.background = '#fff'; f.style.transition = 'opacity 2.2s'; f.style.opacity = 1;
+  blip(660, 1.6, 'sine', .22);
+  setTimeout(() => {
+    const m = Math.floor(story.time / 60), s = String(Math.floor(story.time % 60)).padStart(2, '0');
+    const lines = [
+      ['', 'You step through the light.'], ['', '...'],
+      ['', 'You wake up in your own bed. Sunlight. A bird. Your phone buzzes.'],
+      ['', 'NORA: "Sam are you awake?? I had the weirdest dream. A tall man in the woods."'],
+      ['', 'You laugh. Then you look at the window.'],
+      ['', 'Someone very tall is standing on the lawn, facing the house.'],
+      ['big', 'THE END?'],
+      ['stats', `TIME ${m}:${s} &nbsp;&middot;&nbsp; DEATHS ${story.deaths} &nbsp;&middot;&nbsp; BATTERIES ${story.batteries}`]
+    ];
+    el('won').innerHTML = lines.map(([c, t], i) => `<p class="endline ${c}" style="animation-delay:${i * 2.1}s">${t}</p>`).join('')
+      + `<p class="go" style="animation:fadein 1s forwards ${lines.length * 2.1 + 1}s;opacity:0">tap to play again</p>`;
+    el('won').style.display = 'flex'; state = 'won';
+  }, 2600);
+}
 let death = null;
 const ease = x => x * x * (3 - 2 * x);
 const clamp01 = x => Math.max(0, Math.min(1, x));
 const angDiff = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 function die() {
   if (state !== 'play') return;
+  story.deaths++; clearSubs();
   if (actx) { // jump-scare screech
     const sn = actx.createBufferSource(); sn.buffer = audio.noiseBuf; sn.loop = true;
     const g = actx.createGain(); g.gain.value = .5; g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + 2.5);
@@ -564,22 +999,27 @@ function updateDeath(dt) {
   camera.rotation.set(player.pitch + (Math.random() - .5) * shake, player.yaw + (Math.random() - .5) * shake, (Math.random() - .5) * shake * 2);
 }
 /* ---------------------------------------------------------------- slender ai */
-function slenderDifficulty() { return collected / TOTAL_PAGES; }   // 0..1
+function slenderDifficulty() {
+  if (story.frenzy) return 1;
+  const base = [0.05, 0.2, 0.35, 0.55, 0.72][Math.min(story.ch, 4)];
+  return Math.min(1, base + story.drawings * 0.03 + (player.battery <= 0 ? 0.15 : 0));
+}
 function teleportSlender() {
-  const diff = slenderDifficulty();
-  const dist = 30 - diff * 20 + Math.random() * 6;                    // 30..36 → 10..16
-  for (let tries = 0; tries < 20; tries++) {
-    const a = Math.random() * Math.PI * 2;
+  const diff = slenderDifficulty(), fr = story.frenzy;
+  const dist = fr ? 11 + Math.random() * 5 : 30 - diff * 20 + Math.random() * 6;   // 30..36 → 10..16
+  for (let tries = 0; tries < 30; tries++) {
+    let a = Math.random() * Math.PI * 2;
+    if (fr) a = Math.atan2(L.gate.z - player.pos.z, L.gate.x - player.pos.x) + (Math.random() - .5) * 2.2;  // ahead of you
     const x = player.pos.x + Math.cos(a) * dist, z = player.pos.z + Math.sin(a) * dist;
-    if (Math.hypot(x, z) > WALK_LIMIT + 4) continue;
-    const probe = new THREE.Vector3(x, 0, z);
-    const before = probe.clone(); pushOutOfTrees(probe, 0.8);
+    if (Math.hypot(x, z) > WALK_LIMIT + 4 || safeFire(x, z, 2)) continue;
+    const probe = new THREE.Vector3(x, 0, z), before = probe.clone(); pushOutOfTrees(probe, 0.8);
     if (before.distanceTo(probe) > 0.01) continue;
     sl.pos.copy(probe); return;
   }
 }
 function updateSlender(dt) {
-  const diff = slenderDifficulty();
+  const diff = slenderDifficulty(), fr = story.frenzy;
+  const safe = fr ? null : safeFire(player.pos.x, player.pos.z);
   const toS = new THREE.Vector3(sl.pos.x - player.pos.x, 0, sl.pos.z - player.pos.z);
   sl.dist = toS.length();
   const dirTo = toS.clone().normalize();
@@ -591,11 +1031,18 @@ function updateSlender(dt) {
   slender.visible = true;
   let moved = 0;
   sl.timer -= dt;
-  if (visible) {
-    // looking at him freezes him but fills the stare meter
-    const closeness = 1 - Math.min(sl.dist, 30) / 30;
-    sl.stare += dt * (0.10 + closeness * 0.55 + diff * 0.12);
-    sl.hideTimer = 0;
+  if (fr) {
+    // the forest has woken: he never freezes, he blinks around you and runs
+    sl.stare = 0;
+    if (sl.dist > 1.4) { sl.pos.addScaledVector(dirTo, -4.2 * dt); moved = 4.2 * dt; }
+    if (sl.timer <= 0) { teleportSlender(); sl.timer = 1.0 + Math.random() * 0.9; }
+  } else if (visible) {
+    // looking at him freezes him but fills the stare meter (the firelight calms it)
+    if (safe) sl.stare = Math.max(0, sl.stare - dt * 0.8);
+    else {
+      const closeness = 1 - Math.min(sl.dist, 30) / 30;
+      sl.stare += dt * (0.10 + closeness * 0.55 + diff * 0.12);
+    }
   } else {
     sl.stare = Math.max(0, sl.stare - dt * 0.35);
     // creep toward the player while unseen
@@ -605,6 +1052,11 @@ function updateSlender(dt) {
       teleportSlender();
       sl.timer = Math.max(2.5, 9 - diff * 6.5) + Math.random() * 3;
     }
+  }
+  // he cannot cross into the firelight: he waits at its edge
+  if (!fr) for (const f of fires) if (f.lit) {
+    const dx = sl.pos.x - f.x, dz = sl.pos.z - f.z, d = Math.hypot(dx, dz);
+    if (d < f.r) { const k = (f.r + 0.2) / (d || 1); sl.pos.x = f.x + dx * k; sl.pos.z = f.z + dz * k; }
   }
   if (sl.pos.lengthSq() > (WALK_LIMIT + 6) ** 2) sl.pos.setLength(WALK_LIMIT + 6);
 
@@ -625,10 +1077,12 @@ function updateSlender(dt) {
   U.tent.rotation.z = Math.sin(t * .8) * .04; U.tent.rotation.x = Math.sin(t * .6) * .03;
 
   // consequences
-  if (sl.stare >= 1 || (visible && sl.dist < 2.0) || sl.dist < 1.3) die();
+  if (!safe && (sl.stare >= 1 || (visible && sl.dist < 2.0) || sl.dist < (fr ? 1.5 : 1.3))) die();
 
   // feedback: static + audio
-  const intensity = Math.min(1, Math.max(sl.stare * 1.1, visible ? (1 - sl.dist / 25) * 0.5 : (1 - sl.dist / 14) * 0.25, 0));
+  let intensity = Math.min(1, Math.max(sl.stare * 1.1, visible ? (1 - sl.dist / 25) * 0.5 : (1 - sl.dist / 14) * 0.25, 0));
+  if (safe) intensity *= 0.35;
+  if (fr) intensity = Math.max(intensity, 0.2 + Math.sin(performance.now() / 160) * .06);
   el('static').style.opacity = Math.min(0.95, intensity * 0.9 + (Math.random() < intensity * .15 ? .25 : 0));
   if (audio.static) audio.static.gn.gain.value = intensity * .22;
   if (audio.drone) audio.drone.gain.value = .05 + diff * .06 + intensity * .1;
@@ -645,8 +1099,40 @@ function drawStatic() {
   sctx.putImageData(simg, 0, 0);
 }
 
+/* ---------------------------------------------------------------- objectives + hud */
+function objective() {
+  const S = story, P = player.pos;
+  const nearest = list => { let b = null, bd = 1e9; for (const t of list) { const d = Math.hypot(t.x - P.x, t.z - P.z); if (d < bd) { bd = d; b = t; } } return b; };
+  if (S.frenzy) return { text: 'RUN TO THE DOOR OF LIGHT!', target: L.gate };
+  if (S.ch >= 4) return { text: `Touch the stones in order: ${S.order.map(i => STONE_COLORS[i].name).join(', ')} (${S.progress}/4)`, target: L.shrine };
+  if (S.ch === 3) return { text: 'Go to the well and listen.', target: L.well };
+  if (S.ch === 2) {
+    if (S.fuel < 3) return { text: `Find the red fuel cans (${S.fuel}/3)`, target: nearest(things.filter(t => t.kind === 'fuel' && !t.done)) };
+    return { text: 'Bring the fuel to the radio tower generator.', target: { x: L.tower.x - 4, z: L.tower.z } };
+  }
+  if (S.ch === 1) return { text: S.inCabin ? 'Look around the cabin. Nora left something.' : 'Find the cabin. Nora is waiting there.', target: S.inCabin ? null : L.cabin };
+  return { text: `Find Nora's drawings (${S.drawings}/3)`, target: nearest(things.filter(t => t.kind === 'drawing' && !t.done)) };
+}
+const ARROWS = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
+function setText(id, s) { const e = el(id); if (e.textContent !== s) e.textContent = s; }
+function updateHud(safeF) {
+  const ob = objective(), P = player.pos;
+  setText('objtext', ob.text);
+  el('objtext').style.color = story.frenzy ? '#ff6a5a' : '#eee';
+  if (ob.target) {
+    const f = forwardVec(), rx = Math.cos(player.yaw), rz = -Math.sin(player.yaw);
+    const dx = ob.target.x - P.x, dz = ob.target.z - P.z, d = Math.hypot(dx, dz) || 1;
+    const ang = Math.atan2((dx * rx + dz * rz) / d, (dx * f.x + dz * f.z) / d);
+    setText('hint', `${ARROWS[((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8]}  ${Math.max(5, Math.round(d / 5) * 5)} m`);
+  } else setText('hint', '');
+  el('stamina').firstElementChild.style.width = (player.stamina * 100) + '%';
+  el('bat').firstElementChild.style.width = (player.battery * 100) + '%';
+  el('safe').style.opacity = safeF ? 1 : 0;
+}
+
 /* ---------------------------------------------------------------- main loop */
 function update(dt) {
+  story.time += dt;
   // movement
   const f = forwardVec();
   const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
@@ -658,10 +1144,10 @@ function update(dt) {
   if (touch.mx || touch.my) { mv.addScaledVector(f, -touch.my); mv.addScaledVector(right, touch.mx); }
   const moving = mv.lengthSq() > 0;
   const amt = Math.min(1, mv.length());
-  const wantSprint = (keys.ShiftLeft || keys.ShiftRight || touch.sprint) && moving && player.stamina > 0.02;
-  if (wantSprint) player.stamina = Math.max(0, player.stamina - dt * 0.22);
-  else player.stamina = Math.min(1, player.stamina + dt * (moving ? 0.1 : 0.25));
-  if (player.stamina < 0.02) keys.ShiftLeft = keys.ShiftRight = touch.sprint = false; // force a breather
+  const wantSprint = (keys.ShiftLeft || keys.ShiftRight || touch.sprint) && moving && (player.stamina > 0.02 || story.frenzy);
+  if (wantSprint && !story.frenzy) player.stamina = Math.max(0, player.stamina - dt * 0.22);
+  else player.stamina = Math.min(1, player.stamina + dt * (moving ? 0.1 : 0.25) * (story.frenzy ? 3 : 1));
+  if (player.stamina < 0.02 && !story.frenzy) keys.ShiftLeft = keys.ShiftRight = touch.sprint = false; // force a breather
   if (moving) {
     mv.normalize().multiplyScalar((wantSprint ? SPRINT : WALK) * dt * amt);
     player.pos.add(mv); pushOutOfTrees(player.pos, PLAYER_R);
@@ -669,29 +1155,57 @@ function update(dt) {
     player.bob += dt * (wantSprint ? 12 : 8);
     const ph = Math.floor(player.bob / Math.PI); if (ph !== player.stepPhase) { player.stepPhase = ph; stepSound(); }
   }
+  const sh = (shakeT > 0 ? .025 : 0) + (story.frenzy ? .004 : 0); shakeT = Math.max(0, shakeT - dt);
   camera.position.set(player.pos.x, EYE + (moving ? Math.sin(player.bob) * 0.045 : 0), player.pos.z);
-  camera.rotation.set(player.pitch, player.yaw, 0);
+  camera.rotation.set(player.pitch + (Math.random() - .5) * sh, player.yaw + (Math.random() - .5) * sh, 0);
 
-  // flashlight (flickers when the thing is near)
-  const flickerOff = flick > 0.3 && Math.random() < flick * 0.12;
-  flashlight.intensity = torchOn && !flickerOff ? 55 : 0;
+  // flashlight: drains outside the firelight, flickers when he is near or the batteries are low
+  const safeF = safeFire(player.pos.x, player.pos.z);
+  if (torchOn && !safeF && player.battery > 0) player.battery = Math.max(0, player.battery - dt / 210);
+  glitch = Math.max(0, glitch - dt);
+  const flickerOff = (flick > 0.3 && Math.random() < flick * 0.12) || (player.battery < .15 && Math.random() < .06) || glitch > 0;
+  const lvl = player.battery <= 0 ? 0 : Math.min(1, player.battery / .12);
+  flashlight.intensity = torchOn && !flickerOff ? 55 * lvl : 0;
+  if (player.battery <= 0 && !story.warnedBat) { story.warnedBat = true; say('The flashlight dies. Find batteries, and stay near the fires.', 'thought'); }
 
   updateSlender(dt);
 
-  const np = nearestPage(); el('prompt').style.opacity = np ? 1 : 0; el('btnE').classList.toggle('hot', !!np);
-  el('stamina').firstElementChild.style.width = (player.stamina * 100) + '%';
+  // pickups, checkpoints, story triggers
+  for (const b of batteries) if (!b.taken && Math.hypot(b.x - player.pos.x, b.z - player.pos.z) < 1.5) {
+    b.taken = true; b.grp.visible = false; story.batteries++; player.battery = Math.min(1, player.battery + .55);
+    blip(880, .15, 'triangle', .12); showMsg('+ battery', 1200);
+  }
+  for (const c of CHECKPOINTS) if (Math.hypot(c.at.x - player.pos.x, c.at.z - player.pos.z) < c.r) setCheckpoint(c.name, c.x, c.z, c.tx, c.tz);
+  if (!story.inCabin && Math.abs(player.pos.x - L.cabin.x) < 3 && Math.abs(player.pos.z - L.cabin.z) < 2.1) {
+    story.inCabin = true; say('"Nora?" The cabin is empty. A lantern still burns on the table.', 'thought');
+  }
+  if (story.frenzy && Math.hypot(L.gate.x - player.pos.x, L.gate.z - player.pos.z) < 2.8) ending();
+
+  // living world: fire flicker, tower beacon
+  const tt = performance.now() / 1000;
+  fires.forEach((fr, i) => {
+    const k = fr.lit ? 0.85 + 0.3 * Math.sin(tt * 9 + i * 3) * Math.sin(tt * 5.3 + i) + (Math.random() - .5) * .12 : 0;
+    fr.light.intensity = fr.base * Math.max(0, k);
+    fr.flames.forEach((m, j) => { m.visible = fr.lit; m.scale.set(1 + Math.sin(tt * 11 + j) * .08, .9 + Math.random() * .3, 1); });
+  });
+  if (story.fueled) tower.bulb.material.color.set(Math.sin(tt * 3.2) > 0 ? 0xff2a2a : 0x300808);
+
+  tickSubs(dt); ambient(dt);
+
+  const np = nearestThing(), pr = el('prompt');
+  if (np) { const txt = (isTouch ? 'Tap E: ' : '[E] ') + np.label(); if (pr.textContent !== txt) pr.textContent = txt; pr.style.opacity = 1; } else pr.style.opacity = 0;
+  el('btnE').classList.toggle('hot', !!np);
+  updateHud(safeF);
 }
 
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - lastTime) / 1000); lastTime = now;
-  if (state === 'play') {
-    if (document.pointerLockElement !== canvas && !navigator.webdriver) { /* paused until relocked */ }
-    update(dt);
-  } else if (state === 'dying') {
-    updateDeath(dt);
-  } else if (state === 'menu') {
+  if (state === 'play') update(dt);
+  else if (state === 'dying') updateDeath(dt);
+  else if (state === 'menu') {
     const t = now / 1000; camera.position.set(Math.sin(t * .1) * 3, EYE, Math.cos(t * .1) * 3); camera.rotation.set(0, t * .1 + Math.PI, 0);
+    fires.forEach((fr, i) => { fr.light.intensity = fr.base * (0.85 + Math.random() * .3); fr.flames.forEach(m => m.scale.y = .9 + Math.random() * .3); });
   }
   if (state === 'play' || state === 'dying' || state === 'dead') drawStatic();
   renderer.render(scene, camera);
@@ -701,7 +1215,7 @@ slender.visible = false;
 requestAnimationFrame(loop);
 
 // handy for debugging / automated checks
-window.__game = { player, sl, pages, trees, get collected() { return collected; }, get state() { return state; }, begin, tryCollect, die };
+window.__game = { player, sl, things, fires, trees, L, get story() { return story; }, get state() { return state; }, begin, interact, nearestThing, die, respawn, closeNote, ending, setCheckpoint };
 </script>
 </body>
 </html>
