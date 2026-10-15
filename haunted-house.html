@@ -624,6 +624,23 @@ function itemMesh(id){
   return g;
 }
 
+/* ----- the key you hold in front of you ----- */
+function buildHeldKey(){
+  const g=new THREE.Group(),k=new THREE.Group();k.scale.setScalar(.075);g.add(k);
+  const hs=new THREE.Shape();hs.moveTo(0,-.5);hs.lineTo(.7,-.5);hs.lineTo(1.0,0);hs.lineTo(.7,.5);hs.lineTo(0,.5);hs.closePath();
+  const hole=new THREE.Path();hole.moveTo(.22,-.2);hole.lineTo(.22,.2);hole.lineTo(.6,.2);hole.lineTo(.6,-.2);hole.closePath();hs.holes.push(hole);
+  const hm=new THREE.Mesh(new THREE.ExtrudeGeometry(hs,{depth:.24,bevelEnabled:true,bevelSize:.025,bevelThickness:.025,bevelSegments:2}),MT("wood",0xcfcfcf,{shininess:30}));hm.position.z=-.12;k.add(hm);
+  const bp=[[0,.22],[-1.55,.22],[-1.75,.04],[-1.65,-.1],[-1.4,-.1],[-1.3,-.32],[-1.15,-.1],[-1.0,-.3],[-.85,-.12],[-.6,-.12],[-.45,-.3],[-.3,-.1],[0,-.1]];
+  const bs=new THREE.Shape();bs.moveTo(bp[0][0],bp[0][1]);for(let i=1;i<bp.length;i++)bs.lineTo(bp[i][0],bp[i][1]);bs.closePath();
+  const bm=new THREE.Mesh(new THREE.ExtrudeGeometry(bs,{depth:.1,bevelEnabled:true,bevelSize:.02,bevelThickness:.02,bevelSegments:1}),mat(0xd6d6d6,{shininess:140,specular:0xffffff}));bm.position.z=-.05;k.add(bm);
+  const skin=mat(0xcfcfcf,{shininess:20}),hand=new THREE.Group();g.add(hand);
+  const palm=new THREE.Mesh(new THREE.SphereGeometry(.05,14,10),skin);palm.scale.set(1.1,.8,.9);palm.position.set(.03,-.075,-.005);hand.add(palm);
+  for(let i=0;i<3;i++){const f=new THREE.Mesh(new THREE.CylinderGeometry(.011,.011,.05,8),skin);f.position.set(.005+i*.027,-.035,.035);f.rotation.z=.15;hand.add(f)}
+  const th=new THREE.Mesh(new THREE.CylinderGeometry(.012,.014,.05,8),skin);th.position.set(.075,-.045,.02);th.rotation.z=-.7;hand.add(th);
+  const arm=new THREE.Mesh(new THREE.CylinderGeometry(.04,.05,.5,12),mat(0x3a3a3a,{shininess:8}));arm.position.set(.12,-.32,.02);arm.rotation.z=.45;hand.add(arm);
+  g.position.set(.07,-.1,-.4);g.rotation.set(.1,-.3,.3);g.visible=false;
+  return {g,base:g.position.clone()};
+}
 /* ----- stairs: a real flight of steps between two walls ----- */
 function stairsRun(run){
   const g=new THREE.Group();g.position.set(run.x0,0,run.y);
@@ -772,7 +789,7 @@ function initWorld(imgC,imgF){
     const amb=new THREE.AmbientLight(0xffffff,.2);scene.add(amb);
     const spot=new THREE.SpotLight(0xffffff,1.7,16,.62,.55,1.2);spot.position.set(0,0,0);cam.add(spot);const tgt=new THREE.Object3D();tgt.position.set(0,0,-1);cam.add(tgt);spot.target=tgt;
     const near=new THREE.PointLight(0xffffff,.55,5,2);cam.add(near);
-    const sl=new THREE.PointLight(0xffffff,0,5,2);scene.add(sl);R3={r,scene,cam,tm,amb,spot,near,sl};
+    const sl=new THREE.PointLight(0xffffff,0,5,2);scene.add(sl);R3={r,scene,cam,tm,amb,spot,near,sl};R3.held=buildHeldKey();cam.add(R3.held.g);
     for(let l=0;l<4;l++)buildLevel(l);
     const bc=BUILD.tablebell().bell.clone();bc.position.set(0,0,0);const bg=new THREE.Group();bg.add(bc);R3.bell=bg;bg.visible=false;scene.add(bg);
     DR=buildDracula();DR.root.scale.setScalar(.59);scene.add(DR.root);
@@ -818,6 +835,13 @@ function render(){
   R3.spot.intensity=1.4*lt;R3.near.intensity=.55*lt;R3.amb.intensity=.2*Math.min(1.3,lt)+flash*1.1;
   R3.scene.fog.density=state==="menu"?.17:(.17/Math.max(.7,lt*.95));
   for(const d of LV[CL].dec)if(d.b.hideHide)d.obj.visible=!(P.hid===d);
+  {const hk=R3.held,holding=KEYS.some(q=>q.got&&!q.used)&&(state==="play"||state==="intro")&&!P.hid&&!(wake.on&&wake.t<2.5);
+    hk.g.visible=holding;
+    if(holding){
+      const sw=Math.sin(P.bob)*.006,sx=Math.cos(P.bob*.5)*.004;let z=hk.base.z,rx=.1;
+      if(keyAnim>0){keyAnim-=dt;const q=1-Math.max(0,keyAnim)/.9;z-=.22*Math.sin(Math.min(1,q)*Math.PI);rx=.1+q*Math.PI*1.1}
+      hk.g.position.set(hk.base.x+sx,hk.base.y+sw,z);hk.g.rotation.x=rx;
+    }}
   animWorld(dt);
   for(const it of COLLECT){if(!it.mesh)continue;it.mesh.visible=!it.got&&it.l===CL;it.gl.visible=it.mesh.visible;if(it.mesh.visible){const by=.3+Math.sin(time*2+it.x)*.04;it.mesh.position.y=by;it.gl.position.y=by}}
   {let best=null,bd=7;for(const rn of LV[CL].runs){const d=Math.hypot(rn.x0+rn.len/2-P.x,rn.y+.5-P.y);if(d<bd){bd=d;best=rn}}if(best){R3.sl.position.set(best.x0+best.len/2,best.dir==="d"?.9:1.1,best.y+.5);R3.sl.intensity=.9}else R3.sl.intensity=0}
@@ -909,7 +933,7 @@ function doAct(){
     const d=a.d,bi=d.cell[1]*MW+d.cell[0];
     if(!d.unlocked){
       const k=KEYS.find(q=>q.got&&!q.used&&q.door===CL);
-      if(k){k.used=true;d.unlocked=true;d.b.lock.visible=false;d.open=true;d.openTarget=1;LV[CL].blocked[bi]=0;sfx.open();setList();toast("The "+k.name+" turns. The door is unlocked.",2800)}
+      if(k){k.used=true;d.unlocked=true;d.b.lock.visible=false;d.open=true;d.openTarget=1;LV[CL].blocked[bi]=0;sfx.open();setList();keyAnim=.9;toast("The "+k.name+" turns. The door is unlocked.",2800)}
       else if(KEYS.some(q=>q.got&&!q.used))toast("None of your keys fit this lock.",2400);
       else toast("The door is locked. Find its key.",2600);
     }else if(d.open){
@@ -1072,7 +1096,7 @@ function caught(){
   joy.id=null;joyEl.style.display="none";runHeld=false;actBtn.hidden=true;hud.hidden=true;
   D.lvl=CL;D.stun=0;D.path=[];dangerEl.style.opacity=.55;sfx.growl();buzz(80);
 }
-let fall=null,camDrop=0;
+let fall=null,camDrop=0,keyAnim=0;
 function startFall(w){
   state="fall";fall={w,t:0,phase:0};joy.id=null;joyEl.style.display="none";runHeld=false;actBtn.hidden=true;
   w.broken=true;w.crack.visible=false;w.hole.visible=true;sfx.crash();buzz([60,40,160]);toast("The floor gives way!",1600);
