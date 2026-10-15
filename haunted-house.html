@@ -685,7 +685,7 @@ function buildLevel(l){
     WK.push({l,x:w[1],y:w[2],cx,cz,crack,hole,broken:false,warned:false,debris:[]});
   }
   // stairs
-  for(const run of lv.runs){g.add(stairsRun(run));if(run.dir==="d")B(.03,WH,.98,run.x0+run.len-.03,0,run.y+.5,mat(0x050505),g);else B(.03,2*WH,.98,run.x0+.03,0,run.y+.5,mat(0x050505),g);}
+  for(const run of lv.runs){const cb=BUILD.candle();finalize(cb.g);const cx0=run.dir==="d"?run.x0-.5:run.x0+run.len+.5;const hold=grp(cx0,0,run.y+.14,g);hold.add(cb.g);hold.userData.dyn=true;(lv.flames||(lv.flames=[])).push(...cb.flames);g.add(stairsRun(run));if(run.dir==="d")B(.03,WH,.98,run.x0+run.len-.03,0,run.y+.5,mat(0x050505),g);else B(.03,2*WH,.98,run.x0+.03,0,run.y+.5,mat(0x050505),g);}
   // furniture
   for(const d of lv.dec){
     const b=BUILD[d.type]();finalize(b.g);d.b=b;d.openT=0;d.openTarget=0;d.open=false;
@@ -741,6 +741,7 @@ function openThing(d){
 }
 
 function animWorld(dt){
+  if(LV[CL].flames)for(const f of LV[CL].flames)f.scale.set(.8+Math.random()*.4,.8+Math.random()*.5,.8+Math.random()*.4);
   for(const d of LV[CL].dec){
     if(d.b.anim&&Math.abs(d.openT-d.openTarget)>.002){d.openT+=(d.openTarget-d.openT)*Math.min(1,dt*7);d.b.anim(d.openT)}
     if(d.collectT>0){d.collectT-=dt;d.itemMesh.rotation.y+=dt*3;d.itemMesh.position.y+=dt*.25;if(d.collectT<=0){d.itemMesh.visible=false;const it=d.holds;it.got=true;carried++;sfx.pick();buzz(40);setList();toast("Found: "+it.name+" ("+carried+" of 5)")}}
@@ -903,6 +904,12 @@ function update(dt){
       if(carried===1)setTimeout(()=>{if(state==="play")toast("A cold wind. Something has woken up.",3200)},3400);
     }
   }
+  // stair hints
+  for(const rn of LV[CL].runs){
+    const ex=rn.dir==="d"?rn.x0-.5:rn.x0+rn.len+.5,dd=Math.hypot(P.x-ex,P.y-(rn.y+.5));
+    if(dd<3&&(rn.hintT||0)<=0){rn.hintT=25;toast("Stairs "+(rn.dir==="d"?"down to the ":"up to the ")+FLOORS[rn.to].toLowerCase(),2600)}
+    if(rn.hintT>0&&dd>=3.5)rn.hintT-=dt;
+  }
   // rotten floorboards
   for(const w of WK){
     if(w.l!==CL||w.broken)continue;
@@ -1064,7 +1071,7 @@ const INTRO=[
  "You wake up in a bedroom on the upper floor of Count Dracula's house. Every door out is sealed.",
  "The only way out is the locked casket in the basement. Its five seals break with five relics, lying hidden in the dark corners of the house. They shimmer faintly when you get close.",
  "Walk up to furniture and tap the button beside RUN to open it. When he hunts you, hide in beds, bathtubs, freezers and barrels. Drop the bell from your table to lure him away.",
- "You have a few days. Each time he catches you, a day passes and you wake up back in bed. Stairs join the attic, upper floor, ground floor and basement. Stay quiet and don't knock anything over. Some floorboards are rotten and will give way under you."
+ "You have a few days. Each time he catches you, a day passes and you wake up back in bed. Stairs join the attic, upper floor, ground floor and basement. A lit candle marks each stairwell; the stairs to the attic are at the far east end of the upper hall. Stay quiet and don't knock anything over. Some floorboards are rotten and will give way under you."
 ];
 const INTRO_P=[
  "Practice mode. Dracula is not in the house, so take your time.",
@@ -1372,6 +1379,6 @@ function frame(t){
 resize();setList();setLives();drawFigure();initTitle3D();
 Promise.all([loadImg(WALL_SRC),loadImg(FLOOR_SRC)]).then(r=>{wallTex=1;const ok=r[0]&&r[1]&&initWorld(r[0],r[1]);if(!ok)$("play").textContent="3D FAILED TO LOAD"});
 requestAnimationFrame(frame);
-if(location.hash==="#debug")window.__g={updateBite,updateFall,WK,LG,get R3(){return R3},P,D,LV,ITEMS,BELL,DEC,update,render,doAct,nearestAct,openThing,tp:(l,x,y,a)=>{CL=l;P.x=x;P.y=y;if(a!=null)P.a=a;lvlEl.textContent=FLOORS[l].toUpperCase()},begin:k=>{if(k)diffKey=k;newGame();dialog.hidden=true;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=false;state="play"},get CL(){return CL},get state(){return state},get carried(){return carried},giveAll:()=>{ITEMS.forEach(i=>i.got=true);carried=5;setList()}};
+if(location.hash==="#debug")window.__g={bfs3,updateBite,updateFall,WK,LG,get R3(){return R3},P,D,LV,ITEMS,BELL,DEC,update,render,doAct,nearestAct,openThing,tp:(l,x,y,a)=>{CL=l;P.x=x;P.y=y;if(a!=null)P.a=a;lvlEl.textContent=FLOORS[l].toUpperCase()},begin:k=>{if(k)diffKey=k;newGame();dialog.hidden=true;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=false;state="play"},get CL(){return CL},get state(){return state},get carried(){return carried},giveAll:()=>{ITEMS.forEach(i=>i.got=true);carried=5;setList()}};
 })();
 </script>
