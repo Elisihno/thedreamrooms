@@ -31,7 +31,6 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 #quest ul{list-style:none;margin:0;padding:0}
 #quest li.got{color:var(--dim);text-decoration:line-through}
 #side{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:max(12px,env(safe-area-inset-top,0px));display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-#mini{width:112px;height:88px;border:1px solid var(--line);background:#000;image-rendering:pixelated}
 #lives{font:400 15px var(--display);letter-spacing:.12em;text-shadow:0 0 6px #000}
 #toast{position:absolute;left:50%;top:26%;transform:translateX(-50%);max-width:min(86%,420px);text-align:center;font-size:15px;line-height:1.35;background:var(--panel);border:1px solid var(--line);padding:8px 12px;opacity:0;transition:opacity .3s}
 #toast.on{opacity:1}
@@ -65,14 +64,14 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 #figure{position:relative;flex:1 0 250px;min-height:250px;width:100%;pointer-events:none}
 #figure canvas{position:absolute;left:50%;bottom:0;height:100%;width:auto;transform:translateX(-50%)}
 .diffs{position:relative;display:flex;gap:8px;width:100%;max-width:420px}
-.diffs button{flex:1;font:400 16px var(--display);letter-spacing:.1em;color:var(--ink);background:rgba(0,0,0,.6);border:1px solid var(--dim);padding:10px 4px;cursor:pointer;touch-action:manipulation}
+.diffs button{flex:1;font:400 14px var(--display);letter-spacing:.04em;color:var(--ink);background:rgba(0,0,0,.6);border:1px solid var(--dim);padding:10px 4px;cursor:pointer;touch-action:manipulation}
 .diffs button.sel{background:var(--ink);color:#000;border-color:var(--ink)}
 #fx{position:relative;width:100%;max-width:420px;box-sizing:border-box;border:1px solid var(--line);background:var(--panel);padding:8px 12px;font-size:13px;line-height:1.5}
 #fx b{display:block;font:400 14px var(--display);letter-spacing:.12em;color:var(--dim);margin-bottom:2px}
-#dtab{position:relative;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;width:100%;max-width:440px;box-sizing:border-box;background:rgba(6,6,6,.82);border:1px solid var(--dim)}
-#dtab>*{box-sizing:border-box;margin:0;padding:8px 4px;display:flex;align-items:center;justify-content:center;text-align:center;border:0;border-top:1px solid #2a2a2a;font:400 16px/1.15 var(--mono);color:#d8d8d8}
+#dtab{position:relative;display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr 1.1fr;width:100%;max-width:440px;box-sizing:border-box;background:rgba(6,6,6,.82);border:1px solid var(--dim)}
+#dtab>*{box-sizing:border-box;margin:0;padding:8px 4px;display:flex;align-items:center;justify-content:center;text-align:center;border:0;border-top:1px solid #2a2a2a;font:400 14px/1.15 var(--mono);color:#d8d8d8}
 #dtab .c0{justify-content:flex-start;text-align:left;padding-left:10px;color:#a8a8a8;font-size:14px}
-#dtab .hd{border-top:0;font:400 18px var(--display);letter-spacing:.08em;background:transparent;color:var(--ink)}
+#dtab .hd{border-top:0;font:400 15px var(--display);letter-spacing:.08em;background:transparent;color:var(--ink)}
 #dtab button.hd{border-left:1px solid #2a2a2a;cursor:pointer;touch-action:manipulation;border-top:0}
 #dtab div.hd{color:#a8a8a8;font-size:14px;justify-content:flex-start;padding-left:10px}
 #dtab .cell{border-left:1px solid #2a2a2a}
@@ -106,7 +105,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 
   <div class="hud" id="hud" hidden>
     <div id="quest"><h2>Relics</h2><ul id="list"></ul></div>
-    <div id="side"><canvas id="mini" width="112" height="88"></canvas><div id="lvlname">UPPER FLOOR</div><div id="lives"></div></div>
+    <div id="side"><div id="lvlname">UPPER FLOOR</div><div id="lives"></div></div>
     <div id="toast"></div>
     <div id="joy"><i></i></div>
     <div id="stam"><i></i></div>
@@ -126,6 +125,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
       <button type="button" data-d="easy">Easy</button>
       <button type="button" data-d="normal">Normal</button>
       <button type="button" data-d="hard">Hard</button>
+      <button type="button" data-d="practice">Practice</button>
     </div>
     <div id="more">Scroll down to compare the modes ▾</div>
     <div id="dtab"></div>
@@ -169,7 +169,7 @@ const DEC={
  frontdoor:{h:1.2},boiler:{h:1.35},crate:{h:.5},rack:{h:1.05},coffin:{h:.6},candle:{h:.45,glow:.9},
  torture:{h:.95},table:{h:.7},casket:{h:.75,casket:1}
 };
-const LV=[0,1,2,3].map(i=>({rows:LD.rows[i],blocked:new Uint8Array(MW*MH),dec:[],seen:new Uint8Array(MW*MH),stairs:[]}));
+const LV=[0,1,2,3].map(i=>({rows:LD.rows[i],blocked:new Uint8Array(MW*MH),dec:[],stairs:[]}));
 for(const d of LD.dec){
   const def=DEC[d[1]],lv=LV[d[0]];
   lv.dec.push({type:d[1],def,spr:def.spr||d[1],cx:d[2]+.5,cy:d[3]+.5,cell:[d[2],d[3]],fallen:false});
@@ -224,7 +224,6 @@ const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
 const $=id=>document.getElementById(id);
 const stage=$("stage"),view=$("view");
 const hud=$("hud"),toastEl=$("toast"),listEl=$("list"),livesEl=$("lives"),stamEl=$("stam").firstElementChild;
-const mini=$("mini"),mctx=mini.getContext("2d");
 const titleEl=$("title"),screenEl=$("screen"),dialog=$("dialog"),dtext=$("dtext"),runBtn=$("run"),actBtn=$("act"),joyEl=$("joy"),joyKnob=joyEl.firstElementChild,hint=$("hint"),dangerEl=$("danger"),hideOv=$("hideov"),fadeEl=$("fade"),daytxtEl=$("daytxt"),lvlEl=$("lvlname");
 
 (()=>{const c=document.createElement("canvas");c.width=c.height=96;const g=c.getContext("2d"),im=g.createImageData(96,96);for(let i=0;i<96*96;i++){const v=Math.random()*255;im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v;im.data[i*4+3]=255}g.putImageData(im,0,0);$("grain").style.backgroundImage="url("+c.toDataURL()+")"})();
@@ -236,6 +235,7 @@ const D={x:DRAC_START.x,y:DRAC_START.y,lvl:DRAC_START.l,mode:"patrol",path:[],re
 const DIFF={
  easy:{name:"Easy",lives:7,speed:.8,see:.7,lose:1.8,stam:.7,light:1.3,stun:6},
  normal:{name:"Normal",lives:5,speed:1,see:1,lose:3,stam:1,light:1,stun:3},
+ practice:{name:"Practice",lives:1,speed:0,see:0,lose:0,stam:.5,light:1.25,stun:0,noDrac:true},
  hard:{name:"Hard",lives:3,speed:1.22,see:1.3,lose:5.5,stam:1.45,light:.78,stun:1}
 };
 let cfg=DIFF.normal,maxLives=5,diffKey="normal";
@@ -245,7 +245,7 @@ const joy={id:null,sx:0,sy:0,x:0,y:0};
 const look={id:null,x:0};
 
 const dayNo=()=>maxLives-lives+1;
-function setLives(){livesEl.textContent="DAY "+dayNo()+" OF "+maxLives}
+function setLives(){livesEl.textContent=cfg.noDrac?"PRACTICE":"DAY "+dayNo()+" OF "+maxLives}
 function setList(){listEl.innerHTML=ITEMS.map(i=>"<li class='"+(i.got?"got":"")+"'>"+(i.got?"☑ ":"☐ ")+i.name+"</li>").join("")}
 function toast(msg,ms){toastEl.textContent=msg;toastEl.classList.add("on");toastT=(ms||3000)/1000}
 
@@ -767,21 +767,6 @@ function render(){
   R3.r.render(R3.scene,cam);
 }
 
-/* ---------- minimap ---------- */
-function markSeen(){const sn=LV[CL].seen,cx=Math.floor(P.x),cy=Math.floor(P.y);for(let y=cy-4;y<=cy+4;y++)for(let x=cx-4;x<=cx+4;x++)if(x>=0&&y>=0&&x<MW&&y<MH)sn[y*MW+x]=1}
-function drawMini(){
-  const c=112/MW,lv=LV[CL],sn=lv.seen;mctx.fillStyle="#000";mctx.fillRect(0,0,112,112);
-  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
-    if(!sn[y*MW+x])continue;
-    mctx.fillStyle=isWall(x,y)?"#7a7a7a":(lv.blocked[y*MW+x]?"#444":"#1e1e1e");mctx.fillRect(x*c,y*c,c+.6,c+.6);
-  }
-  const vis=(x,y)=>sn[Math.floor(y)*MW+Math.floor(x)];
-  mctx.fillStyle="#fff";
-  for(const st of lv.stairs)if(vis(st.x,st.y)){mctx.fillStyle="#fff";mctx.beginPath();if(st.dir==="u"){mctx.moveTo(st.x*c+c/2,st.y*c);mctx.lineTo(st.x*c,st.y*c+c);mctx.lineTo(st.x*c+c,st.y*c+c)}else{mctx.moveTo(st.x*c,st.y*c);mctx.lineTo(st.x*c+c,st.y*c);mctx.lineTo(st.x*c+c/2,st.y*c+c)}mctx.fill()}
-  for(const d of lv.dec)if(d.def.casket&&vis(d.cx,d.cy)){mctx.strokeStyle="#fff";mctx.strokeRect(d.cx*c-3,d.cy*c-2,6,4)}
-  mctx.save();mctx.translate(P.x*c,P.y*c);mctx.rotate(P.a);mctx.fillStyle="#fff";mctx.beginPath();mctx.moveTo(6,0);mctx.lineTo(-4,-4);mctx.lineTo(-4,4);mctx.closePath();mctx.fill();mctx.restore();
-}
-
 /* ---------- pathing across floors ---------- */
 const NN=4*MW*MH,prev3=new Int32Array(NN),LINK=new Map();
 const nid=(l,x,y)=>(l*MH+y)*MW+x;
@@ -866,7 +851,7 @@ function doAct(){
 }
 
 function update(dt){
-  time+=dt;markSeen();
+  time+=dt;
   flashT-=dt;if(flashT<=0){flash=1;flashT=9+Math.random()*14;sfx.thunder()}
   flash=Math.max(0,flash-dt*3);
   if(toastT>0){toastT-=dt;if(toastT<=0)toastEl.classList.remove("on")}
@@ -914,7 +899,7 @@ function update(dt){
   actT=nearestAct();
   if(actT){actBtn.hidden=false;if(actBtn.dataset.l!==actT.label){actBtn.textContent=actT.label;actBtn.dataset.l=actT.label}}else actBtn.hidden=true;
 
-  updateDracula(dt,running,mag);
+  if(!cfg.noDrac)updateDracula(dt,running,mag);
 
   // hiding: Dracula may check the spot
   if(P.hid&&D.lvl===CL){
@@ -981,7 +966,7 @@ function showScreen(title,text,btn,how){
   $("stitle").innerHTML=title;$("stext").textContent=text;$("sbtn").textContent=btn;$("how").style.display=how?"flex":"none";screenEl.hidden=false;
 }
 function resetPlayer(){CL=START.l;P.x=START.x;P.y=START.y;P.a=START.a;P.stam=100;P.tired=false;P.hid=null;P.onStair=false;hideOv.hidden=true;lvlEl.textContent=FLOORS[CL].toUpperCase()}
-function resetDracula(stun){D.x=DRAC_START.x;D.y=DRAC_START.y;D.lvl=DRAC_START.l;D.mode="patrol";D.path=[];D.lose=0;D.stun=stun||0;D.sawHide=false}
+function resetDracula(stun){D.x=DRAC_START.x;D.y=DRAC_START.y;D.lvl=cfg.noDrac?-9:DRAC_START.l;D.mode="patrol";D.path=[];D.lose=0;D.stun=stun||0;D.sawHide=false}
 
 let biteT=0,biteK=0,bitePhase=0,bitten=false;
 function caught(){
@@ -1043,11 +1028,11 @@ function updateBite(dt){
 function win(){
   state="win";sfx.win();joy.id=null;joyEl.style.display="none";runHeld=false;actBtn.hidden=true;
   const m=Math.floor(time/60),s=Math.floor(time%60);
-  showScreen("You<br>escaped","The five seals break and the casket opens onto a tunnel. You crawl out into the night. You escaped on day "+dayNo()+" of "+maxLives+", after "+m+":"+String(s).padStart(2,"0")+" of searching.","Back to title",false);
+  showScreen("You<br>escaped","The five seals break and the casket opens onto a tunnel. You crawl out into the night. "+(cfg.noDrac?"You explored the house and escaped in ":"You escaped on day "+dayNo()+" of "+maxLives+", after ")+m+":"+String(s).padStart(2,"0")+(cfg.noDrac?" of practice.":" of searching."),"Back to title",false);
 }
 function newGame(){
   cfg=DIFF[diffKey];maxLives=cfg.lives;
-  ITEMS.forEach(i=>i.got=false);LV.forEach(l=>l.seen.fill(0));
+  ITEMS.forEach(i=>i.got=false);
   LV.forEach(l=>l.dec.forEach(d=>{d.fallen=false;d.fallT=0;d.open=false;d.openT=0;d.openTarget=0;d.collectT=0;if(d.b&&d.b.anim)d.b.anim(0);if(d.itemMesh)d.itemMesh.visible=false}));
   BELL.held=false;BELL.onTable=true;BELL.l=BELL0.l;BELL.x=BELL0.x;BELL.y=BELL0.y;
   WK.forEach(w=>{w.broken=false;w.warned=false;w.crack.visible=true;w.hole.visible=false;w.debris.forEach(m=>LG[w.l].remove(m));w.debris=[]});camDrop=0;fall=null;
@@ -1060,12 +1045,17 @@ const INTRO=[
  "Walk up to furniture and tap the button beside RUN to open it. When he hunts you, hide in beds, bathtubs, freezers and barrels. Drop the bell from your table to lure him away.",
  "You have a few days. Each time he catches you, a day passes and you wake up back in bed. Stairs join the attic, upper floor, ground floor and basement. Stay quiet and don't knock anything over. Some floorboards are rotten and will give way under you."
 ];
-let di=0;
-function startIntro(){state="intro";di=0;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=true;dialog.hidden=false;dtext.textContent=INTRO[0]}
+const INTRO_P=[
+ "Practice mode. Dracula is not in the house, so take your time.",
+ "Walk every floor, open drawers, wardrobes, trunks and coffins, and find the five relics. Try the hiding spots and the bell too.",
+ "Stairs join the attic, upper floor, ground floor and basement. Some floorboards are rotten and will give way. When you have all five relics, open the casket in the basement."
+];
+let INTRO_CUR=INTRO,di=0;
+function startIntro(){INTRO_CUR=diffKey==="practice"?INTRO_P:INTRO;state="intro";di=0;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=true;dialog.hidden=false;dtext.textContent=INTRO_CUR[0]}
 function nextDialog(){
   di++;
-  if(di>=INTRO.length){dialog.hidden=true;hud.hidden=false;state="play";return}
-  dtext.textContent=INTRO[di];
+  if(di>=INTRO_CUR.length){dialog.hidden=true;hud.hidden=false;state="play";return}
+  dtext.textContent=INTRO_CUR[di];
 }
 function tap(el,fn){
   let t0=0;
@@ -1076,11 +1066,11 @@ tap(dialog,()=>{if(state==="intro")nextDialog()});
 tap(actBtn,doAct);
 function toTitle(){state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;if(T3.resize)T3.resize();dangerEl.style.opacity=0;view.style.transform="";hideOv.hidden=true;CL=1}
 const ROWS=["Days","Dracula speed","Sees you from","Gives up after","Stamina","Light","Wakes after"];
-const TBL={easy:["7","Slower","Close","2 sec","Long","Bright","6 sec"],normal:["5","Normal","Normal","3 sec","Normal","Normal","3 sec"],hard:["3","Faster","Far","5 sec","Short","Dark","1 sec"]};
+const TBL={practice:["No limit","None","-","-","Long","Bright","-"],easy:["7","Slower","Close","2 sec","Long","Bright","6 sec"],normal:["5","Normal","Normal","3 sec","Normal","Normal","3 sec"],hard:["3","Faster","Far","5 sec","Short","Dark","1 sec"]};
 (()=>{
   let h="<div class='c0 hd'>Mode</div>";
-  ["easy","normal","hard"].forEach(k=>h+="<button type='button' class='hd' data-d='"+k+"'>"+DIFF[k].name+"</button>");
-  ROWS.forEach((r,i)=>{h+="<div class='c0'>"+r+"</div>";["easy","normal","hard"].forEach(k=>h+="<div class='cell' data-d='"+k+"'>"+TBL[k][i]+"</div>")});
+  ["easy","normal","hard","practice"].forEach(k=>h+="<button type='button' class='hd' data-d='"+k+"'>"+DIFF[k].name+"</button>");
+  ROWS.forEach((r,i)=>{h+="<div class='c0'>"+r+"</div>";["easy","normal","hard","practice"].forEach(k=>h+="<div class='cell' data-d='"+k+"'>"+TBL[k][i]+"</div>")});
   $("dtab").innerHTML=h;
 })();
 function setDiff(k){diffKey=k;document.querySelectorAll("#dtab [data-d],#diffs [data-d]").forEach(n=>n.classList.toggle("sel",n.dataset.d===k))}
@@ -1357,7 +1347,6 @@ function frame(t){
   else if(state==="menu"){time+=dt;if(T3.ready)T3.render(time);CL=1;P.x=START.x;P.y=START.y;P.a=START.a+Math.sin(time*.3)*.4;P.bob=time*.7;flash=Math.max(0,flash-dt*3);flashT-=dt;if(flashT<=0){flash=1;flashT=7+Math.random()*8}}
   const pl=state!=="menu";if(pl!==wasPlay){wasPlay=pl;stage.classList.toggle("play",pl)}
   if(!(state==="menu"&&T3.ready))render();
-  if(state==="play")drawMini();
 }
 resize();setList();setLives();drawFigure();initTitle3D();
 Promise.all([loadImg(WALL_SRC),loadImg(FLOOR_SRC)]).then(r=>{wallTex=1;const ok=r[0]&&r[1]&&initWorld(r[0],r[1]);if(!ok)$("play").textContent="3D FAILED TO LOAD"});
