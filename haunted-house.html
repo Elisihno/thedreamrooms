@@ -32,7 +32,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 #quest li.got{color:var(--dim);text-decoration:line-through}
 #side{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:max(12px,env(safe-area-inset-top,0px));display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 #mini{width:112px;height:88px;border:1px solid var(--line);background:#000;image-rendering:pixelated}
-#lives{font-size:18px;letter-spacing:.1em;text-shadow:0 0 6px #000}
+#lives{font:400 15px var(--display);letter-spacing:.12em;text-shadow:0 0 6px #000}
 #toast{position:absolute;left:50%;top:26%;transform:translateX(-50%);max-width:min(86%,420px);text-align:center;font-size:15px;line-height:1.35;background:var(--panel);border:1px solid var(--line);padding:8px 12px;opacity:0;transition:opacity .3s}
 #toast.on{opacity:1}
 #stam{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(max(24px,env(safe-area-inset-bottom,0px)) + 92px);width:78px;height:5px;background:#222}
@@ -231,17 +231,18 @@ let state="menu"; // menu | intro | play | caught | win | over
 const P={x:START.x,y:START.y,a:START.a,stam:100,tired:false,regenT:0,bob:0,hid:null,px:0,py:0,hidFind:0,onStair:false};
 const D={x:DRAC_START.x,y:DRAC_START.y,lvl:DRAC_START.l,mode:"patrol",path:[],repath:0,lose:0,last:null,wait:0,stun:0,bob:0,sawHide:false};
 const DIFF={
- easy:{name:"Easy",lives:5,speed:.8,see:.7,lose:1.8,stam:.7,light:1.3,stun:6},
- normal:{name:"Normal",lives:3,speed:1,see:1,lose:3,stam:1,light:1,stun:3},
- hard:{name:"Hard",lives:2,speed:1.22,see:1.3,lose:5.5,stam:1.45,light:.78,stun:1}
+ easy:{name:"Easy",lives:7,speed:.8,see:.7,lose:1.8,stam:.7,light:1.3,stun:6},
+ normal:{name:"Normal",lives:5,speed:1,see:1,lose:3,stam:1,light:1,stun:3},
+ hard:{name:"Hard",lives:3,speed:1.22,see:1.3,lose:5.5,stam:1.45,light:.78,stun:1}
 };
-let cfg=DIFF.normal,maxLives=3,diffKey="normal";
-let lives=3,carried=0,time=0,flash=0,flashT=6,beatT=0,toastT=0,msgCool=0,runHeld=false,actT=null;
+let cfg=DIFF.normal,maxLives=5,diffKey="normal";
+let lives=5,carried=0,time=0,flash=0,flashT=6,beatT=0,toastT=0,msgCool=0,runHeld=false,actT=null;
 const keys={};
 const joy={id:null,sx:0,sy:0,x:0,y:0};
 const look={id:null,x:0};
 
-function setLives(){livesEl.textContent="♥".repeat(lives)+"♡".repeat(Math.max(0,maxLives-lives))}
+const dayNo=()=>maxLives-lives+1;
+function setLives(){livesEl.textContent="DAY "+dayNo()+" OF "+maxLives}
 function setList(){listEl.innerHTML=ITEMS.map(i=>"<li class='"+(i.got?"got":"")+"'>"+(i.got?"☑ ":"☐ ")+i.name+"</li>").join("")}
 function toast(msg,ms){toastEl.textContent=msg;toastEl.classList.add("on");toastT=(ms||3000)/1000}
 
@@ -965,13 +966,13 @@ function caught(){
   if(state!=="play")return;
   lives--;setLives();sfx.caught();buzz([200,80,200]);
   state="caught";dangerEl.style.opacity=1;joy.id=null;joyEl.style.display="none";runHeld=false;actBtn.hidden=true;hideOv.hidden=true;P.hid=null;
-  if(lives>0)showScreen("He caught<br>you","Dracula drags you back to the bedroom upstairs. You keep the relics you found. "+lives+(lives===1?" life":" lives")+" left.","Keep going",false);
-  else{state="over";showScreen("Dracula<br>wins","The house goes quiet. You never made it out.","Back to title",false)}
+  if(lives>0)showScreen("Day "+(dayNo()-1)+"<br>is over","Dracula drags you back to the bedroom. You wake up for day "+dayNo()+" of "+maxLives+(lives===1?", your last day":"")+". You keep the relics you found.","Start day "+dayNo(),false);
+  else{state="over";showScreen("No days<br>left","That was your last day. The house goes quiet and you never made it out.","Back to title",false)}
 }
 function win(){
   state="win";sfx.win();joy.id=null;joyEl.style.display="none";runHeld=false;actBtn.hidden=true;
   const m=Math.floor(time/60),s=Math.floor(time%60);
-  showScreen("You<br>escaped","The five seals break and the casket opens onto a tunnel. You crawl out into the night. You finished in "+m+":"+String(s).padStart(2,"0")+" with "+lives+(lives===1?" life":" lives")+" to spare.","Back to title",false);
+  showScreen("You<br>escaped","The five seals break and the casket opens onto a tunnel. You crawl out into the night. You escaped on day "+dayNo()+" of "+maxLives+", after "+m+":"+String(s).padStart(2,"0")+" of searching.","Back to title",false);
 }
 function newGame(){
   cfg=DIFF[diffKey];maxLives=cfg.lives;
@@ -985,7 +986,7 @@ const INTRO=[
  "You wake up in a bedroom on the upper floor of Count Dracula's house. Every door out is sealed.",
  "The only way out is the locked casket in the basement. Its five seals break with five relics, hidden inside drawers, wardrobes, trunks and coffins around the house.",
  "Walk up to furniture and tap the button beside RUN to open it. When he hunts you, hide in beds, bathtubs, freezers and barrels. Drop the bell from your table to lure him away.",
- "Stairs join the attic, upper floor, ground floor and basement. Stay quiet and don't knock anything over."
+ "You have a few days. Each time he catches you, a day passes and you wake up back in bed. Stairs join the attic, upper floor, ground floor and basement. Stay quiet and don't knock anything over."
 ];
 let di=0;
 function startIntro(){state="intro";di=0;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=true;dialog.hidden=false;dtext.textContent=INTRO[0]}
@@ -1002,8 +1003,8 @@ function tap(el,fn){
 tap(dialog,()=>{if(state==="intro")nextDialog()});
 tap(actBtn,doAct);
 function toTitle(){state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;if(T3.resize)T3.resize();dangerEl.style.opacity=0;view.style.transform="";hideOv.hidden=true;CL=1}
-const ROWS=["Lives","Dracula speed","Sees you from","Gives up after","Stamina","Light","Wakes after"];
-const TBL={easy:["5","Slower","Close","2 sec","Long","Bright","6 sec"],normal:["3","Normal","Normal","3 sec","Normal","Normal","3 sec"],hard:["2","Faster","Far","5 sec","Short","Dark","1 sec"]};
+const ROWS=["Days","Dracula speed","Sees you from","Gives up after","Stamina","Light","Wakes after"];
+const TBL={easy:["7","Slower","Close","2 sec","Long","Bright","6 sec"],normal:["5","Normal","Normal","3 sec","Normal","Normal","3 sec"],hard:["3","Faster","Far","5 sec","Short","Dark","1 sec"]};
 (()=>{
   let h="<div class='c0 hd'>Mode</div>";
   ["easy","normal","hard"].forEach(k=>h+="<button type='button' class='hd' data-d='"+k+"'>"+DIFF[k].name+"</button>");
