@@ -1177,8 +1177,7 @@ function updateWake(dt){
   lidT.style.height=lidB.style.height=(50*(1-a)).toFixed(1)+"%";
   const bl=Math.max(0,1-tt/4.4);
   view.style.filter=bl>0?"blur("+(bl*bl*14).toFixed(1)+"px) brightness("+(.5+.5*(1-bl)).toFixed(2)+")":"";
-  if(wake.pend&&tt>3.1){wake.pend=false;dialog.hidden=false}
-  if(tt>4.6){wake.on=false;lidT.style.height=lidB.style.height="0";view.style.filter=""}
+  if(tt>4.6){wake.on=false;lidT.style.height=lidB.style.height="0";view.style.filter="";if(wake.pend){wake.pend=false;dialog.hidden=false}}
 }
 function startWake(withDialog){wake.on=true;wake.t=0;wake.pend=!!withDialog;if(withDialog)dialog.hidden=true;updateWake(0)}
 function startIntro(){INTRO_CUR=diffKey==="practice"?INTRO_P:INTRO;state="intro";di=0;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=true;dialog.hidden=false;dtext.textContent=INTRO_CUR[0];startWake(true)}
