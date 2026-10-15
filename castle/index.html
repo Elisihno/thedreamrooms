@@ -126,6 +126,26 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 #back{background:none;border:0;color:#c4c4c4;font:400 12px var(--mono);padding:2px 10px;cursor:pointer;touch-action:manipulation}
 .lid{position:absolute;left:0;right:0;background:#000;pointer-events:none;height:0;filter:blur(4px)}
 #lidT{top:-4px}#lidB{bottom:-4px}
+#wrench{pointer-events:auto;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--dim);background:rgba(0,0,0,.55);color:var(--ink);cursor:pointer;touch-action:manipulation;margin-top:2px}
+#wrench svg{width:19px;height:19px}
+#pause,#opts{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.78);padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));box-sizing:border-box}
+#pause[hidden],#opts[hidden]{display:none}
+.panel{width:100%;max-width:400px;max-height:100%;overflow-y:auto;touch-action:pan-y;box-sizing:border-box;background:#0b0b0b;border:1px solid var(--dim);padding:16px;display:flex;flex-direction:column;gap:12px}
+.panel h2{margin:0;font:400 22px var(--display);letter-spacing:.16em;text-align:center}
+.panel .row{display:flex;flex-direction:column;gap:6px}
+.panel .row>b{font-weight:400;font-size:13px;color:#a8a8a8;letter-spacing:.05em}
+.vol{display:flex;align-items:center;gap:10px}
+.vol button{flex:none;width:40px;height:40px;font:400 22px var(--mono)}
+.vol input{flex:1;min-width:0;height:34px;accent-color:#ececec}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;font:400 13px var(--display);letter-spacing:.04em;padding:9px 2px;min-height:38px}
+.seg button.sel{background:var(--ink);color:#000;border-color:var(--ink)}
+.panel button,.row2 button{color:var(--ink);background:rgba(255,255,255,.06);border:1px solid var(--dim);cursor:pointer;touch-action:manipulation;font:400 16px var(--display);letter-spacing:.12em;padding:12px}
+.panel button.go{background:var(--ink);color:#000}
+.panel button.warn{border-color:#b9b9b9}
+.panel button.warn.arm{background:#f2f2f2;color:#000}
+.row2{display:flex;gap:8px;width:100%;max-width:440px}
+.row2 button{flex:1;background:none;border:0;color:#c4c4c4;font:400 13px var(--mono);letter-spacing:0;padding:2px 10px}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 
@@ -141,7 +161,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 
   <div class="hud" id="hud" hidden>
     <div id="quest"><button id="dropbtn" type="button" hidden>DROP [Click]</button><h2>Chapter 1</h2><ul id="list"></ul></div>
-    <div id="side"><div id="lvlname">UPPER FLOOR</div><div id="lives"></div></div>
+    <div id="side"><div id="lvlname">UPPER FLOOR</div><div id="lives"></div><button id="wrench" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5l-6 6a1.9 1.9 0 0 0 2.7 2.7l6-6a4 4 0 0 0 5-5.4l-2.5 2.5-2.1-.6-.6-2.1z"/></svg></button></div>
     <div id="toast"></div>
     <div id="joy"><i></i></div>
     <div id="stam"><i></i></div>
@@ -169,9 +189,19 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
       </div>
       <div id="fx2"></div>
       <button type="button" id="begin">BEGIN</button>
-      <button type="button" id="back">Back</button>
+      <div class="row2"><button type="button" id="optbtn">Options</button><button type="button" id="back">Back</button></div>
     </div>
   </div>
+
+  <div id="pause" hidden><div class="panel">
+    <h2>Paused</h2>
+    <div class="row"><b>Volume</b><div class="vol"><button type="button" id="vdn" aria-label="Volume down">−</button><input type="range" id="vslide" min="0" max="100" step="5"><button type="button" id="vup" aria-label="Volume up">+</button></div></div>
+    <button type="button" class="go" id="presume">RESUME</button>
+    <button type="button" id="popts">OPTIONS</button>
+    <button type="button" class="warn" id="prestart">RESTART RUN</button>
+    <button type="button" class="warn" id="pend">END RUN</button>
+  </div></div>
+  <div id="opts" hidden><div class="panel"><h2>Options</h2><div id="optrows"></div><button type="button" class="go" id="optdone">DONE</button></div></div>
 
   <div class="screen" id="screen" hidden>
     <h1 id="stitle">Dracula's<br>Castle</h1>
@@ -423,7 +453,7 @@ function initAudio(){
   try{
     AC=new (window.AudioContext||window.webkitAudioContext)();
     const comp=AC.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=5;
-    master=AC.createGain();master.gain.value=.9;master.connect(comp);comp.connect(AC.destination);
+    master=AC.createGain();master.gain.value=SET.vol/100;master.connect(comp);comp.connect(AC.destination);
     busSfx=AC.createGain();busSfx.gain.value=.9;busSfx.connect(master);
     busBed=AC.createGain();busBed.gain.value=0;busBed.connect(master);
     busMus=AC.createGain();busMus.gain.value=.62;busMus.connect(master);
@@ -444,7 +474,7 @@ function play(name,vol,pan){
     SND[name](AC,g,AC.currentTime+.02,DUR[name]);
   }catch(e){}
 }
-function startChase(){
+function startChase(){if(!SET.music)return;
   if(!AC||!LB.chase||chaseNode)return;
   const s=AC.createBufferSource();s.buffer=LB.chase;s.loop=true;const g=AC.createGain();g.gain.setValueAtTime(0,AC.currentTime);g.gain.linearRampToValueAtTime(1,AC.currentTime+.12);s.connect(g);g.connect(busMus);s.start();chaseNode={s,g};
 }
@@ -453,7 +483,7 @@ function stopChase(){
   try{const t=AC.currentTime;g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+2.2);s.stop(t+2.3)}catch(e){}
 }
 function mixAudio(level){ // level: 1 playing, .55 menu, .25 cutscene
-  if(!AC)return;try{busBed.gain.setTargetAtTime(level,AC.currentTime,.6)}catch(e){}
+  if(!AC)return;try{busBed.gain.setTargetAtTime(level,AC.currentTime,.6);if(BED.rain)BED.rain.gain.setTargetAtTime(SET.rain?.28:0,AC.currentTime,.4)}catch(e){}
 }
 function ambience(dt){
   if(!AC)return;
@@ -474,7 +504,10 @@ const sfx={
   day(){play("daycard",.9)},whoosh(){play("whoosh",.8)},ui(){play("ui",.6)},doorCreak(){play("creak",.55)}
 };
 
-const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
+let ghostUntil=0;const SET={vol:90,look:1,rain:1,fog:1,thunder:1,vib:1,inf:0,music:1};
+try{const s=JSON.parse(localStorage.getItem("castleSet")||"{}");for(const k in SET)if(typeof s[k]==="number")SET[k]=s[k]}catch(e){}
+const saveSet=()=>{try{localStorage.setItem("castleSet",JSON.stringify(SET))}catch(e){}};
+const buzz=ms=>{if(!SET.vib)return;try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
 
 /* ---------- dom ---------- */
 const $=id=>document.getElementById(id);
@@ -1102,8 +1135,8 @@ function render(){
   cam.position.set(P.x,y,P.y);if(state==="fall")cam.position.add(new THREE.Vector3((Math.random()-.5)*.03,0,(Math.random()-.5)*.03));if(state==="bite"&&biteK>.85&&bitePhase<2)cam.position.add(new THREE.Vector3((Math.random()-.5)*.05,(Math.random()-.5)*.05,(Math.random()-.5)*.05));{const rn=runAt(CL,P.x,P.y),tp=window.__pitch!=null?window.__pitch:(state==="bite"?biteK*.3:state==="fall"?.35:rn&&!P.hid?(rn.dir==="d"?-.5:.16):0);P.pitch=(P.pitch||0)+(tp+.6*(1-wke)-(P.pitch||0))*Math.min(1,dt*5);cam.rotation.order="YXZ";cam.rotation.set(P.pitch,-P.a-Math.PI/2,0)}
   const lt=state==="menu"?1:cfg.light*cf.light;
   R3.spot.intensity=1.4*lt;R3.near.intensity=.55*lt;R3.amb.intensity=.2*Math.min(1.3,lt)+flash*1.1;
-  R3.scene.fog.density=state==="menu"?.17:(.17/Math.max(.7,lt*.95))*(cf.sky?.55:1);
-  R3.sky.visible=!!cf.sky;R3.moonL.intensity=cf.sky?.55+flash*1.2:0;R3.rain.visible=!!cf.sky;
+  R3.scene.fog.density=(state==="menu"?.17:(.17/Math.max(.7,lt*.95))*(cf.sky?.55:1))*([.6,1,1.55][SET.fog]);
+  R3.sky.visible=!!cf.sky;R3.moonL.intensity=cf.sky?.55+flash*1.2:0;R3.rain.visible=!!cf.sky&&!!SET.rain;
   if(cf.sky){const rp=R3.rainP,ry=R3.rainY;R3.rain.position.set(P.x,0,P.y);for(let i=0;i<ry.length;i++){let y=ry[i]-dt*13;if(y<0)y+=5;ry[i]=y;rp[i*6+1]=y;rp[i*6+3]=rp[i*6]+.03;rp[i*6+4]=y-.28;rp[i*6+5]=rp[i*6+2]}R3.rain.geometry.attributes.position.needsUpdate=true}
   for(const d of LV[CL].dec)if(d.b.hideHide)d.obj.visible=!(P.hid===d);
   {const hk=R3.held,holding=!!heldKey()&&(state==="play"||state==="intro")&&!P.hid&&!(wake.on&&wake.t<2.5);
@@ -1226,7 +1259,7 @@ function doAct(){
 function update(dt){
   time+=dt;
   mixAudio(1);ambience(dt);
-  flashT-=dt;if(flashT<=0){flash=1;flashT=6+Math.random()*9;sfx.thunder()}
+  flashT-=dt;if(flashT<=0){flash=1;flashT=(6+Math.random()*9)*([2,1,.5][SET.thunder]);sfx.thunder()}
   flash=Math.max(0,flash-dt*3);
   if(toastT>0){toastT-=dt;if(toastT<=0)toastEl.classList.remove("on")}
   if(time>12)hint.style.opacity=0;
@@ -1242,7 +1275,7 @@ function update(dt){
   const wantRun=(runHeld||keys.ShiftLeft||keys.ShiftRight)&&mag>.1;
   const running=wantRun&&!P.tired&&P.stam>0;
   const spd=running?2.8:1.7;
-  if(running){P.stam-=26*cfg.stam*dt;P.regenT=1;if(P.stam<=0){P.stam=0;P.tired=true}}
+  if(running){P.stam-=SET.inf?0:26*cfg.stam*dt;P.regenT=1;if(P.stam<=0){P.stam=0;P.tired=true}}
   else{P.regenT-=dt;if(P.regenT<=0)P.stam=Math.min(100,P.stam+20*dt);if(P.tired&&P.stam>30)P.tired=false}
   stamEl.style.width=P.stam+"%";stamEl.style.opacity=P.tired?.4:1;
   const dx=Math.cos(P.a),dy=Math.sin(P.a);
@@ -1469,7 +1502,7 @@ function nextDialog(){
 }
 function tap(el,fn){
   let t0=0;
-  const h=e=>{const n=performance.now();if(n-t0<400)return;t0=n;fn(e)};
+  const h=e=>{const n=performance.now();if(n-t0<400||n<ghostUntil)return;t0=n;fn(e)};
   el.addEventListener("pointerup",h);el.addEventListener("click",h);
 }
 tap(dialog,()=>{if(state==="intro")nextDialog()});
@@ -1490,6 +1523,43 @@ tap($("modes"),e=>{const n=e.target.closest&&e.target.closest("[data-d]");if(n){
 setDiff("normal");
 let chooseAt=0,readyTimer=0;
 tap($("play"),()=>{if(state!=="menu"||titleEl.classList.contains("choosing"))return;if(!AC)initAudio();titleEl.classList.add("choosing");T3.target=1;chooseAt=performance.now();clearTimeout(readyTimer);readyTimer=setTimeout(()=>{if(titleEl.classList.contains("choosing"))titleEl.classList.add("ready")},1300)});
+const OPTDEF=[
+ ["look","Look speed",["Slow","Normal","Fast"],[.55,1,1.7]],
+ ["rain","Rain",["Off","On"],null],["fog","Fog",["Thin","Normal","Thick"],null],
+ ["thunder","Lightning",["Rare","Normal","Often"],null],["vib","Vibration",["Off","On"],null],
+ ["inf","Infinite stamina",["Off","On"],null],["music","Chase music",["Off","On"],null]
+];
+const optIdx=k=>k==="look"?(SET.look<.8?0:SET.look>1.3?2:1):SET[k];
+function applyVol(){const v=Math.max(0,Math.min(100,SET.vol));SET.vol=v;$("vslide").value=v;try{if(master)master.gain.value=v/100}catch(e){}saveSet()}
+function buildOpts(){
+  const box=$("optrows");box.innerHTML="";box.style.cssText="display:flex;flex-direction:column;gap:12px";
+  const vr=document.createElement("div");vr.className="row";vr.innerHTML="<b>Volume</b><div class='vol'><button type='button' data-v='-10'>−</button><input type='range' min='0' max='100' step='5' id='ovol'><button type='button' data-v='10'>+</button></div>";box.append(vr);
+  const ov=vr.querySelector("#ovol");ov.value=SET.vol;ov.addEventListener("input",()=>{SET.vol=+ov.value;applyVol()});
+  vr.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{SET.vol+=+b.dataset.v;applyVol();ov.value=SET.vol}));
+  for(const [k,label,names,vals] of OPTDEF){
+    const r=document.createElement("div");r.className="row";r.innerHTML="<b>"+label+"</b>";const sg=document.createElement("div");sg.className="seg";
+    names.forEach((n,i)=>{const b=document.createElement("button");b.type="button";b.textContent=n;b.className=i===optIdx(k)?"sel":"";
+      b.addEventListener("click",()=>{SET[k]=vals?vals[i]:i;sg.querySelectorAll("button").forEach((x,j)=>x.className=j===i?"sel":"");saveSet();if(k==="music"&&!SET.music)stopChase()});sg.append(b)});
+    r.append(sg);box.append(r);
+  }
+}
+let optsFrom=null;
+function openOpts(from){optsFrom=from;buildOpts();$("opts").hidden=false}
+function closeOpts(){ghostUntil=performance.now()+500;$("opts").hidden=true}
+tap($("optbtn"),()=>{if(state!=="menu"||!titleEl.classList.contains("ready"))return;openOpts("title")});
+tap($("optdone"),closeOpts);
+// pause menu with the wrench
+const wrenchBtn=$("wrench"),pauseEl=$("pause");
+function openPause(){if(state!=="play")return;ghostUntil=performance.now()+500;state="paused";joy.id=null;joyEl.style.display="none";look.id=null;runHeld=false;pauseEl.hidden=false;applyVol();try{AC&&AC.suspend()}catch(e){}}
+function closePause(){if(state!=="paused")return;ghostUntil=performance.now()+500;pauseEl.hidden=true;closeOpts();state="play";try{AC&&AC.resume()}catch(e){}}
+tap(wrenchBtn,openPause);tap($("presume"),closePause);tap($("popts"),()=>openOpts("pause"));
+$("vslide").addEventListener("input",()=>{SET.vol=+$("vslide").value;applyVol()});
+$("vdn").addEventListener("click",()=>{SET.vol-=10;applyVol()});$("vup").addEventListener("click",()=>{SET.vol+=10;applyVol()});
+function armed(btn,label,fn){let t=0;btn.dataset.l=btn.textContent;btn.addEventListener("click",()=>{if(btn.classList.contains("arm")){clearTimeout(t);btn.classList.remove("arm");btn.textContent=btn.dataset.l;fn();return}btn.classList.add("arm");btn.textContent="TAP AGAIN TO CONFIRM";t=setTimeout(()=>{btn.classList.remove("arm");btn.textContent=btn.dataset.l},3000)})}
+armed($("prestart"),"RESTART RUN",()=>{
+  ghostUntil=performance.now()+500;pauseEl.hidden=true;try{AC&&AC.resume()}catch(e){}stopChase();newGame();dangerEl.style.opacity=0;view.style.transform="";fadeEl.style.opacity=0;daytxtEl.style.opacity=0;hud.hidden=false;dialog.hidden=true;state="play";startWake(false);
+});
+armed($("pend"),"END RUN",()=>{ghostUntil=performance.now()+500;pauseEl.hidden=true;try{AC&&AC.resume()}catch(e){}stopChase();dangerEl.style.opacity=0;toTitle()});
 tap($("back"),()=>{if(!titleEl.classList.contains("ready"))return;clearTimeout(readyTimer);titleEl.classList.remove("choosing","ready");T3.target=0});
 tap($("begin"),()=>{if(state!=="menu"||!titleEl.classList.contains("ready")||performance.now()-chooseAt<1300)return;clearTimeout(readyTimer);titleEl.classList.remove("choosing","ready");T3.target=0;newGame();startIntro()});
 tap($("sbtn"),()=>{
@@ -1515,7 +1585,7 @@ stage.addEventListener("touchmove",e=>{
   const r=bounds();
   for(const t of e.changedTouches){
     if(t.identifier===joy.id){joy.x=t.clientX-r.left;joy.y=t.clientY-r.top;let vx=joy.x-joy.sx,vy=joy.y-joy.sy;const m=Math.hypot(vx,vy),mx=46;if(m>mx){vx=vx/m*mx;vy=vy/m*mx}joyKnob.style.transform="translate("+vx+"px,"+vy+"px)"}
-    else if(t.identifier===look.id){P.a+=(t.clientX-look.x)*.0075;look.x=t.clientX}
+    else if(t.identifier===look.id){P.a+=(t.clientX-look.x)*.0075*SET.look;look.x=t.clientX}
   }
   e.preventDefault();
 },{passive:false});
@@ -1534,7 +1604,7 @@ window.addEventListener("keyup",e=>{keys[e.code]=false});
 let mdrag=false,mlast=0;
 stage.addEventListener("mousedown",e=>{if(e.target.closest("button"))return;mdrag=true;mlast=e.clientX});
 window.addEventListener("mouseup",()=>{mdrag=false});
-window.addEventListener("mousemove",e=>{if(mdrag&&state==="play"){P.a+=(e.clientX-mlast)*.005;mlast=e.clientX}});
+window.addEventListener("mousemove",e=>{if(mdrag&&state==="play"){P.a+=(e.clientX-mlast)*.005*SET.look;mlast=e.clientX}});
 document.addEventListener("contextmenu",e=>e.preventDefault());
 window.addEventListener("resize",()=>{resize();if(T3.resize)T3.resize()});
 
@@ -1756,11 +1826,11 @@ function initTitle3D(){
 let last=0,wasPlay=false;
 function frame(t){
   requestAnimationFrame(frame);
-  const dt=Math.min(.05,(t-last)/1000||0);last=t;updateWake(dt);
+  const dt=Math.min(.05,(t-last)/1000||0);last=t;if(state!=="paused")updateWake(dt);
   if(!wallTex)return;
   if(state==="play")update(dt);else if(state==="bite")updateBite(dt);else if(state==="fall")updateFall(dt);
-  else if(state==="menu"){time+=dt;if(T3.ready)T3.render(time);CL=1;P.x=START.x;P.y=START.y;P.a=START.a+Math.sin(time*.3)*.4;P.bob=time*.7;flash=Math.max(0,flash-dt*3);flashT-=dt;if(flashT<=0){flash=1;flashT=7+Math.random()*8;sfx.thunder()}mixAudio(.6);ambience(dt)}
-  const pl=state!=="menu";if(pl!==wasPlay){wasPlay=pl;stage.classList.toggle("play",pl)}
+  else if(state==="menu"){time+=dt;if(T3.ready)T3.render(time);CL=1;P.x=START.x;P.y=START.y;P.a=START.a+Math.sin(time*.3)*.4;P.bob=time*.7;flash=Math.max(0,flash-dt*3);flashT-=dt;if(flashT<=0){flash=1;flashT=(7+Math.random()*8)*([2,1,.5][SET.thunder]);sfx.thunder()}mixAudio(.6);ambience(dt)}
+  const pl=state==="play";if(pl!==wasPlay){wasPlay=pl;stage.classList.toggle("play",pl)}
   if(!(state==="menu"&&T3.ready))render();
 }
 resize();setList();setLives();drawFigure();initTitle3D();
