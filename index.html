@@ -395,7 +395,12 @@ function begin() {
   canvas.requestPointerLock?.();
   showMsg('Find the pages.', 3500);
 }
-['start', 'dead', 'won'].forEach(id => el(id).addEventListener('click', begin));
+['start', 'dead', 'won'].forEach(id => {
+  const tap = e => { e.preventDefault(); if (state !== 'play') begin(); };
+  el(id).addEventListener('click', tap);
+  el(id).addEventListener('pointerup', tap);
+});
+addEventListener('error', e => { const d = document.createElement('p'); d.style.cssText = 'position:fixed;bottom:8px;left:8px;right:8px;color:#f66;font-size:12px;z-index:99'; d.textContent = 'Error: ' + e.message; document.body.appendChild(d); });
 canvas.addEventListener('click', () => { if (state === 'play' && document.pointerLockElement !== canvas) canvas.requestPointerLock?.(); });
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
