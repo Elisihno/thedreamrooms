@@ -144,7 +144,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 "use strict";
 
 /* ---------- the house: four floors ---------- */
-const LD={"rows":[["############################","############################","############################","##.......#................##","##.......#................##","##.......#................##","##.......#...........#....##","##.......#................##","##.......#...#............##","##.......#................##","##.......#........#.......##","##d......#........#.......##","##....#...........#.......##","##................#.......##","##...........#....#.......##","##................#.......##","##................#.......##","##................#.......##","##................#.......##","############################","############################","############################"],["############################","############################","##........#........#.......#","##........#........#.......#","##........#........#.......#","##.........................#","##.........................#","##........#........#.......#","##........#........#.......#","##........#........#.......#","#####..#######..######..####","##u........................#","##.........................#","#####..#######..######..####","##........#........#.......#","##........#........#.......#","##.........................#","##.........................#","##........#........#.......#","##........#........#.....d.#","##........#........#.......#","############################"],["############################","############################","##..........#........#.....#","##..........#........#.....#","##..........#........#.....#","##.........................#","##.........................#","##..........#........#.....#","##..........#........#.....#","##..........#........#.....#","######..########..######..##","##.........................#","##.........................#","#####..######..######..#####","##........#......#.........#","##........#......#.........#","##.........................#","##.........................#","##........#......#.........#","##........#..d...#.......u.#","##........#......#.........#","############################"],["############################","############################","##........#........#.......#","##........#........#.......#","##........#........#.......#","##.........................#","##.........................#","##........#........#.......#","##........#........#.......#","##........#........#.......#","#####..#######..######..####","##.........................#","##.........................#","#####..######..######..#####","##........#.....#..........#","##........#.....#..........#","##.........................#","##.........................#","##........#.....#..........#","##........#..u..#..........#","##........#.....#..........#","############################"]],"dec":[[0,"freezer",4,16],[0,"mannequin",22,14],[0,"trunk",6,4],[0,"trunk",24,17],[0,"box",12,4],[0,"box",15,16],[0,"box",5,8],[1,"bed",3,3],[1,"tablebell",8,3],[1,"wardrobe",2,8],[1,"nightstand",5,2],[1,"sink",12,2],[1,"sink",14,2],[1,"toilet",12,8],[1,"bathtub",17,4],[1,"bigbed",23,4],[1,"nightstand",21,3],[1,"nightstand",25,3],[1,"wardrobe",26,8],[1,"bed2",3,19],[1,"dresser",8,15],[1,"shelf",12,14],[1,"shelf",15,14],[1,"shelf",17,14],[1,"desk",15,18],[1,"clock",21,14],[2,"sofa",4,3],[2,"sofa",4,8],[2,"fireplace",6,2],[2,"ctable",6,6],[2,"armchair",9,8],[2,"counter",14,2],[2,"counter",16,2],[2,"counter",18,2],[2,"fridge",20,3],[2,"island",16,6],[2,"counter",14,8],[2,"dtable",24,5],[2,"cabinet",26,3],[2,"chair",22,3],[2,"desk",4,16],[2,"shelf",2,15],[2,"shelf",8,14],[2,"shelf",11,14],[2,"shelf",12,14],[2,"barrel",16,19],[2,"frontdoor",22,20],[2,"clock",18,14],[3,"boiler",3,3],[3,"barrelh",8,8],[3,"crate",3,8],[3,"rack",12,3],[3,"rack",14,3],[3,"rack",16,3],[3,"barrelh",17,8],[3,"barrel",12,8],[3,"coffin",22,4],[3,"coffin",25,4],[3,"candle",21,2],[3,"candle",26,2],[3,"candle",23,8],[3,"torture",4,16],[3,"table",8,17],[3,"crate",3,19],[3,"candle",11,15],[3,"casket",23,17],[3,"candle",21,15],[3,"candle",25,15],[3,"candle",21,19],[3,"candle",25,19]],"items":[[0,"cross","Crucifix",24,17],[1,"water","Holy water",25,3],[2,"garlic","Garlic",18,2],[2,"stake","Wooden stake",4,16],[3,"key","Silver key",25,4]],"stairs":[[0,2,11,1],[1,2,11,0],[1,25,19,2],[2,13,19,3],[2,25,19,1],[3,13,19,2]],"W":28,"H":22};
+const LD={"rows":[["#################################","#################################","#################################","##.......#..................ddd##","##.......#................#######","##.......#................#######","##.......#...........#....#######","##.......#................#######","##.......#...#............#######","##.......#................#######","##.......#........#.......#######","##.......#........#.......#######","##....#...........#.......#######","##................#.......#######","##...........#....#.......#######","##................#.......#######","##................#.......#######","##................#.......#######","##................#.......#######","#################################","#################################","#################################"],["#################################","#################################","##........#........#.......######","##........#........#.......#uuu.#","##........#........#.......####.#","##.........................####.#","##.........................####.#","##........#........#.......####.#","##........#........#.......####.#","##........#........#.......####.#","#####..#######..######..#######.#","##..............................#","##..............................#","#####..#######..######..#######.#","##........#........#.......####.#","##........#........#.......####.#","##.........................####.#","##.........................####.#","##........#........#.......####.#","##........#........#........ddd##","##........#........#.......######","#################################"],["#################################","#################################","##..........#........#.....######","##..........#........#......ddd##","##..........#........#.....####.#","##.........................####.#","##.........................####.#","##..........#........#.....####.#","##..........#........#.....####.#","##..........#........#.....####.#","######..########..######..#####.#","##..............................#","##..............................#","#####..######..######..########.#","##........#......#.........####.#","##........#......#.........####.#","##.........................####.#","##.........................####.#","##........#......#.........####.#","##........#......#.........#uuu.#","##........#......#.........######","#################################"],["#################################","#################################","##........#........#.......######","##........#........#.......#uuu.#","##........#........#.......####.#","##.........................####.#","##.........................####.#","##........#........#.......####.#","##........#........#.......####.#","##........#........#.......####.#","#####..#######..######..#######.#","##..............................#","##..............................#","#####..######..######..##########","##........#.....#..........######","##........#.....#..........######","##.........................######","##.........................######","##........#.....#..........######","##........#.....#..........######","##........#.....#..........######","#################################"]],"dec":[[0,"freezer",4,16],[0,"mannequin",22,14],[0,"trunk",6,4],[0,"trunk",24,17],[0,"box",12,4],[0,"box",15,16],[0,"box",5,8],[1,"bed",3,3],[1,"tablebell",8,3],[1,"wardrobe",2,8],[1,"nightstand",5,2],[1,"sink",12,2],[1,"sink",14,2],[1,"toilet",12,8],[1,"bathtub",17,4],[1,"bigbed",23,4],[1,"nightstand",21,3],[1,"nightstand",25,3],[1,"wardrobe",26,8],[1,"bed2",3,19],[1,"dresser",8,15],[1,"shelf",12,14],[1,"shelf",15,14],[1,"shelf",17,14],[1,"desk",15,18],[1,"clock",21,14],[2,"sofa",4,3],[2,"sofa",4,8],[2,"fireplace",6,2],[2,"ctable",6,6],[2,"armchair",9,8],[2,"counter",14,2],[2,"counter",16,2],[2,"counter",18,2],[2,"fridge",20,3],[2,"island",16,6],[2,"counter",14,8],[2,"dtable",24,5],[2,"cabinet",26,8],[2,"chair",22,3],[2,"desk",4,16],[2,"shelf",2,15],[2,"shelf",8,14],[2,"shelf",11,14],[2,"shelf",12,14],[2,"barrel",16,19],[2,"frontdoor",22,20],[2,"clock",18,14],[3,"boiler",3,3],[3,"barrelh",8,8],[3,"crate",3,8],[3,"rack",12,3],[3,"rack",14,3],[3,"rack",16,3],[3,"barrelh",17,8],[3,"barrel",12,8],[3,"coffin",22,4],[3,"coffin",25,4],[3,"candle",21,2],[3,"candle",26,2],[3,"candle",23,8],[3,"torture",4,16],[3,"table",8,17],[3,"crate",3,19],[3,"candle",11,15],[3,"casket",23,17],[3,"candle",21,15],[3,"candle",25,15],[3,"candle",21,19],[3,"candle",25,19]],"items":[[0,"cross","Crucifix",24,17],[1,"water","Holy water",25,3],[2,"garlic","Garlic",18,2],[2,"stake","Wooden stake",4,16],[3,"key","Silver key",25,4]],"stairs":[[0,28,3,1],[0,29,3,1],[0,30,3,1],[1,28,3,0],[1,29,3,0],[1,30,3,0],[1,28,19,2],[1,29,19,2],[1,30,19,2],[2,28,3,3],[2,29,3,3],[2,30,3,3],[2,28,19,1],[2,29,19,1],[2,30,19,1],[3,28,3,2],[3,29,3,2],[3,30,3,2]],"W":33,"H":22};
 const MW=LD.W,MH=LD.H;
 const FLOORS=["Attic","Upper floor","Ground floor","Basement"];
 const LCFG=[
@@ -174,6 +174,7 @@ for(const d of LD.dec){
   if(!def.walk)lv.blocked[d[3]*MW+d[2]]=1;
 }
 for(const s of LD.stairs)LV[s[0]].stairs.push({x:s[1],y:s[2],dir:s[3]>s[0]?"d":"u",to:s[3]});
+LV.forEach(lv=>{lv.runs=[];for(const s of lv.stairs){let r=lv.runs.find(q=>q.y===s.y&&q.dir===s.dir);if(!r){r={y:s.y,x0:s.x,len:0,dir:s.dir,to:s.to};lv.runs.push(r)}r.x0=Math.min(r.x0,s.x);r.len++}});
 const ITEMS=LD.items.map(a=>({l:a[0],id:a[1],name:a[2],x:a[3]+.5,y:a[4]+.5,got:false}));
 ITEMS.forEach(it=>{const d=LV[it.l].dec.find(dd=>dd.cell[0]===it.x-.5&&dd.cell[1]===it.y-.5);d.holds=it;it.cont=d});
 const BELL0={l:1,x:8.5,y:3.5};
@@ -247,59 +248,332 @@ function toast(msg,ms){toastEl.textContent=msg;toastEl.classList.add("on");toast
 /* ---------- the 3D world ---------- */
 const WH=1.6,EYE=.95;
 let R3=null;const LG=[];let DR=null,lastT=0;
-const MC={};
-const mat=(c,o)=>{const k=c+(o?JSON.stringify(o):"");return MC[k]||(MC[k]=new THREE.MeshPhongMaterial(Object.assign({color:c,shininess:10,specular:0x181818},o||{})))};
-const emis=c=>{const k="e"+c;return MC[k]||(MC[k]=new THREE.MeshBasicMaterial({color:c}))};
-const WOOD=0x5e5e5e,WOODL=0x8c8c8c,WOODD=0x383838,WHITE=0xdadada,METAL=0x909090,DARKC=0x171717,FAB=0x666666,FABL=0x8c8c8c;
-const mm=m=>typeof m==="number"?mat(m):m;
-function B(w,h,d,x,y,z,m,par){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mm(m));o.position.set(x,y+h/2,z);if(par)par.add(o);return o}
-function C(rt,rb,h,x,y,z,m,par,seg){const o=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg||18),mm(m));o.position.set(x,y+h/2,z);if(par)par.add(o);return o}
-function Sp(r,x,y,z,m,par,sx,sy,sz){const o=new THREE.Mesh(new THREE.SphereGeometry(r,18,14),mm(m));o.position.set(x,y,z);if(sx)o.scale.set(sx,sy,sz);if(par)par.add(o);return o}
-const grp=(x,y,z,par)=>{const g=new THREE.Group();g.position.set(x||0,y||0,z||0);if(par)par.add(g);return g};
-function lathe(pts,m,seg){return new THREE.Mesh(new THREE.LatheGeometry(pts.map(a=>new THREE.Vector2(a[0],a[1])),seg||24),mm(m))}
-const DS=THREE.DoubleSide;
-function bellMesh(){const g=new THREE.Group();const b=lathe([[0,.15],[.03,.145],[.055,.11],[.07,.05],[.085,.01],[.09,0],[.06,0]],mat(0xe6e6e6,{shininess:90,side:THREE.DoubleSide}));g.add(b);Sp(.02,0,.16,0,0xffffff,g);Sp(.025,0,.0,0,0x777777,g);return g}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=(()=>{let s=1234567;return()=>{s=(s*16807)%2147483647;return s/2147483647}})();
 
-/* furniture: origin = floor centre of its cell, front = +z, 1 unit = 1.6 m */
+/* ----- procedural textures (gray only) ----- */
+function ctex(w,h,fn){const c=document.createElement("canvas");c.width=w;c.height=h;fn(c.getContext("2d"),w,h);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=2;return t}
+const TXF={
+ wood:()=>ctex(128,128,(g,w,h)=>{g.fillStyle="#a8a8a8";g.fillRect(0,0,w,h);for(let i=0;i<100;i++){const y=rnd()*h,a=.05+rnd()*.16;g.strokeStyle=(rnd()<.55?"rgba(0,0,0,":"rgba(255,255,255,")+a+")";g.lineWidth=.4+rnd()*1.6;g.beginPath();g.moveTo(0,y);g.bezierCurveTo(w*.3,y+(rnd()-.5)*10,w*.7,y+(rnd()-.5)*10,w,y+(rnd()-.5)*5);g.stroke()}for(let k=0;k<2;k++){const x=rnd()*w,y=rnd()*h;g.strokeStyle="rgba(0,0,0,.35)";for(let r=2;r<9;r+=2){g.beginPath();g.ellipse(x,y,r*1.8,r*.8,0,0,7);g.stroke()}}}),
+ fabric:()=>ctex(64,64,(g,w,h)=>{g.fillStyle="#bdbdbd";g.fillRect(0,0,w,h);for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){const v=(x/2+y/2)%2?20:-14;g.fillStyle="rgba("+(v>0?"255,255,255":"0,0,0")+","+Math.abs(v)/100+")";g.fillRect(x,y,2,2)}for(let i=0;i<300;i++){g.fillStyle="rgba(0,0,0,"+rnd()*.08+")";g.fillRect(rnd()*w,rnd()*h,1,1)}}),
+ quilt:()=>ctex(128,128,(g,w,h)=>{g.fillStyle="#b4b4b4";g.fillRect(0,0,w,h);g.strokeStyle="rgba(0,0,0,.4)";g.lineWidth=1.4;for(let i=-h;i<w+h;i+=22){g.beginPath();g.moveTo(i,0);g.lineTo(i+h,h);g.stroke();g.beginPath();g.moveTo(i+h,0);g.lineTo(i,h);g.stroke()}g.fillStyle="rgba(255,255,255,.12)";for(let y=11;y<h;y+=22)for(let x=11;x<w;x+=22){g.beginPath();g.arc(x,y,5,0,7);g.fill()}}),
+ tile:()=>ctex(128,128,(g,w,h)=>{g.fillStyle="#dadada";g.fillRect(0,0,w,h);for(let y=0;y<4;y++)for(let x=0;x<4;x++){g.fillStyle="rgba(0,0,0,"+rnd()*.1+")";g.fillRect(x*32+2,y*32+2,28,28)}g.strokeStyle="rgba(0,0,0,.55)";g.lineWidth=2;for(let i=0;i<=4;i++){g.beginPath();g.moveTo(i*32,0);g.lineTo(i*32,h);g.stroke();g.beginPath();g.moveTo(0,i*32);g.lineTo(w,i*32);g.stroke()}}),
+ stone:()=>ctex(128,128,(g,w,h)=>{g.fillStyle="#a0a0a0";g.fillRect(0,0,w,h);for(let r=0;r<6;r++){const y=r*21;for(let x=-(r%2)*20;x<w;x+=40){g.fillStyle="rgba("+(rnd()<.5?"0,0,0":"255,255,255")+","+rnd()*.14+")";g.fillRect(x+1,y+1,38,19);}}g.strokeStyle="rgba(0,0,0,.6)";g.lineWidth=2;for(let r=0;r<=6;r++){g.beginPath();g.moveTo(0,r*21);g.lineTo(w,r*21);g.stroke();for(let x=-(r%2)*20;x<w;x+=40){g.beginPath();g.moveTo(x,r*21);g.lineTo(x,r*21+21);g.stroke()}}}),
+ rug:()=>ctex(128,128,(g,w,h)=>{g.fillStyle="#5a5a5a";g.fillRect(0,0,w,h);g.strokeStyle="#cfcfcf";g.lineWidth=4;g.strokeRect(6,6,w-12,h-12);g.strokeStyle="#262626";g.lineWidth=2;g.strokeRect(14,14,w-28,h-28);g.fillStyle="#9a9a9a";for(let i=0;i<5;i++){const c=w/2,s=50-i*10;g.save();g.translate(c,c);g.rotate(Math.PI/4);g.strokeStyle=i%2?"#d8d8d8":"#2a2a2a";g.lineWidth=3;g.strokeRect(-s/2,-s/2,s,s);g.restore()}}),
+ art1:()=>ctex(64,80,(g,w,h)=>{const r=g.createLinearGradient(0,0,0,h);r.addColorStop(0,"#9a9a9a");r.addColorStop(1,"#2a2a2a");g.fillStyle=r;g.fillRect(0,0,w,h);g.fillStyle="#111";g.beginPath();g.ellipse(32,34,12,16,0,0,7);g.fill();g.beginPath();g.moveTo(8,80);g.quadraticCurveTo(32,44,56,80);g.fill();g.fillStyle="#d4d4d4";g.beginPath();g.ellipse(32,34,9,13,0,0,7);g.fill()}),
+ art2:()=>ctex(80,64,(g,w,h)=>{const r=g.createLinearGradient(0,0,0,h);r.addColorStop(0,"#bcbcbc");r.addColorStop(1,"#3a3a3a");g.fillStyle=r;g.fillRect(0,0,w,h);g.fillStyle="#f2f2f2";g.beginPath();g.arc(58,16,8,0,7);g.fill();g.fillStyle="#171717";g.beginPath();g.moveTo(0,64);g.quadraticCurveTo(20,30,44,48);g.quadraticCurveTo(62,36,80,56);g.lineTo(80,64);g.fill();g.fillRect(14,36,3,14);g.beginPath();g.moveTo(8,36);g.lineTo(15,14);g.lineTo(23,36);g.fill()}),
+ art3:()=>ctex(64,64,(g,w,h)=>{g.fillStyle="#202020";g.fillRect(0,0,w,h);for(let i=0;i<30;i++){g.strokeStyle="rgba(255,255,255,"+(.1+rnd()*.4)+")";g.lineWidth=1+rnd()*3;g.beginPath();g.moveTo(rnd()*w,rnd()*h);g.bezierCurveTo(rnd()*w,rnd()*h,rnd()*w,rnd()*h,rnd()*w,rnd()*h);g.stroke()}}),
+ clock:()=>ctex(64,64,(g,w,h)=>{g.fillStyle="#efefef";g.fillRect(0,0,w,h);g.strokeStyle="#111";g.lineWidth=2;g.beginPath();g.arc(32,32,29,0,7);g.stroke();for(let i=0;i<12;i++){const a=i*Math.PI/6;g.beginPath();g.moveTo(32+Math.sin(a)*24,32-Math.cos(a)*24);g.lineTo(32+Math.sin(a)*28,32-Math.cos(a)*28);g.stroke()}g.lineWidth=3;g.beginPath();g.moveTo(32,32);g.lineTo(32,14);g.stroke();g.lineWidth=2;g.beginPath();g.moveTo(32,32);g.lineTo(44,38);g.stroke()}),
+ brick:()=>ctex(128,128,(g,w,h)=>{g.fillStyle="#7a7a7a";g.fillRect(0,0,w,h);g.fillStyle="#5a5a5a";g.fillRect(0,0,w,h);for(let r=0;r<8;r++){for(let x=-(r%2)*16;x<w;x+=32){g.fillStyle="rgb("+(110+rnd()*50|0)+","+(110+rnd()*50|0)+","+(110+rnd()*50|0)+")";g.fillRect(x+1,r*16+1,30,14)}}})
+};
+const TXC={};const tex=n=>TXC[n]||(TXC[n]=TXF[n]());
+const MC={};
+const mat=(c,o)=>{const k=c+(o?JSON.stringify(o):"");return MC[k]||(MC[k]=new THREE.MeshPhongMaterial(Object.assign({color:c,shininess:12,specular:0x1c1c1c},o||{})))};
+const MT=(kind,c,o)=>{const k="t"+kind+c+(o?JSON.stringify(o):"");return MC[k]||(MC[k]=new THREE.MeshPhongMaterial(Object.assign({color:c,map:tex(kind),bumpMap:tex(kind),bumpScale:.7,shininess:14,specular:0x1c1c1c},o||{})))};
+const emis=c=>{const k="e"+c;return MC[k]||(MC[k]=new THREE.MeshBasicMaterial({color:c}))};
+const M={
+ wood:()=>MT("wood",0x707070),woodL:()=>MT("wood",0xa8a8a8),woodD:()=>MT("wood",0x3c3c3c),
+ fab:()=>MT("fabric",0x6c6c6c),fabL:()=>MT("fabric",0x9c9c9c),fabD:()=>MT("fabric",0x454545),sheet:()=>MT("fabric",0xe6e6e6),quilt:()=>MT("quilt",0x8e8e8e),
+ white:()=>mat(0xe4e4e4,{shininess:80,specular:0x555555}),metal:()=>mat(0xb4b4b4,{shininess:100,specular:0x999999}),dark:()=>mat(0x121212),
+ tile:()=>MT("tile",0xd6d6d6,{shininess:70,specular:0x555555}),stone:()=>MT("stone",0x909090),glass:()=>mat(0xe0e0e0,{transparent:true,opacity:.22,shininess:120,specular:0xffffff,depthWrite:false}),
+ gold:()=>mat(0xd2d2d2,{shininess:110,specular:0xbbbbbb}),paper:()=>mat(0xeeeeee),iron:()=>mat(0x262626,{shininess:40,specular:0x444444})
+};
+
+/* ----- mesh helpers: y = bottom of the part ----- */
+const mm=m=>m;
+function B(w,h,d,x,y,z,m,par){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y+h/2,z);if(par)par.add(o);return o}
+function RB(w,h,d,r,x,y,z,m,par,seg){
+  const s=seg||3,g=new THREE.BoxGeometry(w,h,d,s,s,s),p=g.attributes.position,hx=w/2-r,hy=h/2-r,hz=d/2-r,v=new THREE.Vector3(),c=new THREE.Vector3();
+  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);c.set(clamp(v.x,-hx,hx),clamp(v.y,-hy,hy),clamp(v.z,-hz,hz));v.sub(c);if(v.lengthSq()>1e-9)v.normalize().multiplyScalar(r);p.setXYZ(i,c.x+v.x,c.y+v.y,c.z+v.z)}
+  g.computeVertexNormals();const o=new THREE.Mesh(g,m);o.position.set(x,y+h/2,z);if(par)par.add(o);return o;
+}
+function C(rt,rb,h,x,y,z,m,par,seg){const o=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg||16),m);o.position.set(x,y+h/2,z);if(par)par.add(o);return o}
+function Sp(r,x,y,z,m,par,sx,sy,sz){const o=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),m);o.position.set(x,y,z);if(sx)o.scale.set(sx,sy,sz);if(par)par.add(o);return o}
+function Lt(pts,m,x,y,z,par,seg){const o=new THREE.Mesh(new THREE.LatheGeometry(pts.map(a=>new THREE.Vector2(a[0],a[1])),seg||20),m);o.position.set(x,y,z);if(par)par.add(o);return o}
+function Tor(R,r,x,y,z,m,par,rx,ry,rz){const o=new THREE.Mesh(new THREE.TorusGeometry(R,r,8,22),m);o.position.set(x,y,z);o.rotation.set(rx||0,ry||0,rz||0);if(par)par.add(o);return o}
+const grp=(x,y,z,par)=>{const g=new THREE.Group();g.position.set(x||0,y||0,z||0);if(par)par.add(g);return g};
+const dyn=(x,y,z,par)=>{const g=grp(x,y,z,par);g.userData.dyn=true;return g};
+let glowTex=null;
+function glow(x,y,z,s,par,op){
+  if(!glowTex)glowTex=ctex(64,64,g=>{const r=g.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,"rgba(255,255,255,1)");r.addColorStop(.25,"rgba(255,255,255,.4)");r.addColorStop(1,"rgba(255,255,255,0)");g.fillStyle=r;g.fillRect(0,0,64,64)});
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,transparent:true,opacity:op||.6,blending:THREE.AdditiveBlending,depthWrite:false}));
+  sp.position.set(x,y,z);sp.scale.set(s,s,1);sp.userData.dyn=true;if(par)par.add(sp);return sp;
+}
+// merge every static mesh of a group into one mesh per material (dyn children stay as they are)
+function finalize(root){
+  const buckets=new Map(),keep=[];
+  const walk=(n,pm)=>{
+    n.updateMatrix();const m=n===root?new THREE.Matrix4():pm.clone().multiply(n.matrix);
+    if(n!==root&&n.userData.dyn){keep.push(n);return}
+    if(n.isMesh){let a=buckets.get(n.material);if(!a){a=[];buckets.set(n.material,a)}let g=n.geometry.clone();if(g.index)g=g.toNonIndexed();g.applyMatrix4(m);a.push(g)}
+    for(const c of n.children)walk(c,m);
+  };
+  walk(root,new THREE.Matrix4());
+  for(const c of root.children.slice())if(!c.userData.dyn)root.remove(c);
+  buckets.forEach((gs,m)=>{
+    let n=0;for(const g of gs)n+=g.attributes.position.count;
+    const P=new Float32Array(n*3),N=new Float32Array(n*3),U=new Float32Array(n*2);let o=0;
+    for(const g of gs){const c=g.attributes.position.count;P.set(g.attributes.position.array,o*3);N.set(g.attributes.normal.array,o*3);if(g.attributes.uv)U.set(g.attributes.uv.array,o*2);o+=c}
+    const mg=new THREE.BufferGeometry();mg.setAttribute("position",new THREE.BufferAttribute(P,3));mg.setAttribute("normal",new THREE.BufferAttribute(N,3));mg.setAttribute("uv",new THREE.BufferAttribute(U,2));
+    root.add(new THREE.Mesh(mg,m));
+  });
+}
+
+/* ----- furniture (units = cells, 1 cell = 1.6 m; front = +z) ----- */
 const BUILD={};
-BUILD.freezer=()=>{const g=grp();B(.62,1.0,.58,0,0,0,WHITE,g);B(.56,.9,.02,0,.05,.3,0xc8c8c8,g);B(.03,.3,.03,.22,.45,.33,METAL,g);B(.5,.02,.5,0,1.0,0,0xbbbbbb,g);for(let i=0;i<4;i++)B(.4,.01,.02,0,.2+i*.2,.31,0x888888,g);return {g,hideHide:true}};
-BUILD.mannequin=()=>{const g=grp(),b=grp(0,0,0,g);C(.02,.02,.9,0,0,0,METAL,b);C(.14,.14,.02,0,0,0,0x333333,b);const t=C(.12,.09,.36,0,.55,0,0xe2e2e2,b);t.scale.z=.7;Sp(.075,0,1.05,0,0xeeeeee,b,1,1.2,1);C(.025,.025,.06,0,.95,0,0xdddddd,b);for(const s of[-1,1]){const a=C(.03,.025,.38,s*.17,.6,0,0xdcdcdc,b);a.rotation.z=s*.12}C(.1,.1,.04,0,.5,0,0xd0d0d0,b);return {g,b}};
-BUILD.trunk=()=>{const g=grp();B(.62,.3,.4,0,0,0,WOOD,g);B(.64,.04,.42,0,.26,0,WOODD,g);B(.04,.3,.42,-.2,0,0,METAL,g);B(.04,.3,.42,.2,0,0,METAL,g);const lid=grp(0,.3,-.2,g);const lg=new THREE.Mesh(new THREE.CylinderGeometry(.21,.21,.62,14,1,false,0,Math.PI),mm(WOODD));lg.rotation.z=Math.PI/2;lg.rotation.y=Math.PI/2;lg.position.set(0,0,.2);lid.add(lg);B(.05,.05,.03,0,0,.41,METAL,lid);return {g,anim:t=>{lid.rotation.x=-t*1.7},open:1,loud:1,label:"OPEN TRUNK"}};
-BUILD.box=()=>{const g=grp();B(.5,.4,.46,0,0,0,0xa8a8a8,g);B(.52,.02,.1,0,.4,0,0x888888,g);B(.22,.02,.4,-.14,.41,0,0xb4b4b4,g);return {g}};
-BUILD.bed=()=>{const g=grp();[[-.28,-.55],[.28,-.55],[-.28,.55],[.28,.55]].forEach(p=>B(.05,.2,.05,p[0],0,p[1],WOODD,g));B(.62,.05,1.2,0,.2,0,WOOD,g);B(.58,.12,1.14,0,.25,0,WHITE,g);B(.46,.07,.26,0,.37,-.42,0xf0f0f0,g);B(.6,.05,.74,0,.37,.2,FAB,g);B(.64,.55,.05,0,.2,-.62,WOODD,g);B(.64,.3,.05,0,0,.62,WOODD,g);return {g}};
+const legs4=(g,x,z,h,m,r)=>{for(const sx of[-1,1])for(const sz of[-1,1])Lt([[0,0],[r||.03,0],[(r||.03)*.7,h*.4],[(r||.03)*1.2,h*.55],[(r||.03)*.7,h*.7],[(r||.03)*.9,h],[0,h]],m,sx*x,0,sz*z,g,10)};
+BUILD.bed=()=>{const g=grp();
+  legs4(g,.29,.57,.2,M.woodD(),.035);
+  RB(.66,.06,1.26,.012,0,.2,0,M.wood(),g);
+  RB(.6,.13,1.16,.045,0,.26,0,M.sheet(),g,4);
+  RB(.62,.05,.8,.022,0,.37,.17,M.quilt(),g,3);
+  RB(.62,.06,.13,.02,0,.37,-.2,M.sheet(),g,2);
+  RB(.27,.09,.2,.04,-.15,.37,-.44,M.sheet(),g,3);RB(.27,.09,.2,.04,.15,.37,-.44,M.sheet(),g,3);
+  RB(.7,.66,.06,.02,0,.16,-.65,M.woodD(),g,3);
+  for(const x of[-.32,.32]){C(.035,.035,.78,x,0,-.65,M.woodD(),g,10);Sp(.05,x,.82,-.65,M.woodD(),g)}
+  RB(.64,.3,.05,.015,0,.16,.65,M.woodD(),g,3);
+  return {g}};
 BUILD.bed2=BUILD.bed;
-BUILD.bigbed=()=>{const g=grp();[[-.4,-.55],[.4,-.55],[-.4,.55],[.4,.55]].forEach(p=>B(.06,.22,.06,p[0],0,p[1],WOODD,g));B(.9,.05,1.2,0,.22,0,WOOD,g);B(.86,.14,1.14,0,.27,0,WHITE,g);B(.38,.08,.24,-.2,.41,-.42,0xf0f0f0,g);B(.38,.08,.24,.2,.41,-.42,0xf0f0f0,g);B(.88,.06,.78,0,.41,.18,FABL,g);B(.94,.7,.06,0,.22,-.62,WOODD,g);B(.94,.35,.06,0,0,.62,WOODD,g);return {g}};
-BUILD.tablebell=()=>{const g=grp();B(.7,.04,.7,0,.42,0,WOODL,g);[[-.3,-.3],[.3,-.3],[-.3,.3],[.3,.3]].forEach(p=>B(.05,.42,.05,p[0],0,p[1],WOOD,g));const bell=bellMesh();bell.position.set(0,.46,0);g.add(bell);return {g,bell}};
-BUILD.table=()=>{const g=grp();B(.7,.04,.6,0,.42,0,WOODL,g);[[-.3,-.25],[.3,-.25],[-.3,.25],[.3,.25]].forEach(p=>B(.05,.42,.05,p[0],0,p[1],WOOD,g));return {g}};
-BUILD.wardrobe=()=>{const g=grp();B(.86,1.3,.5,0,0,0,WOOD,g);B(.78,1.2,.02,0,.05,.25,DARKC,g);const L=grp(-.4,0,.26,g),Rr=grp(.4,0,.26,g);B(.4,1.2,.03,.2,.05,0,WOODL,L);B(.03,.18,.03,.35,.6,.03,METAL,L);B(.4,1.2,.03,-.2,.05,0,WOODL,Rr);B(.03,.18,.03,-.35,.6,.03,METAL,Rr);return {g,anim:t=>{L.rotation.y=-t*1.9;Rr.rotation.y=t*1.9},open:1,loud:1,label:"OPEN DOOR"}};
-BUILD.nightstand=()=>{const g=grp();B(.5,.5,.4,0,0,0,WOOD,g);const d=B(.42,.16,.02,0,.22,.21,WOODL,g);B(.1,.02,.03,0,.07,.02,METAL,d);C(.05,.07,.06,.1,.5,-.05,0xaaaaaa,g);const sh=C(.09,.14,.14,.1,.56,-.05,emis(0xffffff),g);return {g,anim:t=>{d.position.z=.21+t*.24},open:1,label:"OPEN DRAWER"}};
-BUILD.dresser=()=>{const g=grp();B(.84,.7,.42,0,0,0,WOOD,g);const ds=[];for(let i=0;i<3;i++){const d=B(.74,.17,.02,0,.04+i*.22,.22,WOODL,g);B(.1,.02,.03,0,.1,.02,METAL,d);ds.push(d)}return {g,anim:t=>{ds.forEach((d,i)=>{d.position.z=.22+Math.max(0,Math.min(1,t*1.4-i*.15))*.2})},open:1,label:"OPEN DRAWERS"}};
-BUILD.sink=()=>{const g=grp();C(.07,.09,.55,0,0,0,WHITE,g);const b=C(.2,.12,.12,0,.55,0,WHITE,g);b.scale.z=.8;C(.015,.015,.12,0,.67,-.1,METAL,g);B(.4,.4,.02,0,.8,-.22,0xcfcfcf,g);B(.44,.44,.01,0,.78,-.235,0x222222,g);return {g}};
-BUILD.toilet=()=>{const g=grp();C(.12,.09,.4,0,0,.05,WHITE,g);const bw=Sp(.17,0,.4,.08,WHITE,g,1,.45,1.25);B(.34,.4,.12,0,.25,-.18,WHITE,g);B(.26,.03,.2,0,.62,-.18,0xeeeeee,g);return {g}};
-BUILD.bathtub=()=>{const g=grp();B(.64,.48,1.24,0,.1,0,WHITE,g);B(.5,.02,1.08,0,.58,0,0x2a2a2a,g);[[-.26,-.5],[.26,-.5],[-.26,.5],[.26,.5]].forEach(p=>C(.04,.03,.1,p[0],0,p[1],METAL,g));C(.02,.02,.2,0,.58,-.55,METAL,g);return {g}};
-BUILD.shelf=()=>{const g=grp();B(.04,1.3,.34,-.43,0,0,WOODD,g);B(.04,1.3,.34,.43,0,0,WOODD,g);B(.9,.04,.34,0,1.28,0,WOODD,g);B(.9,.04,.34,0,0,0,WOODD,g);B(.86,1.3,.02,0,0,-.16,WOOD,g);let seed=7;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};for(let r=0;r<5;r++){const y=.06+r*.25;B(.86,.03,.32,0,y,0,WOOD,g);let x=-.4;while(x<.38){const w=.03+rnd()*.03,h=.12+rnd()*.1;B(w,h,.22,x+w/2,y+.03,0,[0xcfcfcf,0x8a8a8a,0xeeeeee,0x6a6a6a,0xa8a8a8][(rnd()*5)|0],g);x+=w+.004}}return {g}};
-BUILD.desk=()=>{const g=grp();B(.9,.05,.5,0,.6,0,WOODL,g);B(.04,.6,.46,-.43,0,0,WOOD,g);B(.3,.55,.46,.27,.04,0,WOOD,g);const d=B(.26,.14,.02,.27,.38,.24,WOODL,g);B(.08,.02,.03,0,.07,.02,METAL,d);C(.04,.05,.04,-.3,.65,.05,0x888888,g);C(.07,.1,.1,-.3,.7,.05,emis(0xffffff),g);return {g,anim:t=>{d.position.z=.24+t*.24},open:1,label:"OPEN DRAWER"}};
-BUILD.clock=()=>{const g=grp();B(.36,1.4,.28,0,0,0,WOOD,g);B(.3,.3,.02,0,1.0,.15,0xe8e8e8,g);C(.13,.13,.02,0,1.0,.16,0xf2f2f2,g).rotation.x=Math.PI/2;B(.02,.1,.01,0,1.05,.18,0x111111,g);B(.08,.01,.01,.03,1.04,.18,0x111111,g);B(.24,.5,.02,0,.2,.15,0x333333,g);C(.01,.01,.4,0,.25,.14,METAL,g);Sp(.05,0,.3,.14,0xdddddd,g);return {g}};
-BUILD.sofa=()=>{const g=grp();B(1.05,.22,.5,0,.08,0,FAB,g);B(1.05,.42,.14,0,.18,-.22,FAB,g);B(.12,.36,.5,-.46,.08,0,0x555555,g);B(.12,.36,.5,.46,.08,0,0x555555,g);B(.4,.1,.38,-.2,.3,.04,FABL,g);B(.4,.1,.38,.2,.3,.04,FABL,g);return {g}};
-BUILD.armchair=()=>{const g=grp();B(.6,.22,.55,0,.08,0,FAB,g);B(.6,.45,.14,0,.18,-.22,FAB,g);B(.1,.34,.5,-.27,.08,.02,0x555555,g);B(.1,.34,.5,.27,.08,.02,0x555555,g);B(.38,.1,.36,0,.3,.04,FABL,g);return {g}};
-BUILD.fireplace=()=>{const g=grp();B(1.0,1.1,.4,0,0,0,0x7a7a7a,g);B(.6,.6,.3,0,0,.12,0x050505,g);B(1.08,.06,.46,0,1.08,0,0x999999,g);const f=[];for(let i=0;i<3;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(.08,.3,8),emis(0xffffff));c.position.set(-.12+i*.12,.25,.2);g.add(c);f.push(c)}return {g,flames:f}};
-BUILD.ctable=()=>{const g=grp();B(.8,.04,.5,0,.28,0,WOODL,g);[[-.34,-.2],[.34,-.2],[-.34,.2],[.34,.2]].forEach(p=>B(.04,.28,.04,p[0],0,p[1],WOOD,g));return {g}};
-BUILD.counter=()=>{const g=grp();B(.92,.56,.52,0,0,0,0x9a9a9a,g);B(.96,.05,.56,0,.56,0,0xdedede,g);const ds=[];for(const s of[-1,1]){const d=B(.4,.2,.02,s*.22,.3,.27,0xb0b0b0,g);B(.1,.02,.03,0,.1,.02,METAL,d);ds.push(d)}B(.4,.22,.02,-.22,.06,.27,0xb0b0b0,g);return {g,anim:t=>{ds.forEach(d=>{d.position.z=.27+t*.24})},open:1,label:"OPEN DRAWER"}};
-BUILD.island=BUILD.counter;
-BUILD.fridge=()=>{const g=grp();B(.66,1.15,.58,0,0,0,0xd6d6d6,g);const top=grp(-.32,.5,.3,g);B(.62,.6,.03,.31,0,0,0xe4e4e4,top);B(.03,.2,.03,.5,.3,.03,METAL,top);const bot=B(.62,.46,.03,0,.02,.3,0xe4e4e4,g);B(.03,.3,.03,.24,.1,.02,METAL,bot);return {g,anim:t=>{top.rotation.y=-t*1.7},open:1,label:"OPEN FRIDGE"}};
-BUILD.dtable=()=>{const g=grp();B(1.0,.05,.6,0,.44,0,WOODL,g);[[-.45,-.25],[.45,-.25],[-.45,.25],[.45,.25]].forEach(p=>B(.06,.44,.06,p[0],0,p[1],WOOD,g));B(.9,.01,.5,0,.49,0,0xe0e0e0,g);C(.03,.03,.14,0,.5,0,0xeeeeee,g);const fl=new THREE.Mesh(new THREE.ConeGeometry(.02,.06,8),emis(0xffffff));fl.position.set(0,.7,0);g.add(fl);return {g,flames:[fl]}};
-BUILD.cabinet=()=>{const g=grp();B(.8,1.15,.4,0,0,0,WOOD,g);for(let i=0;i<3;i++)B(.74,.02,.34,0,.25+i*.3,0,WOODL,g);for(let i=0;i<3;i++)C(.09,.09,.01,-.12+i*.12,.28+(i%2)*.3,.06,0xe0e0e0,g).rotation.x=Math.PI/2;const L=grp(-.4,0,.21,g),Rr=grp(.4,0,.21,g);const gm=mat(0xcfcfcf,{transparent:true,opacity:.28});B(.38,1.05,.02,.2,.05,0,gm,L);B(.38,1.05,.02,-.2,.05,0,gm,Rr);return {g,anim:t=>{L.rotation.y=-t*1.8;Rr.rotation.y=t*1.8},open:1,label:"OPEN DOOR"}};
-BUILD.chair=()=>{const g=grp();B(.36,.04,.36,0,.3,0,WOODL,g);B(.36,.4,.04,0,.32,-.17,WOOD,g);[[-.15,-.15],[.15,-.15],[-.15,.15],[.15,.15]].forEach(p=>B(.03,.3,.03,p[0],0,p[1],WOOD,g));return {g}};
-BUILD.barrel=()=>{const g=grp();const b=lathe([[0,0],[.26,0],[.32,.2],[.34,.4],[.32,.62],[.26,.8],[0,.8]],mat(0x6a6a6a,{side:DS}),22);g.add(b);for(const y of[.1,.4,.7])C(.33,.33,.025,0,y,0,0x2a2a2a,g,22);return {g,hideHide:true}};
+BUILD.bigbed=()=>{const g=grp();
+  legs4(g,.42,.57,.22,M.woodD(),.04);
+  RB(.92,.06,1.26,.012,0,.22,0,M.wood(),g);
+  RB(.86,.15,1.16,.05,0,.28,0,M.sheet(),g,4);
+  RB(.88,.06,.84,.025,0,.42,.16,M.quilt(),g,3);
+  RB(.88,.07,.13,.02,0,.42,-.26,M.sheet(),g,2);
+  RB(.38,.1,.22,.045,-.2,.42,-.46,M.sheet(),g,3);RB(.38,.1,.22,.045,.2,.42,-.46,M.sheet(),g,3);
+  RB(.9,.14,.12,.05,0,.5,-.28,M.fabD(),g,3);
+  RB(.98,.78,.07,.025,0,.18,-.65,M.woodD(),g,3);B(.8,.5,.02,0,.3,-.61,M.wood(),g);
+  for(const x of[-.47,.47]){C(.04,.04,.9,x,0,-.65,M.woodD(),g,10);Sp(.06,x,.95,-.65,M.woodD(),g)}
+  RB(.94,.36,.06,.02,0,.18,.65,M.woodD(),g,3);
+  return {g}};
+BUILD.tablebell=()=>{const g=grp();
+  RB(.74,.05,.74,.015,0,.4,0,M.woodL(),g);B(.62,.08,.62,0,.34,0,M.wood(),g);
+  legs4(g,.3,.3,.4,M.wood(),.035);
+  const bell=dyn(0,.45,0,g);
+  Lt([[0,.15],[.025,.148],[.05,.12],[.065,.07],[.08,.02],[.09,0],[.07,0]],mat(0xe8e8e8,{shininess:100,specular:0xffffff,side:THREE.DoubleSide}),0,0,0,bell,22);Sp(.02,0,.16,0,M.metal(),bell);Sp(.02,0,.0,0,M.dark(),bell);
+  C(.05,.06,.03,.28,.45,.25,M.metal(),g);Lt([[0,0],[.04,0],[.05,.12],[.03,.2],[0,.2]],mat(0xdcdcdc,{shininess:90}),-.25,.45,-.22,g,10);
+  return {g,bell}};
+BUILD.table=()=>{const g=grp();RB(.74,.05,.64,.015,0,.4,0,M.woodL(),g);legs4(g,.3,.25,.4,M.wood(),.035);B(.6,.06,.5,0,.34,0,M.wood(),g);return {g}};
+BUILD.wardrobe=()=>{const g=grp();
+  RB(.88,1.3,.5,.015,0,.06,0,M.wood(),g);B(.94,.06,.54,0,0,0,M.woodD(),g);B(.96,.08,.56,0,1.34,0,M.woodD(),g);B(.92,.04,.52,0,1.42,0,M.woodL(),g);
+  const L=dyn(-.41,.1,.27,g),Rr=dyn(.41,.1,.27,g);
+  for(const [P,s] of[[L,1],[Rr,-1]]){RB(.4,1.22,.035,.01,s*.205,0,0,M.woodL(),P);B(.28,.9,.02,s*.205,.14,.02,M.wood(),P);B(.28,.2,.02,s*.205,.9,.02,M.wood(),P);Sp(.022,s*.37,.6,.04,M.gold(),P)}
+  B(.8,1.2,.02,0,.1,.25,M.dark(),g);
+  return {g,anim:t=>{L.rotation.y=-t*1.9;Rr.rotation.y=t*1.9},open:1,loud:1,label:"OPEN DOOR"}};
+BUILD.nightstand=()=>{const g=grp();
+  RB(.48,.46,.38,.012,0,.06,0,M.wood(),g);RB(.54,.04,.42,.015,0,.5,0,M.woodL(),g);legs4(g,.2,.15,.07,M.woodD(),.03);
+  const d=dyn(0,.3,.2,g);RB(.4,.14,.025,.008,0,0,0,M.woodL(),d);Sp(.02,0,.07,.03,M.gold(),d);B(.4,.1,.3,0,-.06,-.14,M.wood(),d);
+  B(.4,.1,.02,0,.12,.2,M.dark(),g);
+  Lt([[0,0],[.06,0],[.05,.02],[.025,.05],[.03,.15],[.0,.16]],M.metal(),.12,.54,-.05,g,14);
+  const sh=new THREE.Mesh(new THREE.CylinderGeometry(.07,.12,.12,16,1,true),mat(0xffffff,{side:THREE.DoubleSide,emissive:0xcccccc}));sh.position.set(.12,.76,-.05);g.add(sh);
+  glow(.12,.72,-.05,.5,g,.45);
+  return {g,anim:t=>{d.position.z=.2+t*.26},open:1,label:"OPEN DRAWER"}};
+BUILD.dresser=()=>{const g=grp();
+  RB(.86,.68,.42,.012,0,.06,0,M.wood(),g);RB(.92,.04,.46,.015,0,.74,0,M.woodL(),g);legs4(g,.38,.17,.07,M.woodD(),.035);
+  const ds=[];for(let i=0;i<3;i++){const d=dyn(0,.1+i*.21,.22,g);RB(.76,.17,.025,.008,0,0,0,M.woodL(),d);Sp(.02,-.14,.085,.03,M.gold(),d);Sp(.02,.14,.085,.03,M.gold(),d);B(.74,.12,.3,0,-.04,-.16,M.wood(),d);ds.push(d)}
+  B(.78,.62,.02,0,.08,.21,M.dark(),g);
+  const mir=B(.5,.44,.02,0,.8,-.17,M.glass(),g);RB(.56,.5,.025,.01,0,.78,-.18,M.woodD(),g,2);
+  return {g,anim:t=>{ds.forEach((d,i)=>{d.position.z=.22+clamp(t*1.4-i*.15,0,1)*.2})},open:1,label:"OPEN DRAWERS"}};
+BUILD.sink=()=>{const g=grp();
+  Lt([[0,0],[.1,0],[.08,.08],[.06,.4],[.1,.52],[.0,.52]],M.white(),0,0,0,g,18);
+  const b=RB(.46,.14,.36,.08,0,.5,.03,M.white(),g,4);B(.36,.02,.26,0,.64,.03,M.dark(),g);
+  C(.015,.015,.14,0,.64,-.1,M.metal(),g,8);const sp=C(.012,.012,.1,0,.74,-.06,M.metal(),g,8);sp.rotation.x=Math.PI/2;
+  Sp(.025,-.12,.66,-.08,M.metal(),g);Sp(.025,.12,.66,-.08,M.metal(),g);
+  B(.46,.5,.02,0,.8,-.22,M.glass(),g);RB(.5,.54,.025,.01,0,.78,-.235,M.woodD(),g,2);
+  return {g}};
+BUILD.toilet=()=>{const g=grp();
+  Lt([[0,0],[.1,0],[.12,.1],[.16,.25],[.0,.25]],M.white(),0,0,.05,g,16);
+  const bw=RB(.3,.12,.46,.05,0,.34,.06,M.white(),g,3);RB(.28,.03,.4,.03,0,.45,.07,M.woodD(),g,2);
+  RB(.34,.42,.14,.025,0,.24,-.2,M.white(),g,3);RB(.22,.04,.1,.015,0,.64,-.2,M.white(),g,2);C(.012,.012,.07,.1,.52,-.12,M.metal(),g,8).rotation.z=Math.PI/2;
+  return {g}};
+BUILD.bathtub=()=>{const g=grp();
+  RB(.66,.5,1.26,.08,0,.1,0,M.white(),g,4);B(.5,.02,1.08,0,.6,0,M.dark(),g);RB(.58,.04,1.18,.02,0,.6,0,M.white(),g,2);
+  for(const sx of[-1,1])for(const sz of[-1,1]){Lt([[0,0],[.04,0],[.05,.05],[.03,.1],[0,.1]],M.metal(),sx*.26,0,sz*.52,g,10)}
+  C(.02,.02,.2,0,.6,-.58,M.metal(),g,8);Sp(.03,-.1,.74,-.58,M.metal(),g);Sp(.03,.1,.74,-.58,M.metal(),g);
+  return {g}};
+BUILD.shelf=()=>{const g=grp();
+  B(.05,1.32,.36,-.43,0,0,M.woodD(),g);B(.05,1.32,.36,.43,0,0,M.woodD(),g);B(.95,.05,.38,0,1.32,0,M.woodD(),g);B(.95,.06,.38,0,0,0,M.woodD(),g);B(.88,1.3,.02,0,0,-.17,M.wood(),g);
+  const cols=[0xcfcfcf,0x8c8c8c,0xeeeeee,0x6a6a6a,0xb0b0b0,0x4e4e4e];
+  for(let r=0;r<5;r++){const y=.07+r*.25;B(.88,.03,.34,0,y,0,M.wood(),g);let x=-.4;while(x<.37){const w=.03+rnd()*.035,h=.13+rnd()*.09;if(rnd()<.12){x+=.05;continue}const bk=B(w,h,.22,x+w/2,y+.03,-.02,mat(cols[(rnd()*6)|0],{shininess:25}),g);if(rnd()<.1)bk.rotation.z=.25;x+=w+.003}if(r===1)Sp(.045,-.3,y+.07,0,M.white(),g,1,1.2,1);if(r===3){C(.04,.05,.12,.28,y+.03,0,M.metal(),g,10)}}
+  return {g}};
+BUILD.desk=()=>{const g=grp();
+  RB(.92,.05,.52,.012,0,.6,0,M.woodL(),g);B(.7,.006,.36,-.05,.65,0,mat(0x1d1d1d,{shininess:50}),g);
+  B(.05,.6,.46,-.43,0,0,M.wood(),g);RB(.3,.55,.46,.01,.27,.05,0,M.wood(),g);
+  const d=dyn(.27,.38,.24,g);RB(.26,.14,.025,.008,0,0,0,M.woodL(),d);Sp(.018,0,.07,.03,M.gold(),d);B(.25,.1,.3,0,-.04,-.16,M.wood(),d);
+  B(.26,.12,.02,.27,.1,.24,M.woodL(),g);B(.26,.12,.02,.27,.22,.24,M.woodL(),g);
+  Lt([[0,0],[.06,0],[.03,.02],[.025,.18],[.0,.2]],M.metal(),-.3,.65,.05,g,12);const sh=C(.05,.1,.1,-.3,.8,.05,mat(0xffffff,{emissive:0xbbbbbb}),g,14);glow(-.3,.82,.05,.45,g,.4);
+  B(.14,.03,.2,.05,.65,-.05,M.paper(),g);B(.12,.03,.18,.1,.68,-.03,M.sheet(),g);C(.03,.03,.05,.3,.65,-.1,M.dark(),g,10);
+  return {g,anim:t=>{d.position.z=.24+t*.26},open:1,label:"OPEN DRAWER"}};
+BUILD.clock=()=>{const g=grp();
+  RB(.38,1.3,.3,.02,0,.1,0,M.wood(),g);B(.44,.1,.34,0,0,0,M.woodD(),g);RB(.42,.16,.32,.03,0,1.4,0,M.woodD(),g);Sp(.04,0,1.62,0,M.gold(),g);
+  const f=new THREE.Mesh(new THREE.CircleGeometry(.15,28),new THREE.MeshPhongMaterial({map:tex("clock"),color:0xffffff}));f.position.set(0,1.1,.16);g.add(f);
+  B(.26,.5,.02,0,.35,.151,M.glass(),g);B(.24,.5,.01,0,.35,.14,M.dark(),g);C(.008,.008,.34,0,.4,.15,M.gold(),g,6);Sp(.05,0,.4,.15,M.gold(),g,1,1,.3);
+  return {g}};
+BUILD.sofa=()=>{const g=grp();
+  RB(1.06,.2,.52,.03,0,.08,.0,M.fab(),g,3);RB(1.06,.42,.14,.04,0,.2,-.22,M.fab(),g,3);
+  for(const s of[-1,1]){RB(.12,.36,.52,.045,s*.47,.08,0,M.fabD(),g,3)}
+  RB(.4,.1,.38,.04,-.2,.28,.05,M.fabL(),g,3);RB(.4,.1,.38,.04,.2,.28,.05,M.fabL(),g,3);
+  for(const x of[-.28,0,.28])RB(.28,.3,.08,.04,x,.26,-.2,M.fabL(),g,3);
+  RB(.18,.16,.06,.03,-.33,.33,.12,M.quilt(),g,2).rotation.y=.4;
+  for(const sx of[-1,1])for(const sz of[-1,1])C(.025,.02,.08,sx*.47,0,sz*.22,M.woodD(),g,8);
+  return {g}};
+BUILD.armchair=()=>{const g=grp();
+  RB(.62,.2,.56,.03,0,.08,0,M.fab(),g,3);RB(.62,.46,.14,.045,0,.2,-.22,M.fab(),g,3);
+  for(const s of[-1,1])RB(.1,.34,.54,.04,s*.26,.08,.01,M.fabD(),g,3);
+  RB(.4,.1,.38,.04,0,.27,.04,M.fabL(),g,3);
+  for(const sx of[-1,1])for(const sz of[-1,1])C(.025,.02,.08,sx*.26,0,sz*.22,M.woodD(),g,8);
+  return {g}};
+BUILD.fireplace=()=>{const g=grp();
+  B(.14,1.0,.4,-.44,0,0,M.stone(),g);B(.14,1.0,.4,.44,0,0,M.stone(),g);B(1.0,.34,.4,0,.78,0,M.stone(),g);B(.9,.1,.4,0,0,0,M.stone(),g);
+  B(.78,.9,.16,0,0,-.12,M.dark(),g);RB(1.14,.07,.5,.015,0,1.1,0,M.woodD(),g);
+  RB(.92,.05,.46,.01,0,.98,0,M.woodL(),g);
+  for(const x of[-.2,.1])C(.05,.05,.4,x,.06,.1,M.woodD(),g,8).rotation.z=Math.PI/2;
+  const fl=[];for(let i=0;i<4;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(.07-i%2*.02,.28+i%3*.05,8),emis(0xffffff));c.position.set(-.18+i*.12,.28,.08);c.userData.dyn=true;g.add(c);fl.push(c)}
+  glow(0,.35,.12,1.1,g,.7);
+  for(const x of[-.35,.3]){C(.025,.03,.18,x,1.17,0,M.metal(),g,8)}
+  return {g,flames:fl}};
+BUILD.ctable=()=>{const g=grp();RB(.84,.05,.52,.015,0,.28,0,M.woodL(),g);legs4(g,.36,.2,.28,M.wood(),.03);B(.7,.03,.4,0,.1,0,M.wood(),g);C(.08,.06,.04,0,.33,0,M.white(),g,14);return {g}};
+function counterBody(g,sinkv){
+  RB(.92,.54,.52,.01,0,.06,0,M.woodL(),g);B(.94,.06,.54,0,0,0,M.woodD(),g);RB(.98,.05,.58,.012,0,.6,0,mat(0xdadada,{shininess:80,specular:0x666666}),g);
+  if(sinkv){B(.36,.02,.28,-.18,.64,0,M.dark(),g);C(.014,.014,.16,-.18,.65,-.2,M.metal(),g,8);const sp=C(.012,.012,.1,-.18,.78,-.14,M.metal(),g,8);sp.rotation.x=Math.PI/2}
+  else{for(const [x,z] of[[-.24,-.1],[-.1,-.1],[-.24,.08],[-.1,.08]])C(.06,.06,.012,x,.65,z,M.dark(),g,16);Lt([[0,0],[.07,0],[.07,.08],[.06,.1],[0,.1]],M.metal(),.22,.65,0,g,14);C(.012,.012,.12,.22,.75,0,M.metal(),g,6)}
+}
+BUILD.counter=()=>{const g=grp();counterBody(g,((Math.random()*2)|0)===0);
+  const ds=[];for(const s of[-1,1]){const d=dyn(s*.23,.34,.27,g);RB(.4,.2,.025,.008,0,0,0,M.woodL(),d);C(.012,.012,.14,0,.08,.03,M.metal(),d,8).rotation.z=Math.PI/2;B(.38,.14,.34,0,-.06,-.18,M.wood(),d);ds.push(d)}
+  RB(.4,.24,.025,.008,-.23,.08,.27,M.woodL(),g);RB(.4,.24,.025,.008,.23,.08,.27,M.woodL(),g);B(.84,.52,.02,0,.08,.25,M.dark(),g);
+  return {g,anim:t=>{ds.forEach(d=>{d.position.z=.27+t*.26})},open:1,label:"OPEN DRAWER"}};
+BUILD.island=()=>{const g=grp();counterBody(g,false);RB(.4,.24,.025,.008,-.23,.08,.27,M.woodL(),g);RB(.4,.24,.025,.008,.23,.08,.27,M.woodL(),g);RB(.4,.2,.025,.008,-.23,.34,.27,M.woodL(),g);RB(.4,.2,.025,.008,.23,.34,.27,M.woodL(),g);return {g}};
+BUILD.fridge=()=>{const g=grp();
+  RB(.68,1.18,.6,.04,0,.02,0,mat(0xdcdcdc,{shininess:90,specular:0x888888}),g,3);
+  const top=dyn(-.33,.55,.31,g);RB(.62,.62,.04,.015,.31,0,0,mat(0xe6e6e6,{shininess:90,specular:0x888888}),top);RB(.03,.28,.04,.012,.55,.18,.03,M.metal(),top);
+  RB(.62,.5,.04,.015,0,.04,.31,mat(0xe6e6e6,{shininess:90,specular:0x888888}),g);RB(.03,.3,.04,.012,.25,.12,.34,M.metal(),g);
+  B(.6,.6,.04,0,.54,.28,M.dark(),g);
+  return {g,anim:t=>{top.rotation.y=-t*1.7},open:1,label:"OPEN FRIDGE"}};
+BUILD.dtable=()=>{const g=grp();
+  RB(1.04,.05,.64,.018,0,.44,0,M.woodL(),g);B(.9,.06,.5,0,.38,0,M.wood(),g);
+  for(const sx of[-1,1])for(const sz of[-1,1])Lt([[0,0],[.035,0],[.045,.1],[.03,.2],[.05,.3],[.035,.4],[0,.4]],M.wood(),sx*.46,0,sz*.25,g,10);
+  B(.9,.008,.22,0,.49,0,mat(0xe8e8e8,{shininess:20}),g);
+  for(const x of[-.3,.3])for(const z of[-.16,.16]){C(.1,.09,.01,x,.5,z,M.white(),g,16)}
+  C(.025,.03,.14,0,.5,0,M.metal(),g,10);C(.015,.015,.1,0,.64,0,M.white(),g,8);
+  const fl=new THREE.Mesh(new THREE.ConeGeometry(.018,.06,8),emis(0xffffff));fl.position.set(0,.77,0);fl.userData.dyn=true;g.add(fl);glow(0,.77,0,.4,g,.55);
+  for(const [x,z,r] of[[-.3,.4,0],[.3,.4,0],[-.3,-.4,Math.PI],[.3,-.4,Math.PI]]){const c=grp(x,0,z,g);c.rotation.y=r;RB(.34,.04,.34,.012,0,.28,0,M.fab(),c,2);for(const sx of[-1,1])for(const sz of[-1,1])B(.03,.28,.03,sx*.15,0,sz*.15,M.wood(),c);RB(.34,.34,.035,.01,0,.3,-.16,M.wood(),c,2)}
+  return {g,flames:[fl]}};
+BUILD.cabinet=()=>{const g=grp();
+  RB(.84,1.2,.42,.012,0,.1,0,M.wood(),g);B(.9,.1,.46,0,0,0,M.woodD(),g);B(.92,.06,.48,0,1.3,0,M.woodD(),g);
+  for(let i=0;i<3;i++){B(.76,.02,.36,0,.3+i*.32,0,M.woodL(),g);for(let k=0;k<3;k++){C(.08,.08,.012,-.22+k*.22,.33+i*.32,.04,M.white(),g,16).rotation.x=Math.PI/2;C(.04,.03,.06,-.22+k*.22,.33+i*.32,.04,M.white(),g,12)}}
+  B(.78,1.1,.02,0,.12,-.19,M.dark(),g);
+  const L=dyn(-.42,.14,.22,g),Rr=dyn(.42,.14,.22,g);
+  for(const [P,s] of[[L,1],[Rr,-1]]){B(.4,1.1,.02,s*.2,0,0,M.glass(),P);B(.4,.03,.025,s*.2,0,0,M.woodL(),P);B(.4,.03,.025,s*.2,1.07,0,M.woodL(),P);B(.03,1.1,.025,s*.02,0,0,M.woodL(),P);B(.03,1.1,.025,s*.38,0,0,M.woodL(),P);Sp(.02,s*.34,.55,.03,M.gold(),P)}
+  return {g,anim:t=>{L.rotation.y=-t*1.8;Rr.rotation.y=t*1.8},open:1,label:"OPEN DOOR"}};
+BUILD.chair=()=>{const g=grp();
+  RB(.38,.05,.38,.015,0,.3,0,M.fab(),g,2);legs4(g,.15,.15,.3,M.wood(),.025);
+  for(const x of[-.15,.15])B(.03,.4,.03,x,.32,-.17,M.wood(),g);for(let i=0;i<3;i++)B(.3,.03,.02,0,.4+i*.1,-.17,M.wood(),g);
+  return {g}};
+BUILD.barrel=()=>{const g=grp();
+  Lt([[0,0],[.25,0],[.3,.1],[.34,.3],[.35,.4],[.34,.5],[.3,.7],[.25,.8],[0,.8]],MT("wood",0x6a6a6a,{side:THREE.DoubleSide}),0,0,0,g,26);
+  for(const y of[.1,.38,.7])Tor(y===.38?.35:.31,.012,0,y,0,M.iron(),g,Math.PI/2);
+  C(.25,.25,.015,0,.79,0,M.woodD(),g,22);
+  return {g,hideHide:true}};
 BUILD.barrelh=BUILD.barrel;
-BUILD.frontdoor=()=>{const g=grp();B(.9,1.45,.1,0,0,-.04,0x2a2a2a,g);B(.78,1.38,.05,0,0,.03,WOODL,g);for(const x of[-.18,.18])for(const y of[.08,.76])B(.28,.5,.02,x,y,.06,0x777777,g);Sp(.03,.3,.7,.1,0xeeeeee,g);B(.4,.03,.03,0,1.0,.07,0x333333,g);return {g}};
-BUILD.boiler=()=>{const g=grp();C(.3,.3,1.0,0,0,0,0x737373,g,24);Sp(.3,0,1.0,0,0x737373,g,1,.4,1);C(.04,.04,.5,.2,1.0,0,METAL,g);C(.04,.04,.4,-.15,1.0,0,METAL,g);C(.1,.1,.03,0,.7,.3,0xeeeeee,g).rotation.x=Math.PI/2;B(.28,.22,.02,0,.12,.3,0x050505,g);B(.2,.12,.01,0,.17,.311,emis(0xffffff),g);return {g}};
-BUILD.crate=()=>{const g=grp();B(.54,.46,.54,0,0,0,0x7e7e7e,g);for(const y of[.04,.2,.36])B(.56,.06,.56,0,y,0,0x6a6a6a,g);return {g}};
-BUILD.rack=()=>{const g=grp();B(.9,1.1,.4,0,0,0,WOODD,g);for(let r=0;r<4;r++)for(let c=0;c<6;c++){const b=C(.05,.05,.28,-.38+c*.15,.12+r*.26,.0,0x1f1f1f,g,10);b.rotation.x=Math.PI/2;C(.015,.015,.06,-.38+c*.15,.12+r*.26,.18,0xcccccc,g,8).rotation.x=Math.PI/2}return {g}};
-BUILD.coffin=()=>{const g=grp();const sh=new THREE.Shape();sh.moveTo(-.12,-.6);sh.lineTo(.12,-.6);sh.lineTo(.24,-.2);sh.lineTo(.24,.2);sh.lineTo(.12,.6);sh.lineTo(-.12,.6);sh.lineTo(-.24,.2);sh.lineTo(-.24,-.2);sh.closePath();const geo=new THREE.ExtrudeGeometry(sh,{depth:.3,bevelEnabled:false});geo.rotateX(Math.PI/2);geo.translate(0,.32,0);g.add(new THREE.Mesh(geo,mat(0x3c3c3c)));B(.4,.02,1.0,0,.04,0,0x0a0a0a,g);const lid=grp(-.25,.32,0,g);const lg=new THREE.ExtrudeGeometry(sh,{depth:.04,bevelEnabled:false});lg.rotateX(Math.PI/2);lg.translate(.25,.04,0);lid.add(new THREE.Mesh(lg,mat(0x555555)));B(.04,.02,.5,.25,.05,0,0xdddddd,lid);B(.3,.02,.04,.25,.05,.1,0xdddddd,lid);return {g,anim:t=>{lid.rotation.z=t*1.9},open:1,loud:1,label:"LIFT LID"}};
-BUILD.candle=()=>{const g=grp();C(.03,.035,.22,0,0,0,0xeeeeee,g);C(.06,.06,.015,0,0,0,0x777777,g);const fl=new THREE.Mesh(new THREE.ConeGeometry(.018,.06,8),emis(0xffffff));fl.position.set(0,.25,0);g.add(fl);return {g,flames:[fl]}};
-BUILD.torture=()=>{const g=grp();B(.5,.06,1.1,0,.4,0,WOOD,g);for(const s of[-1,1])for(const z of[-.45,.45])B(.06,.4,.06,s*.22,0,z,WOODD,g);for(const z of[-.5,.5])C(.05,.05,.56,0,.43,z,0x777777,g).rotation.z=Math.PI/2;C(.1,.1,.03,.3,.5,.5,0xcccccc,g).rotation.z=Math.PI/2;return {g}};
-BUILD.casket=()=>{const g=grp();const sh=new THREE.Shape();sh.moveTo(-.16,-.64);sh.lineTo(.16,-.64);sh.lineTo(.3,-.2);sh.lineTo(.3,.2);sh.lineTo(.16,.64);sh.lineTo(-.16,.64);sh.lineTo(-.3,.2);sh.lineTo(-.3,-.2);sh.closePath();const geo=new THREE.ExtrudeGeometry(sh,{depth:.4,bevelEnabled:false});geo.rotateX(Math.PI/2);geo.translate(0,.42,0);g.add(new THREE.Mesh(geo,mat(0x4a4a4a)));const lid=grp(-.3,.44,0,g);const lg=new THREE.ExtrudeGeometry(sh,{depth:.05,bevelEnabled:false});lg.rotateX(Math.PI/2);lg.translate(.3,.05,0);lid.add(new THREE.Mesh(lg,mat(0x6a6a6a)));const seals=[];for(let i=0;i<5;i++){const s=C(.045,.045,.02,.3,.06,-.4+i*.2,emis(0xffffff),lid);seals.push(s)}B(.5,.025,.04,.3,.06,0,0x222222,lid);return {g,anim:t=>{lid.rotation.z=t*1.9},seals}};
+BUILD.frontdoor=()=>{const g=grp();
+  B(1.0,1.5,.12,0,0,-.05,M.woodD(),g);B(.1,1.52,.16,-.5,0,-.04,M.wood(),g);B(.1,1.52,.16,.5,0,-.04,M.wood(),g);B(1.1,.1,.16,0,1.48,-.04,M.wood(),g);
+  RB(.8,1.4,.06,.01,0,0,.04,M.woodL(),g);
+  for(const x of[-.2,.2])for(const y of[.08,.78]){RB(.3,.55,.03,.008,x,y,.08,M.wood(),g)}
+  Sp(.035,.32,.68,.12,M.gold(),g);Tor(.05,.01,0,1.1,.1,M.gold(),g);B(.46,.04,.04,0,.95,.1,M.iron(),g);
+  for(const y of[.2,.7,1.2])B(.08,.1,.04,-.37,y,.09,M.iron(),g);
+  return {g}};
+BUILD.boiler=()=>{const g=grp();
+  Lt([[0,0],[.3,0],[.31,.05],[.31,.9],[.3,1.0],[.2,1.08],[.0,1.12]],mat(0x7c7c7c,{shininess:70,specular:0x777777}),0,.0,0,g,26);
+  for(const y of[.2,.5,.85])Tor(.31,.012,0,y,0,M.iron(),g,Math.PI/2);
+  B(.26,.2,.04,0,.1,.3,M.iron(),g);B(.2,.12,.01,0,.14,.32,emis(0xffffff),g);glow(0,.2,.36,.5,g,.4);
+  Lt([[0,0],[.12,0],[.12,.02],[0,.02]],M.dark(),0,.7,.31,g,16).rotation.x=Math.PI/2;
+  Sp(.08,0,.72,.32,mat(0xeeeeee),g,1,1,.2);
+  C(.04,.04,.55,.18,1.1,0,M.metal(),g,10);C(.04,.04,.4,-.14,1.1,.02,M.metal(),g,10);
+  const el=C(.04,.04,.3,.05,1.62,0,M.metal(),g,10);el.rotation.z=Math.PI/2;
+  return {g}};
+BUILD.crate=()=>{const g=grp();
+  for(let i=0;i<4;i++)B(.56,.1,.04,0,.02+i*.12,.26,M.woodD(),g),B(.56,.1,.04,0,.02+i*.12,-.26,M.woodD(),g),B(.04,.1,.56,.26,.02+i*.12,0,M.woodD(),g),B(.04,.1,.56,-.26,.02+i*.12,0,M.woodD(),g);
+  for(const x of[-.26,.26])for(const z of[-.26,.26])B(.06,.5,.06,x,0,z,M.wood(),g);B(.5,.04,.5,0,.02,0,M.wood(),g);
+  return {g}};
+BUILD.rack=()=>{const g=grp();
+  B(.05,1.12,.4,-.45,0,0,M.woodD(),g);B(.05,1.12,.4,.45,0,0,M.woodD(),g);B(.95,.05,.4,0,1.1,0,M.woodD(),g);
+  for(let r=0;r<4;r++){B(.9,.03,.4,0,.02+r*.28,0,M.wood(),g);for(let c=0;c<6;c++){const x=-.38+c*.15,y=.1+r*.28;const b=C(.05,.05,.26,x,y,-.02,mat(0x1b1b1b,{shininess:90,specular:0x999999}),g,12);b.rotation.x=Math.PI/2;const n=C(.02,.02,.1,x,y,.18,mat(0x1b1b1b,{shininess:90,specular:0x999999}),g,8);n.rotation.x=Math.PI/2;C(.021,.021,.02,x,y,.23,M.gold(),g,8).rotation.x=Math.PI/2}}
+  return {g}};
+function coffinShape(w,l){const sh=new THREE.Shape();sh.moveTo(-w*.4,-l);sh.lineTo(w*.4,-l);sh.lineTo(w,-l*.3);sh.lineTo(w,l*.3);sh.lineTo(w*.4,l);sh.lineTo(-w*.4,l);sh.lineTo(-w,l*.3);sh.lineTo(-w,-l*.3);sh.closePath();return sh}
+BUILD.coffin=()=>{const g=grp();
+  const sh=coffinShape(.25,.6),geo=new THREE.ExtrudeGeometry(sh,{depth:.3,bevelEnabled:true,bevelSize:.02,bevelThickness:.02,bevelSegments:2});geo.rotateX(Math.PI/2);geo.translate(0,.34,0);
+  g.add(new THREE.Mesh(geo,MT("wood",0x4a4a4a)));B(.42,.02,1.0,0,.06,0,M.fabD(),g);
+  for(let i=0;i<3;i++)RB(.05,.04,.1,.01,-.275,.12+i*.1,-.3+i*.3,M.gold(),g,2),RB(.05,.04,.1,.01,.275,.12+i*.1,-.3+i*.3,M.gold(),g,2);
+  const lid=dyn(-.26,.34,0,g);const lg=new THREE.ExtrudeGeometry(sh,{depth:.045,bevelEnabled:true,bevelSize:.012,bevelThickness:.012,bevelSegments:2});lg.rotateX(Math.PI/2);lg.translate(.26,.06,0);lid.add(new THREE.Mesh(lg,MT("wood",0x606060)));
+  B(.04,.015,.5,.26,.07,0,M.gold(),lid);B(.3,.015,.04,.26,.07,.08,M.gold(),lid);
+  return {g,anim:t=>{lid.rotation.z=t*1.9},open:1,loud:1,label:"LIFT LID"}};
+BUILD.candle=()=>{const g=grp();
+  Lt([[0,0],[.07,0],[.07,.012],[.03,.02],[.025,.04],[.035,.05],[0,.05]],M.metal(),0,0,0,g,12);
+  Lt([[0,0],[.028,0],[.032,.1],[.026,.18],[.022,.22],[0,.22]],mat(0xf2f2f2,{shininess:30}),0,.05,0,g,12);
+  const fl=new THREE.Mesh(new THREE.ConeGeometry(.016,.06,8),emis(0xffffff));fl.position.set(0,.31,0);fl.userData.dyn=true;g.add(fl);glow(0,.32,0,.38,g,.6);
+  return {g,flames:[fl]}};
+BUILD.torture=()=>{const g=grp();
+  RB(.5,.07,1.14,.015,0,.42,0,M.wood(),g);for(const sx of[-1,1])for(const sz of[-1,1])B(.07,.42,.07,sx*.22,0,sz*.48,M.woodD(),g);B(.4,.03,.9,0,.36,0,M.woodD(),g);
+  for(const z of[-.52,.52]){const r=C(.05,.05,.58,0,.5,z,M.woodL(),g,12);r.rotation.z=Math.PI/2;for(const x of[-.3,.3])C(.08,.08,.03,x,.5,z,M.iron(),g,14).rotation.z=Math.PI/2}
+  Tor(.1,.014,.34,.55,.52,M.iron(),g,0,Math.PI/2);for(const x of[-.12,.12])B(.05,.012,.2,x,.5,-.35,mat(0x3a3a3a),g),B(.05,.012,.2,x,.5,.35,mat(0x3a3a3a),g);
+  for(const z of[-.44,.44])Tor(.04,.008,.0,.5,z+(z>0?.08:-.08),M.iron(),g);
+  return {g}};
+BUILD.casket=()=>{const g=grp();
+  const sh=coffinShape(.3,.64),geo=new THREE.ExtrudeGeometry(sh,{depth:.4,bevelEnabled:true,bevelSize:.025,bevelThickness:.025,bevelSegments:2});geo.rotateX(Math.PI/2);geo.translate(0,.46,0);
+  g.add(new THREE.Mesh(geo,MT("wood",0x555555)));
+  for(const sx of[-1,1])for(let i=0;i<2;i++)RB(.05,.05,.14,.012,sx*.335,.2,-.25+i*.5,M.gold(),g,2);
+  const lid=dyn(-.31,.48,0,g);const lg=new THREE.ExtrudeGeometry(sh,{depth:.06,bevelEnabled:true,bevelSize:.015,bevelThickness:.015,bevelSegments:2});lg.rotateX(Math.PI/2);lg.translate(.31,.07,0);lid.add(new THREE.Mesh(lg,MT("wood",0x707070)));
+  const seals=[];for(let i=0;i<5;i++){const s=C(.045,.045,.02,.31,.08,-.4+i*.2,emis(0xffffff),lid);s.userData.dyn=true;seals.push(s)}
+  B(.5,.025,.04,.31,.08,0,M.gold(),lid);B(.04,.025,.7,.31,.08,0,M.gold(),lid);
+  return {g,anim:t=>{lid.rotation.z=t*1.9},seals}};
+BUILD.trunk=()=>{const g=grp();
+  RB(.64,.3,.42,.015,0,.02,0,M.wood(),g);for(const x of[-.2,.2])B(.05,.31,.44,x,.02,0,M.iron(),g);
+  for(const sx of[-1,1])for(const sz of[-1,1])B(.06,.06,.06,sx*.3,0,sz*.2,M.gold(),g);
+  const lid=dyn(0,.32,-.21,g);const lg=new THREE.CylinderGeometry(.21,.21,.64,16,1,false,0,Math.PI);lg.rotateZ(Math.PI/2);lg.rotateY(Math.PI/2);{const lm=new THREE.Mesh(lg,M.woodD());lm.position.set(0,0,.21);lid.add(lm)}
+  for(const x of[-.2,.2]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.215,.215,.05,16,1,false,0,Math.PI),M.iron());b.rotation.z=Math.PI/2;b.rotation.y=Math.PI/2;b.position.set(x,0,.21);lid.add(b)}
+  RB(.06,.07,.03,.008,0,-.02,.42,M.gold(),lid);
+  return {g,anim:t=>{lid.rotation.x=-t*1.7},open:1,loud:1,label:"OPEN TRUNK"}};
+BUILD.box=()=>{const g=grp();RB(.52,.4,.46,.012,0,0,0,mat(0xa8a8a8),g,2);B(.52,.004,.07,0,.4,0,mat(0x7a7a7a),g);const f=B(.24,.012,.44,-.14,.4,0,mat(0xb6b6b6),g);f.rotation.z=.2;const f2=B(.24,.012,.44,.14,.4,0,mat(0xb6b6b6),g);f2.rotation.z=-.15;return {g}};
+BUILD.freezer=()=>{const g=grp();
+  RB(.64,1.04,.6,.04,0,.02,0,mat(0xdedede,{shininess:90,specular:0x777777}),g,3);RB(.56,.9,.03,.012,0,.08,.31,mat(0xe8e8e8,{shininess:90,specular:0x777777}),g,2);
+  RB(.03,.34,.04,.012,.22,.4,.34,M.metal(),g,2);for(let i=0;i<5;i++)B(.4,.012,.02,0,.12+i*.03,-.31,M.dark(),g);
+  for(const y of[.2,.8])B(.03,.1,.03,-.26,y,.32,M.metal(),g);
+  return {g,hideHide:true}};
+BUILD.mannequin=()=>{const g=grp(),b=dyn(0,0,0,g);
+  C(.015,.015,.95,0,0,0,M.metal(),b,8);Lt([[0,0],[.16,0],[.15,.03],[0,.03]],M.dark(),0,0,0,b,18);
+  Lt([[0,0],[.075,0],[.1,.08],[.13,.2],[.14,.28],[.12,.36],[.09,.42],[.06,.47],[0,.47]],mat(0xe4e4e4,{shininess:50}),0,.5,0,b,18).scale.z=.7;
+  Sp(.075,0,1.04,0,mat(0xeeeeee,{shininess:60}),b,1,1.25,1);C(.025,.03,.07,0,.92,0,mat(0xdddddd),b,10);
+  for(const s of[-1,1]){const a=C(.03,.022,.4,s*.17,.52,0,mat(0xdcdcdc),b,10);a.rotation.z=s*.12;Sp(.035,s*.19,.5,0,mat(0xd4d4d4),b)}
+  Lt([[0,0],[.09,0],[.12,.1],[.0,.1]],mat(0xd2d2d2),0,.43,0,b,18);
+  return {g,b}};
+
+function itemMesh(id){
+  const g=new THREE.Group(),w=mat(0xf4f4f4,{shininess:70,specular:0x888888});
+  if(id==="cross"){RB(.045,.26,.035,.01,0,0,0,w,g,2);RB(.16,.045,.035,.01,0,.14,0,w,g,2);Sp(.02,0,.26,0,w,g)}
+  else if(id==="garlic"){Sp(.07,0,.07,0,w,g,1,.9,1);for(let i=0;i<6;i++){const c=Sp(.03,Math.cos(i)*.045,.07,Math.sin(i)*.045,mat(0xe0e0e0),g,.6,1.4,.6)}const c=new THREE.Mesh(new THREE.ConeGeometry(.03,.07,8),w);c.position.y=.155;g.add(c)}
+  else if(id==="water"){Sp(.075,0,.075,0,mat(0xd4d4d4,{shininess:120,specular:0xffffff}),g);C(.027,.027,.09,0,.12,0,w,g,12);C(.032,.032,.03,0,.21,0,M.dark(),g,12);Sp(.05,0,.06,0,mat(0x777777),g,1,.7,1)}
+  else if(id==="stake"){const c=new THREE.Mesh(new THREE.ConeGeometry(.026,.12,10),w);c.rotation.x=Math.PI;c.position.y=.06;g.add(c);C(.026,.024,.26,0,.12,0,mat(0xc0c0c0),g,10);g.rotation.z=1.3}
+  else if(id==="key"){Tor(.04,.012,0,.15,0,w,g);B(.02,.15,.02,0,0,0,w,g);B(.05,.022,.02,.03,.02,0,w,g);B(.04,.022,.02,.03,.06,0,w,g)}
+  return g;
+}
+
+/* ----- stairs: a real flight of steps between two walls ----- */
+function stairsRun(run){
+  const g=new THREE.Group();g.position.set(run.x0,0,run.y);
+  const L=run.len,N=14,rw=L/N,riser=WH/N,st=MT("wood",0xb8b8b8,{emissive:0x3a3a3a}),dk=MT("wood",0x555555,{emissive:0x1c1c1c});
+  if(run.dir==="d"){
+    for(let i=0;i<N;i++){const top=-riser*(i+1);B(rw,top+WH,.96,(i+.5)*rw,-WH,.5,st,g);B(rw*.25,.018,.98,(i+.12)*rw,top,.5,dk,g)}
+    B(L,.03,1,L/2,-WH,.5,M.dark(),g);B(.04,WH,1,L,-WH,.5,MT("wood",0x555555,{emissive:0x181818}),g);
+    B(L,WH,.04,L/2,-WH,.02,mat(0x4a4a4a),g);B(L,WH,.04,L/2,-WH,.98,mat(0x4a4a4a),g);
+    for(const z of[.07,.93]){const rail=C(.022,.022,Math.hypot(L,WH),L/2,0,z,M.woodD(),g,8);rail.position.y=.5-WH/2;rail.rotation.z=Math.PI/2-Math.atan2(WH,L);for(let i=1;i<N;i+=2)C(.012,.012,.42,(i+.5)*rw,-riser*(i+1),z,M.woodD(),g,6)}
+  }else{
+    for(let i=0;i<N;i++){const top=WH-riser*(i+1);B(rw,top,.96,(i+.5)*rw,0,.5,st,g);B(rw*.25,.018,.98,(i+.12)*rw,top,.5,dk,g)}
+    B(L,WH,.04,L/2,WH,.02,mat(0x4a4a4a),g);B(L,WH,.04,L/2,WH,.98,mat(0x4a4a4a),g);B(L,.03,1,L/2,2*WH,.5,M.dark(),g);
+    for(const z of[.07,.93]){const rail=C(.022,.022,Math.hypot(L,WH),L/2,0,z,M.woodD(),g,8);rail.position.y=.5+WH/2;rail.rotation.z=Math.PI/2-Math.atan2(WH,L);for(let i=1;i<N;i+=2)C(.012,.012,.42,(i+.5)*rw,WH-riser*(i+1),z,M.woodD(),g,6)}
+  }
+  finalize(g);return g;
+}
+
 function resize(){
   const cw=stage.clientWidth||360,ch=stage.clientHeight||640;
   if(R3){R3.r.setSize(cw,ch,false);R3.cam.aspect=cw/ch;R3.cam.fov=cw/ch<.8?72:62;R3.cam.updateProjectionMatrix()}
@@ -309,70 +583,104 @@ function lineClear(x0,y0,x1,y1){
   for(let i=1;i<n;i++){const t=i/n;if(isWall(Math.floor(x0+dx*t),Math.floor(y0+dy*t)))return false}
   return true;
 }
-function itemMesh(id){
-  const g=new THREE.Group(),w=mat(0xf0f0f0,{shininess:50});
-  if(id==="cross"){B(.04,.22,.03,0,0,0,w,g);B(.14,.04,.03,0,.12,0,w,g)}
-  else if(id==="garlic"){Sp(.07,0,.07,0,w,g,1,.9,1);const c=new THREE.Mesh(new THREE.ConeGeometry(.03,.07,8),w);c.position.y=.15;g.add(c)}
-  else if(id==="water"){Sp(.07,0,.07,0,mat(0xcfcfcf,{shininess:90}),g);C(.025,.025,.08,0,.12,0,w,g);C(.03,.03,.03,0,.2,0,0x222222,g)}
-  else if(id==="stake"){const c=new THREE.Mesh(new THREE.ConeGeometry(.025,.1,8),w);c.rotation.x=Math.PI;c.position.y=.05;g.add(c);C(.025,.025,.24,0,.1,0,0xbdbdbd,g);g.rotation.z=1.3}
-  else if(id==="key"){const t=new THREE.Mesh(new THREE.TorusGeometry(.04,.012,8,16),w);t.position.set(0,.14,0);g.add(t);B(.02,.14,.02,0,0,0,w,g);B(.05,.02,.02,.03,.02,0,w,g);B(.04,.02,.02,.03,.06,0,w,g)}
-  return g;
-}
+function runAt(l,x,y){const cy=Math.floor(y);for(const r of LV[l].runs)if(r.y===cy&&x>=r.x0&&x<=r.x0+r.len)return r;return null}
+function stairOffset(l,x,y){const r=runAt(l,x,y);if(!r)return 0;const s=clamp(x-r.x0,0,r.len);return r.dir==="d"?-WH*s/r.len:WH*(1-s/r.len)}
 
-function stairsMesh(l,x,y,dir){
-  const g=new THREE.Group();g.position.set(x+.5,0,y+.5);
-  let rot=0;const nb=[[1,0,0],[-1,0,Math.PI],[0,1,-Math.PI/2],[0,-1,Math.PI/2]];
-  for(const n of nb){if(LV[l].rows[y+n[1]]&&LV[l].rows[y+n[1]].charCodeAt(x+n[0])===35){rot=n[2];break}}
-  g.rotation.y=rot;
-  const st=mat(0x8a8a8a),dk=mat(0x3c3c3c),N=6;
-  if(dir==="d"){
-    B(1,.02,1,0,-WH,0,0x0a0a0a,g);
-    for(const [px,pz,w,d] of[[-.5,0,.04,1],[.5,0,.04,1],[0,-.5,1,.04],[0,.5,1,.04]])B(w,WH,d,px,-WH,pz,dk,g);
-    for(let i=0;i<N;i++){const top=-.2*(i+1)-.02;B(1/N,top+WH,.92,-.5+(i+.5)/N,-WH,0,st,g)}
-  }else{
-    B(1,.02,1,0,WH*2,0,0x0a0a0a,g);
-    for(const [px,pz,w,d] of[[-.5,0,.04,1],[.5,0,.04,1],[0,-.5,1,.04],[0,.5,1,.04]])B(w,WH,d,px,WH,pz,dk,g);
-    for(let i=0;i<N;i++){const top=.25*(i+1);B(1/N,top,.92,-.5+(i+.5)/N,0,0,st,g)}
-  }
-  return g;
-}
-
+/* ----- one floor: walls, floor, ceiling, trim, props, stairs, furniture ----- */
 function buildLevel(l){
   const lv=LV[l],cf=LCFG[l],g=new THREE.Group(),rows=lv.rows;
-  const acc=()=>({p:[],n:[],u:[],i:[]});
-  const WG=acc(),FG=acc(),CG=acc();
-  const quad=(G,vs,n,uvs)=>{const i0=G.p.length/3;for(let k=0;k<4;k++){G.p.push(vs[k][0],vs[k][1],vs[k][2]);G.n.push(n[0],n[1],n[2]);G.u.push(uvs[k][0],uvs[k][1])}G.i.push(i0,i0+1,i0+2,i0,i0+2,i0+3)};
+  const acc=()=>({p:[],n:[],u:[]});
+  const WG=acc(),FG=acc(),CG=acc(),TG=acc();
+  const quad=(G,vs,n,uvs)=>{
+    const a=vs[0],b=vs[1],c=vs[2];
+    const cx=(b[1]-a[1])*(c[2]-a[2])-(b[2]-a[2])*(c[1]-a[1]),cy=(b[2]-a[2])*(c[0]-a[0])-(b[0]-a[0])*(c[2]-a[2]),cz=(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+    const ord=(cx*n[0]+cy*n[1]+cz*n[2])>=0?[0,1,2,0,2,3]:[0,3,2,0,2,1];
+    for(const k of ord){G.p.push(vs[k][0],vs[k][1],vs[k][2]);G.n.push(n[0],n[1],n[2]);G.u.push(uvs[k][0],uvs[k][1])}
+  };
   const open=(x,y)=>x>=0&&y>=0&&x<MW&&y<MH&&rows[y].charCodeAt(x)!==35;
   const H=WH,K=.7;
+  const faces=[];
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
     const ch=rows[y][x];
     if(ch==="#"){
-      if(open(x+1,y))quad(WG,[[x+1,0,y+1],[x+1,0,y],[x+1,H,y],[x+1,H,y+1]],[1,0,0],[[(y+1)*K,0],[y*K,0],[y*K,H*K],[(y+1)*K,H*K]]);
-      if(open(x-1,y))quad(WG,[[x,0,y],[x,0,y+1],[x,H,y+1],[x,H,y]],[-1,0,0],[[y*K,0],[(y+1)*K,0],[(y+1)*K,H*K],[y*K,H*K]]);
-      if(open(x,y+1))quad(WG,[[x,0,y+1],[x+1,0,y+1],[x+1,H,y+1],[x,H,y+1]],[0,0,1],[[x*K,0],[(x+1)*K,0],[(x+1)*K,H*K],[x*K,H*K]]);
-      if(open(x,y-1))quad(WG,[[x+1,0,y],[x,0,y],[x,H,y],[x+1,H,y]],[0,0,-1],[[(x+1)*K,0],[x*K,0],[x*K,H*K],[(x+1)*K,H*K]]);
+      if(open(x+1,y)){const vs=[[x+1,0,y+1],[x+1,0,y],[x+1,H,y],[x+1,H,y+1]];quad(WG,vs,[1,0,0],[[(y+1)*K,0],[y*K,0],[y*K,H*K],[(y+1)*K,H*K]]);faces.push({x,y,n:[1,0],vs})}
+      if(open(x-1,y)){const vs=[[x,0,y],[x,0,y+1],[x,H,y+1],[x,H,y]];quad(WG,vs,[-1,0,0],[[y*K,0],[(y+1)*K,0],[(y+1)*K,H*K],[y*K,H*K]]);faces.push({x,y,n:[-1,0],vs})}
+      if(open(x,y+1)){const vs=[[x,0,y+1],[x+1,0,y+1],[x+1,H,y+1],[x,H,y+1]];quad(WG,vs,[0,0,1],[[x*K,0],[(x+1)*K,0],[(x+1)*K,H*K],[x*K,H*K]]);faces.push({x,y,n:[0,1],vs})}
+      if(open(x,y-1)){const vs=[[x+1,0,y],[x,0,y],[x,H,y],[x+1,H,y]];quad(WG,vs,[0,0,-1],[[(x+1)*K,0],[x*K,0],[x*K,H*K],[(x+1)*K,H*K]]);faces.push({x,y,n:[0,-1],vs})}
     }else{
       const f=.5;
-      if(ch!=="d")quad(FG,[[x,0,y],[x,0,y+1],[x+1,0,y+1],[x+1,0,y]],[0,1,0],[[x*f,y*f],[x*f,(y+1)*f],[(x+1)*f,(y+1)*f],[(x+1)*f,y*f]]);
+      if(ch!=="d"&&ch!=="u")quad(FG,[[x,0,y],[x,0,y+1],[x+1,0,y+1],[x+1,0,y]],[0,1,0],[[x*f,y*f],[x*f,(y+1)*f],[(x+1)*f,(y+1)*f],[(x+1)*f,y*f]]);
       if(ch!=="u")quad(CG,[[x+1,H,y],[x+1,H,y+1],[x,H,y+1],[x,H,y]],[0,-1,0],[[(x+1)*f,y*f],[(x+1)*f,(y+1)*f],[x*f,(y+1)*f],[x*f,y*f]]);
     }
   }
-  const mk=(G,m)=>{const geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.Float32BufferAttribute(G.p,3));geo.setAttribute("normal",new THREE.Float32BufferAttribute(G.n,3));geo.setAttribute("uv",new THREE.Float32BufferAttribute(G.u,2));geo.setIndex(G.i);return new THREE.Mesh(geo,m)};
-  g.add(mk(WG,R3.tm[cf.wall].wall));g.add(mk(FG,R3.tm[cf.floor].floor));g.add(mk(CG,R3.tm[cf.ceil].ceil));
+  // skirting board and crown moulding on every wall face
+  for(const fc of faces){
+    const n=[fc.n[0],0,fc.n[1]],o=.035,vs=fc.vs;
+    const sh=(v,y,off)=>[v[0]+n[0]*off,y,v[2]+n[2]*off];
+    for(const [y0,y1] of[[0,.12],[H-.11,H]]){
+      quad(TG,[sh(vs[0],y0,o),sh(vs[1],y0,o),sh(vs[1],y1,o),sh(vs[0],y1,o)],n,[[0,0],[1,0],[1,1],[0,1]]);
+      quad(TG,[sh(vs[0],y1,o),sh(vs[1],y1,o),sh(vs[1],y1,0),sh(vs[0],y1,0)],[0,1,0],[[0,0],[1,0],[1,1],[0,1]]);
+    }
+    quad(TG,[sh(vs[0],H-.11,0),sh(vs[1],H-.11,0),sh(vs[1],H-.11,o),sh(vs[0],H-.11,o)],[0,-1,0],[[0,0],[1,0],[1,1],[0,1]]);
+  }
+  const mk=(G,m)=>{const geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.Float32BufferAttribute(G.p,3));geo.setAttribute("normal",new THREE.Float32BufferAttribute(G.n,3));geo.setAttribute("uv",new THREE.Float32BufferAttribute(G.u,2));return new THREE.Mesh(geo,m)};
+  g.add(mk(WG,R3.tm[cf.wall].wall));g.add(mk(FG,R3.tm[cf.floor].floor));g.add(mk(CG,R3.tm[cf.ceil].ceil));g.add(mk(TG,M.woodD()));
+
+  // props on walls and floors
+  const P2=new THREE.Group();
+  const dec=new Set(lv.dec.filter(d=>!d.def.walk).map(d=>d.cell[0]+","+d.cell[1]));
+  const wallAt=(x,y)=>x<0||y<0||x>=MW||y>=MH||rows[y].charCodeAt(x)===35;
+  const arts=["art1","art2","art3"],artSize={art1:[.42,.52],art2:[.54,.42],art3:[.44,.44]};
+  const wmat=new THREE.MeshBasicMaterial({color:0xcfcfcf});
+  for(const fc of faces){
+    const nx=fc.n[0],nz=fc.n[1],ax=fc.x+nx,ay=fc.y+nz; // open cell in front of the face
+    const along=nx?[0,1]:[1,0];
+    const contiguous=wallAt(fc.x+along[0],fc.y+along[1])&&wallAt(fc.x-along[0],fc.y-along[1]);
+    const hash=(fc.x*73+fc.y*151+l*37)%23;
+    const cx=fc.x+.5+nx*.5,cz=fc.y+.5+nz*.5;
+    if(!contiguous)continue;
+    // keep clear of furniture
+    let clear=true;for(let k=-1;k<=1;k++){if(dec.has((ax+along[0]*k)+","+(ay+along[1]*k)))clear=false}
+    if(!clear)continue;
+    const yaw=Math.atan2(nx,nz);
+    if(l<3&&hash===3&&(fc.x<=1||fc.y<=1||fc.y>=20)&&(rows[ay]&&rows[ay][ax]==="."||true)){
+      // window with curtains and moonlight
+      const w=new THREE.Group();w.position.set(cx+nx*.02,0,cz+nz*.02);w.rotation.y=yaw;
+      B(.5,.8,.02,0,.7,0,wmat,w);for(const x of[-.27,.27])B(.05,.9,.05,x,.65,.0,M.woodD(),w);B(.6,.05,.05,0,1.52,0,M.woodD(),w);B(.6,.05,.07,0,.64,.02,M.woodD(),w);B(.03,.8,.03,0,.7,.02,M.woodD(),w);B(.5,.03,.03,0,1.08,.02,M.woodD(),w);
+      for(const x of[-.37,.37])RB(.14,1.0,.06,.02,x,.55,.04,M.fabD(),w,2);B(.9,.03,.03,0,1.56,.04,M.metal(),w);
+      glow(0,1.1,.2,1.6,w,.18);
+      P2.add(w);continue;
+    }
+    if(hash===0||hash===9||hash===16){
+      const a=arts[(fc.x+fc.y+l)%3],sz=artSize[a];const w=new THREE.Group();w.position.set(cx+nx*.03,0,cz+nz*.03);w.rotation.y=yaw;
+      RB(sz[0]+.1,sz[1]+.1,.04,.012,0,.78,0,M.woodD(),w,2);
+      const pl=new THREE.Mesh(new THREE.PlaneGeometry(sz[0],sz[1]),new THREE.MeshPhongMaterial({map:tex(a),shininess:30}));pl.position.set(0,.78+(sz[1]+.1)/2,.022);w.add(pl);
+      P2.add(w);
+    }
+  }
+  // rugs
+  const rugs=RUGS[l]||[];
+  for(const r of rugs){const m=new THREE.Mesh(new THREE.PlaneGeometry(r[2],r[3]),MT("rug",r[4]||0xb0b0b0,{bumpScale:.3}));m.rotation.x=-Math.PI/2;m.position.set(r[0],.006,r[1]);if(r[5])m.rotation.z=Math.PI/2;P2.add(m);const e=B(r[2]+.04,.006,r[3]+.04,r[0],.0,r[1],M.dark(),P2)}
+  finalize(P2);g.add(P2);
   // stairs
-  for(const s of lv.stairs)g.add(stairsMesh(l,s.x,s.y,s.dir));
+  for(const run of lv.runs)g.add(stairsRun(run));
   // furniture
   for(const d of lv.dec){
-    const b=BUILD[d.type]();d.b=b;d.openT=0;d.openTarget=0;d.open=false;
+    const b=BUILD[d.type]();finalize(b.g);d.b=b;d.openT=0;d.openTarget=0;d.open=false;
     const holder=grp(d.cx,0,d.cy,g);holder.add(b.g);d.obj=holder;
-    // face away from the nearest wall
     let fx=0,fz=1;
     for(const n of[[0,-1],[1,0],[0,1],[-1,0]]){const wx=d.cell[0]+n[0],wy=d.cell[1]+n[1];if(wy>=0&&wy<MH&&wx>=0&&wx<MW&&rows[wy].charCodeAt(wx)===35){fx=-n[0];fz=-n[1];break}}
     holder.rotation.y=Math.atan2(fx,fz);
-    if(d.holds){const m=itemMesh(d.holds.id);m.position.set(0,.3,0);m.visible=false;holder.add(m);d.itemMesh=m;if(d.type==="coffin")m.position.set(0,.18,0);if(d.type==="trunk")m.position.set(0,.18,0);if(d.type==="nightstand"||d.type==="desk"||d.type==="counter")m.position.set(0,.28,.2)}
+    if(d.holds){const m=itemMesh(d.holds.id);m.position.set(0,.3,0);m.visible=false;holder.add(m);d.itemMesh=m;if(d.type==="coffin"||d.type==="trunk")m.position.set(0,.2,0);if(d.type==="nightstand"||d.type==="desk"||d.type==="counter")m.position.set(0,.3,.2)}
   }
   g.visible=false;R3.scene.add(g);LG[l]=g;
 }
+const RUGS=[
+ [[8,10,6,5]],
+ [[5.5,5.5,3,3.6,0xa0a0a0],[23.5,6,3.2,3.8,0xb8b8b8],[14.5,6,2.6,3,0x909090],[10,11.5,7,1,0x909090],[19,11.5,7,1,0x909090],[14.5,17,4,3,0xa8a8a8]],
+ [[6.5,5.5,4.4,3.6,0xa8a8a8],[24.5,5.5,3.8,2.8,0xb0b0b0],[7,17,4,3,0x909090],[22,17,5,3,0xa0a0a0],[10,11.5,7,1,0x909090],[19,11.5,7,1,0x909090]],
+ [[23.5,6,3.4,3.4,0x777777],[21.5,17,5,3.6,0x808080]]
+];
 
 function initWorld(imgC,imgF){
   try{
@@ -380,23 +688,21 @@ function initWorld(imgC,imgF){
     r.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));r.setClearColor(0x000000,1);
     const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x000000,.17);
     const cam=new THREE.PerspectiveCamera(70,1,.04,40);scene.add(cam);
-    const tex=im=>{const t=new THREE.Texture(im);t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;t.anisotropy=4;t.needsUpdate=true;return t};
-    const tc=tex(imgC),tf=tex(imgF);
+    const tex2=im=>{const t=new THREE.Texture(im);t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;t.anisotropy=4;t.needsUpdate=true;return t};
+    const tc=tex2(imgC),tf=tex2(imgF);
     const m=(t,c)=>new THREE.MeshPhongMaterial({map:t,color:c,shininess:4,specular:0x111111});
-    const tm={c:{wall:m(tc,0x8e8e8e),floor:m(tc,0x808080),ceil:m(tc,0x555555)},f:{wall:m(tf,0xa0a0a0),floor:m(tf,0xb4b4b4),ceil:m(tf,0x4a4a4a)}};
+    const tm={c:{wall:m(tc,0x7a7a7a),floor:m(tc,0x707070),ceil:m(tc,0x4a4a4a)},f:{wall:m(tf,0x8c8c8c),floor:m(tf,0xa0a0a0),ceil:m(tf,0x404040)}};
     const amb=new THREE.AmbientLight(0xffffff,.2);scene.add(amb);
-    const spot=new THREE.SpotLight(0xffffff,2,16,.62,.55,1.2);spot.position.set(0,0,0);cam.add(spot);const tgt=new THREE.Object3D();tgt.position.set(0,0,-1);cam.add(tgt);spot.target=tgt;
+    const spot=new THREE.SpotLight(0xffffff,1.7,16,.62,.55,1.2);spot.position.set(0,0,0);cam.add(spot);const tgt=new THREE.Object3D();tgt.position.set(0,0,-1);cam.add(tgt);spot.target=tgt;
     const near=new THREE.PointLight(0xffffff,.55,5,2);cam.add(near);
-    R3={r,scene,cam,tm,amb,spot,near};
+    const sl=new THREE.PointLight(0xffffff,0,5,2);scene.add(sl);R3={r,scene,cam,tm,amb,spot,near,sl};
     for(let l=0;l<4;l++)buildLevel(l);
-    // bell on the floor (when dropped)
-    R3.bell=bellMesh();R3.bell.visible=false;scene.add(R3.bell);
-    // Dracula
+    const bc=BUILD.tablebell().bell.clone();bc.position.set(0,0,0);const bg=new THREE.Group();bg.add(bc);R3.bell=bg;bg.visible=false;scene.add(bg);
     DR=buildDracula();DR.root.scale.setScalar(.59);scene.add(DR.root);
     const dl=new THREE.PointLight(0xffffff,.7,3.5,2);dl.position.set(0,1.7,.6);DR.root.add(dl);
     resize();
     return true;
-  }catch(e){R3=null;return false}
+  }catch(e){window.__err=e&&e.stack||String(e);R3=null;return false}
 }
 
 function openThing(d){
@@ -416,6 +722,7 @@ function animWorld(dt){
     if(d.type==="mannequin"){const t=d.fallen?Math.min(1,(d.fallT=(d.fallT||0)+dt*2.2)):0;d.b.b.rotation.z=t*1.45;d.b.b.position.set(t*.35,t*.07,0)}
     if(d.b.flames)for(const f of d.b.flames){f.scale.set(.8+Math.random()*.4,.8+Math.random()*.5,.8+Math.random()*.4)}
     if(d.type==="tablebell")d.b.bell.visible=BELL.onTable;
+    if(d.b.seals){const k=.5+.5*Math.sin(time*3);for(const s of d.b.seals)s.visible=carried>=ITEMS.length||k>.5||true}
   }
 }
 
@@ -425,21 +732,20 @@ function render(){
   const cf=LCFG[CL];
   for(let l=0;l<4;l++)LG[l].visible=(l===CL);
   const cam=R3.cam;
-  let y=EYE+Math.sin(P.bob)*.014;
+  let y=EYE+Math.sin(P.bob)*.014+stairOffset(CL,P.x,P.y);
   if(P.hid){const t=P.hid.type;y=t==="bed"||t==="bigbed"?.14:t==="bathtub"?.34:t==="dtable"?.22:t==="freezer"?.85:.7}
-  cam.position.set(P.x,y,P.y);cam.rotation.set(0,-P.a-Math.PI/2,0);
+  cam.position.set(P.x,y,P.y);{const rn=runAt(CL,P.x,P.y),tp=window.__pitch!=null?window.__pitch:(rn&&!P.hid?(rn.dir==="d"?-.5:.16):0);P.pitch=(P.pitch||0)+(tp-(P.pitch||0))*Math.min(1,dt*5);cam.rotation.order="YXZ";cam.rotation.set(P.pitch,-P.a-Math.PI/2,0)}
   const lt=state==="menu"?1:cfg.light*cf.light;
-  R3.spot.intensity=1.7*lt;R3.near.intensity=.55*lt;R3.amb.intensity=.2*Math.min(1.3,lt)+flash*1.1;
+  R3.spot.intensity=1.4*lt;R3.near.intensity=.55*lt;R3.amb.intensity=.2*Math.min(1.3,lt)+flash*1.1;
   R3.scene.fog.density=state==="menu"?.17:(.17/Math.max(.7,lt*.95));
   for(const d of LV[CL].dec)if(d.b.hideHide)d.obj.visible=!(P.hid===d);
   animWorld(dt);
-  // loose bell
+  {let best=null,bd=7;for(const rn of LV[CL].runs){const d=Math.hypot(rn.x0+rn.len/2-P.x,rn.y+.5-P.y);if(d<bd){bd=d;best=rn}}if(best){R3.sl.position.set(best.x0+best.len/2,best.dir==="d"?.9:1.1,best.y+.5);R3.sl.intensity=.9}else R3.sl.intensity=0}
   R3.bell.visible=!BELL.held&&!BELL.onTable&&BELL.l===CL;if(R3.bell.visible)R3.bell.position.set(BELL.x,0,BELL.y);
-  // Dracula
   const dv=D.lvl===CL&&(D.stun<=0||Math.floor(time*8)%2===0);
   DR.root.visible=dv;
   if(dv){
-    DR.root.position.set(D.x,Math.abs(Math.sin(D.bob*1.6))*.02,D.y);
+    DR.root.position.set(D.x,stairOffset(D.lvl,D.x,D.y)+Math.abs(Math.sin(D.bob*1.6))*.02,D.y);
     const tf=D.face||0;let df=tf-DR.root.rotation.y;df=Math.atan2(Math.sin(df),Math.cos(df));DR.root.rotation.y+=df*Math.min(1,dt*6);
     DR.head.rotation.set(-.08+Math.sin(time*.7)*.03,Math.sin(time*.5)*.2,0);
   }
@@ -464,7 +770,7 @@ function drawMini(){
 /* ---------- pathing across floors ---------- */
 const NN=4*MW*MH,prev3=new Int32Array(NN),LINK=new Map();
 const nid=(l,x,y)=>(l*MH+y)*MW+x;
-for(const l of [0,1,2,3])for(const s of LV[l].stairs)LINK.set(nid(l,s.x,s.y),nid(s.to,s.x,s.y));
+for(const l of [0,1,2,3])for(const r of LV[l].runs)if(r.dir==="d")for(const x of[r.x0,r.x0+r.len-1]){LINK.set(nid(l,x,r.y),nid(r.to,x,r.y));LINK.set(nid(r.to,x,r.y),nid(l,x,r.y))}
 const walkable=(l,x,y)=>x>=0&&y>=0&&x<MW&&y<MH&&LV[l].rows[y].charCodeAt(x)!==35&&!LV[l].blocked[y*MW+x];
 function nearWalk(l,x,y){
   if(walkable(l,x,y))return [x,y];
@@ -569,10 +875,12 @@ function update(dt){
   if(!P.hid)tryMove((dx*fw-dy*st)*spd*dt,(dy*fw+dx*st)*spd*dt);
   P.bob+=mag*spd*dt*3.2;
 
-  // stairs
-  const sx=Math.floor(P.x),sy=Math.floor(P.y),ch=LV[CL].rows[sy][sx];
-  const onS=(ch==="u"||ch==="d")&&Math.hypot(P.x-(sx+.5),P.y-(sy+.5))<.55;
-  if(onS&&!P.onStair&&!P.hid){P.onStair=true;changeLevel(ch==="d"?CL+1:CL-1)}else if(!onS)P.onStair=false;
+  // stairs: walk down or up a flight and change floor at its end
+  const run=runAt(CL,P.x,P.y);
+  if(run&&!P.hid){
+    if(run.dir==="d"&&P.x>=run.x0+run.len-.14)changeLevel(CL+1);
+    else if(run.dir==="u"&&P.x<=run.x0+.14)changeLevel(CL-1);
+  }
 
   // mannequin
   for(const d of LV[CL].dec){
