@@ -214,6 +214,7 @@ const sfx={
   crash(){tone(180,30,.7,"sawtooth",.35);tone(90,20,.9,"square",.2)},
   stairs(){tone(140,90,.25,"triangle",.2)},
   hide(){tone(200,120,.2,"sine",.15)},
+  creak(){tone(120,70,.5,"sawtooth",.12)},
   open(){tone(320,180,.12,"square",.1)},
   win(){tone(523,523,.18,"triangle",.25);setTimeout(()=>tone(659,659,.18,"triangle",.25),180);setTimeout(()=>tone(784,1046,.5,"triangle",.25),360)}
 };
@@ -269,6 +270,8 @@ const TXF={
  clock:()=>ctex(64,64,(g,w,h)=>{g.fillStyle="#efefef";g.fillRect(0,0,w,h);g.strokeStyle="#111";g.lineWidth=2;g.beginPath();g.arc(32,32,29,0,7);g.stroke();for(let i=0;i<12;i++){const a=i*Math.PI/6;g.beginPath();g.moveTo(32+Math.sin(a)*24,32-Math.cos(a)*24);g.lineTo(32+Math.sin(a)*28,32-Math.cos(a)*28);g.stroke()}g.lineWidth=3;g.beginPath();g.moveTo(32,32);g.lineTo(32,14);g.stroke();g.lineWidth=2;g.beginPath();g.moveTo(32,32);g.lineTo(44,38);g.stroke()}),
  brick:()=>ctex(128,128,(g,w,h)=>{g.fillStyle="#7a7a7a";g.fillRect(0,0,w,h);g.fillStyle="#5a5a5a";g.fillRect(0,0,w,h);for(let r=0;r<8;r++){for(let x=-(r%2)*16;x<w;x+=32){g.fillStyle="rgb("+(110+rnd()*50|0)+","+(110+rnd()*50|0)+","+(110+rnd()*50|0)+")";g.fillRect(x+1,r*16+1,30,14)}}})
 };
+TXF.crack=()=>ctex(128,128,(g,w,h)=>{g.fillStyle="#7a7a7a";g.fillRect(0,0,w,h);for(let i=0;i<8;i++){g.fillStyle="rgba("+(i%2?"0,0,0":"255,255,255")+",.12)";g.fillRect(i*16,0,16,h);g.fillStyle="rgba(0,0,0,.65)";g.fillRect(i*16,0,2,h)}g.strokeStyle="#050505";g.lineWidth=3;for(let k=0;k<5;k++){g.beginPath();let x=64,y=64;g.moveTo(x,y);const a=k*1.26+.3;for(let s=0;s<6;s++){x+=Math.cos(a+(rnd()-.5)*1.1)*14;y+=Math.sin(a+(rnd()-.5)*1.1)*14;g.lineTo(x,y)}g.stroke()}g.fillStyle="rgba(0,0,0,.35)";g.beginPath();g.ellipse(64,64,22,18,0,0,7);g.fill()});
+TXF.hole=()=>ctex(128,128,(g,w,h)=>{g.clearRect(0,0,w,h);g.fillStyle="#000";g.beginPath();const n=14;for(let i=0;i<n;i++){const a=i/n*Math.PI*2,r=46+rnd()*14;g.lineTo(64+Math.cos(a)*r,64+Math.sin(a)*r)}g.closePath();g.fill()});
 const TXC={};const tex=n=>TXC[n]||(TXC[n]=TXF[n]());
 const MC={};
 const mat=(c,o)=>{const k=c+(o?JSON.stringify(o):"");return MC[k]||(MC[k]=new THREE.MeshPhongMaterial(Object.assign({color:c,shininess:12,specular:0x1c1c1c},o||{})))};
@@ -665,6 +668,12 @@ function buildLevel(l){
   const rugs=RUGS[l]||[];
   for(const r of rugs){const m=new THREE.Mesh(new THREE.PlaneGeometry(r[2],r[3]),MT("rug",r[4]||0xb0b0b0,{bumpScale:.3}));m.rotation.x=-Math.PI/2;m.position.set(r[0],.006,r[1]);if(r[5])m.rotation.z=Math.PI/2;P2.add(m);const e=B(r[2]+.04,.006,r[3]+.04,r[0],.0,r[1],M.dark(),P2)}
   finalize(P2);g.add(P2);
+  for(const w of WEAK)if(w[0]===l){
+    const cx=w[1]+.5,cz=w[2]+.5;
+    const crack=new THREE.Mesh(new THREE.PlaneGeometry(.94,.94),new THREE.MeshPhongMaterial({map:tex("crack"),color:0xb0b0b0,shininess:6}));crack.rotation.x=-Math.PI/2;crack.position.set(cx,.009,cz);g.add(crack);
+    const hole=new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.1),new THREE.MeshBasicMaterial({map:tex("hole"),transparent:true,depthWrite:false}));hole.rotation.x=-Math.PI/2;hole.position.set(cx,.012,cz);hole.visible=false;g.add(hole);
+    WK.push({l,x:w[1],y:w[2],cx,cz,crack,hole,broken:false,warned:false,debris:[]});
+  }
   // stairs
   for(const run of lv.runs){g.add(stairsRun(run));if(run.dir==="d")B(.03,WH,.98,run.x0+run.len-.03,0,run.y+.5,mat(0x050505),g);else B(.03,2*WH,.98,run.x0+.03,0,run.y+.5,mat(0x050505),g);}
   // furniture
@@ -678,6 +687,8 @@ function buildLevel(l){
   }
   g.visible=false;R3.scene.add(g);LG[l]=g;
 }
+const WEAK=[[0,20,12],[0,10,16],[1,15,6],[1,22,16],[2,7,17],[2,15,6]];
+const WK=[];
 const RUGS=[
  [[8,10,6,5]],
  [[5.5,5.5,3,3.6,0xa0a0a0],[23.5,6,3.2,3.8,0xb8b8b8],[14.5,6,2.6,3,0x909090],[10,11.5,7,1,0x909090],[19,11.5,7,1,0x909090],[14.5,17,4,3,0xa8a8a8]],
@@ -735,9 +746,9 @@ function render(){
   const cf=LCFG[CL];
   for(let l=0;l<4;l++)LG[l].visible=(l===CL);
   const cam=R3.cam;
-  let y=EYE+Math.sin(P.bob)*.014+stairOffset(CL,P.x,P.y);
+  let y=EYE+Math.sin(P.bob)*.014+stairOffset(CL,P.x,P.y)+camDrop;
   if(P.hid){const t=P.hid.type;y=t==="bed"||t==="bigbed"?.14:t==="bathtub"?.34:t==="dtable"?.22:t==="freezer"?.85:.7}
-  cam.position.set(P.x,y,P.y);if(state==="bite"&&biteK>.85&&bitePhase<2)cam.position.add(new THREE.Vector3((Math.random()-.5)*.05,(Math.random()-.5)*.05,(Math.random()-.5)*.05));{const rn=runAt(CL,P.x,P.y),tp=window.__pitch!=null?window.__pitch:(state==="bite"?biteK*.3:rn&&!P.hid?(rn.dir==="d"?-.5:.16):0);P.pitch=(P.pitch||0)+(tp-(P.pitch||0))*Math.min(1,dt*5);cam.rotation.order="YXZ";cam.rotation.set(P.pitch,-P.a-Math.PI/2,0)}
+  cam.position.set(P.x,y,P.y);if(state==="fall")cam.position.add(new THREE.Vector3((Math.random()-.5)*.03,0,(Math.random()-.5)*.03));if(state==="bite"&&biteK>.85&&bitePhase<2)cam.position.add(new THREE.Vector3((Math.random()-.5)*.05,(Math.random()-.5)*.05,(Math.random()-.5)*.05));{const rn=runAt(CL,P.x,P.y),tp=window.__pitch!=null?window.__pitch:(state==="bite"?biteK*.3:state==="fall"?.35:rn&&!P.hid?(rn.dir==="d"?-.5:.16):0);P.pitch=(P.pitch||0)+(tp-(P.pitch||0))*Math.min(1,dt*5);cam.rotation.order="YXZ";cam.rotation.set(P.pitch,-P.a-Math.PI/2,0)}
   const lt=state==="menu"?1:cfg.light*cf.light;
   R3.spot.intensity=1.4*lt;R3.near.intensity=.55*lt;R3.amb.intensity=.2*Math.min(1.3,lt)+flash*1.1;
   R3.scene.fog.density=state==="menu"?.17:(.17/Math.max(.7,lt*.95));
@@ -886,6 +897,13 @@ function update(dt){
     else if(run.dir==="u"&&P.x<=run.x0+.55){changeLevel(CL-1);P.x=run.x0-.3;P.a=Math.PI}
   }
 
+  // rotten floorboards
+  for(const w of WK){
+    if(w.l!==CL||w.broken)continue;
+    const dd=Math.hypot(P.x-w.cx,P.y-w.cz);
+    if(dd<.5&&!P.hid){startFall(w);return}
+    if(dd<1.4&&!w.warned){w.warned=true;sfx.creak();toast("The floorboards creak under your feet...",2200)}
+  }
   // mannequin
   for(const d of LV[CL].dec){
     if(d.type==="mannequin"&&!d.fallen&&Math.hypot(d.cx-P.x,d.cy-P.y)<.7){
@@ -974,6 +992,30 @@ function caught(){
   joy.id=null;joyEl.style.display="none";runHeld=false;actBtn.hidden=true;hud.hidden=true;
   D.lvl=CL;D.stun=0;D.path=[];dangerEl.style.opacity=.55;sfx.growl();buzz(80);
 }
+let fall=null,camDrop=0;
+function startFall(w){
+  state="fall";fall={w,t:0,phase:0};joy.id=null;joyEl.style.display="none";runHeld=false;actBtn.hidden=true;
+  w.broken=true;w.crack.visible=false;w.hole.visible=true;sfx.crash();buzz([60,40,160]);toast("The floor gives way!",1600);
+  for(let i=0;i<8;i++){const m=new THREE.Mesh(new THREE.BoxGeometry(.06+Math.random()*.05,.025,.3+Math.random()*.25),M.woodD());m.position.set(w.cx+(Math.random()-.5)*.7,.03,w.cz+(Math.random()-.5)*.7);m.userData.v=[(Math.random()-.5)*.8,1.2+Math.random()*1.5,(Math.random()-.5)*.8];m.userData.r=[Math.random()*5,Math.random()*5,Math.random()*5];LG[CL].add(m);w.debris.push(m)}
+}
+function updateFall(dt){
+  const f=fall;if(!f){state="play";return}f.t+=dt;
+  for(const m of f.w.debris){const v=m.userData.v,r=m.userData.r;v[1]-=9*dt;m.position.x+=v[0]*dt;m.position.y+=v[1]*dt;m.position.z+=v[2]*dt;m.rotation.x+=r[0]*dt;m.rotation.y+=r[1]*dt;m.rotation.z+=r[2]*dt;if(m.position.y<-3)m.visible=false}
+  if(f.phase===0){
+    camDrop=-Math.min(WH+.7,5.5*f.t*f.t);
+    if(f.t>.62){
+      f.phase=1;f.t=0;f.w.debris.forEach(m=>m.visible=false);
+      changeLevel(CL+1);
+      const cx=Math.floor(P.x),cy=Math.floor(P.y);
+      if(!walkable(CL,cx,cy)){const c=nearWalk(CL,cx,cy);P.x=c[0]+.5;P.y=c[1]+.5}
+      camDrop=-.6;sfx.crash();buzz([120,60,200]);flash=1;
+      alertDracula(CL,P.x,P.y);toast("You crashed through the floor!",2600);
+    }
+  }else{
+    camDrop+=(0-camDrop)*Math.min(1,dt*3);
+    if(f.t>.9){camDrop=0;state="play";fall=null}
+  }
+}
 function updateBite(dt){
   biteT+=dt;const t=biteT;
   if(bitePhase<1){
@@ -1008,6 +1050,7 @@ function newGame(){
   ITEMS.forEach(i=>i.got=false);LV.forEach(l=>l.seen.fill(0));
   LV.forEach(l=>l.dec.forEach(d=>{d.fallen=false;d.fallT=0;d.open=false;d.openT=0;d.openTarget=0;d.collectT=0;if(d.b&&d.b.anim)d.b.anim(0);if(d.itemMesh)d.itemMesh.visible=false}));
   BELL.held=false;BELL.onTable=true;BELL.l=BELL0.l;BELL.x=BELL0.x;BELL.y=BELL0.y;
+  WK.forEach(w=>{w.broken=false;w.warned=false;w.crack.visible=true;w.hole.visible=false;w.debris.forEach(m=>LG[w.l].remove(m));w.debris=[]});camDrop=0;fall=null;
   carried=0;lives=maxLives;time=0;flashT=6;P.bob=0;
   resetPlayer();resetDracula(cfg.stun);setList();setLives();hint.style.opacity=1;toastEl.classList.remove("on");
 }
@@ -1015,7 +1058,7 @@ const INTRO=[
  "You wake up in a bedroom on the upper floor of Count Dracula's house. Every door out is sealed.",
  "The only way out is the locked casket in the basement. Its five seals break with five relics, hidden inside drawers, wardrobes, trunks and coffins around the house.",
  "Walk up to furniture and tap the button beside RUN to open it. When he hunts you, hide in beds, bathtubs, freezers and barrels. Drop the bell from your table to lure him away.",
- "You have a few days. Each time he catches you, a day passes and you wake up back in bed. Stairs join the attic, upper floor, ground floor and basement. Stay quiet and don't knock anything over."
+ "You have a few days. Each time he catches you, a day passes and you wake up back in bed. Stairs join the attic, upper floor, ground floor and basement. Stay quiet and don't knock anything over. Some floorboards are rotten and will give way under you."
 ];
 let di=0;
 function startIntro(){state="intro";di=0;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=true;dialog.hidden=false;dtext.textContent=INTRO[0]}
@@ -1310,7 +1353,7 @@ function frame(t){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,(t-last)/1000||0);last=t;
   if(!wallTex)return;
-  if(state==="play")update(dt);else if(state==="bite")updateBite(dt);
+  if(state==="play")update(dt);else if(state==="bite")updateBite(dt);else if(state==="fall")updateFall(dt);
   else if(state==="menu"){time+=dt;if(T3.ready)T3.render(time);CL=1;P.x=START.x;P.y=START.y;P.a=START.a+Math.sin(time*.3)*.4;P.bob=time*.7;flash=Math.max(0,flash-dt*3);flashT-=dt;if(flashT<=0){flash=1;flashT=7+Math.random()*8}}
   const pl=state!=="menu";if(pl!==wasPlay){wasPlay=pl;stage.classList.toggle("play",pl)}
   if(!(state==="menu"&&T3.ready))render();
@@ -1319,6 +1362,6 @@ function frame(t){
 resize();setList();setLives();drawFigure();initTitle3D();
 Promise.all([loadImg(WALL_SRC),loadImg(FLOOR_SRC)]).then(r=>{wallTex=1;const ok=r[0]&&r[1]&&initWorld(r[0],r[1]);if(!ok)$("play").textContent="3D FAILED TO LOAD"});
 requestAnimationFrame(frame);
-if(location.hash==="#debug")window.__g={updateBite,LG,get R3(){return R3},P,D,LV,ITEMS,BELL,DEC,update,render,doAct,nearestAct,openThing,tp:(l,x,y,a)=>{CL=l;P.x=x;P.y=y;if(a!=null)P.a=a;lvlEl.textContent=FLOORS[l].toUpperCase()},begin:k=>{if(k)diffKey=k;newGame();dialog.hidden=true;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=false;state="play"},get CL(){return CL},get state(){return state},get carried(){return carried},giveAll:()=>{ITEMS.forEach(i=>i.got=true);carried=5;setList()}};
+if(location.hash==="#debug")window.__g={updateBite,updateFall,WK,LG,get R3(){return R3},P,D,LV,ITEMS,BELL,DEC,update,render,doAct,nearestAct,openThing,tp:(l,x,y,a)=>{CL=l;P.x=x;P.y=y;if(a!=null)P.a=a;lvlEl.textContent=FLOORS[l].toUpperCase()},begin:k=>{if(k)diffKey=k;newGame();dialog.hidden=true;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=false;state="play"},get CL(){return CL},get state(){return state},get carried(){return carried},giveAll:()=>{ITEMS.forEach(i=>i.got=true);carried=5;setList()}};
 })();
 </script>
