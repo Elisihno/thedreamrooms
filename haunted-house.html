@@ -54,19 +54,22 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 .screen button{pointer-events:auto;font:400 20px var(--display);letter-spacing:.14em;color:#000;background:var(--ink);border:0;padding:14px 28px;cursor:pointer}
 .screen button:focus-visible,#run:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .how{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--dim)}
-#title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:10px;box-sizing:border-box;padding:max(18px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(18px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(#000 0,rgba(0,0,0,.6) 18%,rgba(0,0,0,0) 38%,rgba(0,0,0,0) 50%,rgba(0,0,0,.88) 70%,#000 100%);overflow:hidden}
+#title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:10px;box-sizing:border-box;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow-x:hidden;overflow-y:auto;touch-action:pan-y;background:#000}
 #title[hidden]{display:none}
-#moon{position:absolute;top:-8%;right:-25%;width:95%;height:62%;background:radial-gradient(ellipse at 62% 28%,rgba(255,255,255,.5),transparent 60%);pointer-events:none}
+#tcanvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none}
+#shade{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;background:linear-gradient(rgba(0,0,0,.7) 0,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 48%,rgba(0,0,0,.82) 66%,rgba(0,0,0,.96) 100%)}
+#title>*:not(#tcanvas):not(#shade){position:relative}
 #title h1{position:relative;margin:0;text-align:center;font:400 clamp(30px,9vw,52px)/1 var(--display);letter-spacing:.04em;text-wrap:balance}
 #title .tag{position:relative;margin:0;text-align:center;font-size:14px;color:#cfcfcf;max-width:34ch}
-#figure{position:relative;flex:1;min-height:90px;width:100%;pointer-events:none}
+#figure{position:relative;flex:1 0 120px;width:100%;pointer-events:none}
 #figure canvas{position:absolute;left:50%;bottom:0;height:100%;width:auto;transform:translateX(-50%)}
 .diffs{position:relative;display:flex;gap:8px;width:100%;max-width:420px}
 .diffs button{flex:1;font:400 16px var(--display);letter-spacing:.1em;color:var(--ink);background:rgba(0,0,0,.6);border:1px solid var(--dim);padding:10px 4px;cursor:pointer;touch-action:manipulation}
 .diffs button.on{background:var(--ink);color:#000;border-color:var(--ink)}
 #fx{position:relative;width:100%;max-width:420px;box-sizing:border-box;border:1px solid var(--line);background:var(--panel);padding:8px 12px;font-size:13px;line-height:1.5}
 #fx b{display:block;font:400 14px var(--display);letter-spacing:.12em;color:var(--dim);margin-bottom:2px}
-#fx ul{margin:0;padding-left:16px}
+#fx ul{margin:0;padding-left:16px;columns:2;column-gap:14px;font-size:12px;line-height:1.45}
+#fx li{break-inside:avoid}
 #play{position:relative;width:100%;max-width:420px;font:400 22px var(--display);letter-spacing:.18em;color:#000;background:var(--ink);border:0;padding:14px;cursor:pointer;touch-action:manipulation}
 #play:focus-visible,.diffs button:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .screen button{touch-action:manipulation}
@@ -92,7 +95,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
   <div id="dialog" hidden><b>GRANNY</b><p id="dtext"></p><small>tap to continue</small></div>
 
   <div id="title">
-    <div id="moon"></div>
+    <canvas id="tcanvas"></canvas><div id="shade"></div>
     <h1>Granny's<br>Haunted House</h1>
     <p class="tag">Fetch Granny's five lost things before Dracula finds you.</p>
     <div id="figure"><canvas id="fig" width="400" height="720"></canvas></div>
@@ -101,8 +104,8 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
       <button type="button" data-d="normal" class="on">Normal</button>
       <button type="button" data-d="hard">Hard</button>
     </div>
-    <div id="fx"></div>
     <button type="button" id="play">PLAY</button>
+    <div id="fx"></div>
   </div>
 
   <div class="screen" id="screen" hidden>
@@ -114,6 +117,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (()=>{
 "use strict";
@@ -549,7 +553,7 @@ function tap(el,fn){
   el.addEventListener("pointerup",h);el.addEventListener("click",h);
 }
 tap(dialog,()=>{if(state==="intro")nextDialog()});
-function toTitle(){state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;dangerEl.style.opacity=0;view.style.transform=""}
+function toTitle(){state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;if(T3.resize)T3.resize();dangerEl.style.opacity=0;view.style.transform=""}
 function setDiff(k){
   diffKey=k;
   document.querySelectorAll("#diffs button").forEach(b=>b.classList.toggle("on",b.dataset.d===k));
@@ -601,7 +605,7 @@ stage.addEventListener("mousedown",e=>{if(e.target.closest("button"))return;mdra
 window.addEventListener("mouseup",()=>{mdrag=false});
 window.addEventListener("mousemove",e=>{if(mdrag&&state==="play"){P.a+=(e.clientX-mlast)*.005;mlast=e.clientX}});
 document.addEventListener("contextmenu",e=>e.preventDefault());
-window.addEventListener("resize",resize);
+window.addEventListener("resize",()=>{resize();if(T3.resize)T3.resize()});
 
 /* ---------- title figure: Dracula in the room, chin raised, looking up and to the right ---------- */
 function drawFigure(){
@@ -641,6 +645,109 @@ function drawFigure(){
   g.restore();
 }
 
+/* ---------- 3D Dracula (three.js) ---------- */
+const T3={ready:false};
+function buildDracula(){
+  const root=new THREE.Group(),S=(c,r)=>new THREE.MeshStandardMaterial({color:c,roughness:r==null?.8:r});
+  const black=S(0x0b0b0b,.9),suit=S(0x1c1c1c,.8),skin=S(0xb4b4b4,.6),white=S(0xf2f2f2,.6);
+  const add=(geo,mat,x,y,z,par)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);(par||root).add(m);return m};
+  // cloak: open at the front, grey lining inside
+  const pts=[];for(let i=0;i<=14;i++){const k=i/14;pts.push(new THREE.Vector2(.26+.36*k+.04*Math.sin(k*10)*k,1.52-k*1.52))}
+  const lg=new THREE.LatheGeometry(pts,48,Math.PI*.3,Math.PI*1.4);
+  const cloak=new THREE.Mesh(lg,new THREE.MeshStandardMaterial({color:0x0a0a0a,roughness:.9,side:THREE.FrontSide}));
+  const lining=new THREE.Mesh(lg,new THREE.MeshStandardMaterial({color:0x8a8a8a,roughness:.8,side:THREE.BackSide}));
+  root.add(cloak);root.add(lining);
+  // torso, shirt, cravat, legs
+  add(new THREE.CylinderGeometry(.19,.23,.7,24),suit,0,1.13,0);
+  add(new THREE.PlaneGeometry(.2,.5),white,0,1.2,.215);
+  add(new THREE.BoxGeometry(.08,.1,.04),S(0x555555),0,1.4,.22);
+  add(new THREE.CylinderGeometry(.07,.07,.8,12),suit,-.09,.4,0);add(new THREE.CylinderGeometry(.07,.07,.8,12),suit,.09,.4,0);
+  // arms and hands
+  [-1,1].forEach(s=>{
+    const arm=add(new THREE.CylinderGeometry(.05,.06,.62,12),suit,s*.29,1.14,.03);arm.rotation.z=s*.3;
+    add(new THREE.SphereGeometry(.05,12,10),skin,s*.39,.83,.04);
+    for(let f=0;f<3;f++){const c=add(new THREE.ConeGeometry(.012,.07,6),skin,s*(.37+f*.02),.77,.05);c.rotation.x=Math.PI}
+  });
+  // stand-up collar
+  [-1,1].forEach(s=>{const c=add(new THREE.ConeGeometry(.2,.52,4),black,s*.2,1.66,-.07);c.scale.z=.18;c.rotation.z=-s*.28});
+  // neck + head group (pivot at the neck so it can turn and tilt)
+  add(new THREE.CylinderGeometry(.065,.08,.16,12),skin,0,1.52,0);
+  const head=new THREE.Group();head.position.set(0,1.56,0);head.scale.setScalar(1.32);root.add(head);
+  const skull=add(new THREE.SphereGeometry(.17,32,24),skin,0,.13,0,head);skull.scale.set(.86,1.15,.95);
+  add(new THREE.SphereGeometry(.05,16,12),skin,0,-.02,.1,head).scale.set(1,.9,.9);
+  const nose=add(new THREE.ConeGeometry(.03,.09,10),skin,0,.1,.165,head);nose.rotation.x=Math.PI*.5+.15;
+  [-1,1].forEach(s=>{
+    const ear=add(new THREE.ConeGeometry(.03,.08,8),skin,s*.15,.15,-.01,head);ear.rotation.z=-s*Math.PI*.5;
+    add(new THREE.SphereGeometry(.03,12,10),S(0x222222),s*.058,.14,.14,head).scale.set(1.2,.7,.6);
+    add(new THREE.SphereGeometry(.017,10,8),new THREE.MeshBasicMaterial({color:0xffffff}),s*.058,.14,.158,head);
+    const br=add(new THREE.BoxGeometry(.075,.014,.016),black,s*.058,.185,.152,head);br.rotation.z=-s*.38;
+    const fang=add(new THREE.ConeGeometry(.01,.04,6),white,s*.022,.015,.158,head);fang.rotation.x=Math.PI;
+  });
+  add(new THREE.BoxGeometry(.08,.009,.01),S(0x222222),0,.035,.15,head);
+  const hair=add(new THREE.SphereGeometry(.18,32,18,0,Math.PI*2,0,Math.PI*.47),black,0,.135,-.012,head);hair.scale.set(.88,1.17,.99);
+  const peak=add(new THREE.ConeGeometry(.045,.075,3),black,0,.255,.135,head);peak.rotation.x=Math.PI;
+  return {root,head,cloak,lining};
+}
+
+function initTitle3D(){
+  if(!window.THREE)return;
+  try{
+    const cv=$("tcanvas");
+    const r=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+    r.setPixelRatio(Math.min(window.devicePixelRatio||1,2));r.setClearColor(0x000000,1);
+    const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x000000,.17);
+    const cam=new THREE.PerspectiveCamera(40,1,.1,40);
+    const tl=new THREE.TextureLoader(),wt=tl.load(WALL_SRC),ft=tl.load(FLOOR_SRC);
+    wt.wrapS=wt.wrapT=ft.wrapS=ft.wrapT=THREE.RepeatWrapping;wt.repeat.set(3,2);ft.repeat.set(5,5);
+    const wm=new THREE.MeshStandardMaterial({map:wt,roughness:1,side:THREE.DoubleSide}),fm=new THREE.MeshStandardMaterial({map:ft,roughness:.8});
+    const back=new THREE.Mesh(new THREE.PlaneGeometry(14,6),wm);back.position.set(0,3,-3);scene.add(back);
+    [-1,1].forEach(s=>{const w=new THREE.Mesh(new THREE.PlaneGeometry(14,6),wm);w.position.set(s*3.6,3,3);w.rotation.y=-s*Math.PI/2;scene.add(w)});
+    const fl=new THREE.Mesh(new THREE.PlaneGeometry(14,14),fm);fl.rotation.x=-Math.PI/2;scene.add(fl);
+    const win=new THREE.Mesh(new THREE.PlaneGeometry(.95,1.5),new THREE.MeshBasicMaterial({color:0xffffff}));win.position.set(.9,2.25,-2.97);scene.add(win);
+    const barMat=new THREE.MeshBasicMaterial({color:0x000000});
+    const b1=new THREE.Mesh(new THREE.BoxGeometry(.05,1.5,.02),barMat),b2=new THREE.Mesh(new THREE.BoxGeometry(.95,.05,.02),barMat);
+    b1.position.set(.9,2.25,-2.95);b2.position.set(.9,2.25,-2.95);scene.add(b1);scene.add(b2);
+    scene.add(new THREE.HemisphereLight(0xa0a0a0,0x101010,.75));
+    const moon=new THREE.SpotLight(0xffffff,1.4,14,.55,.7);moon.position.set(1.2,2.6,-2.4);moon.target.position.set(0,1.2,0);scene.add(moon);scene.add(moon.target);
+    const fl2=new THREE.PointLight(0xffffff,.35,5);fl2.position.set(1,2.1,1.3);scene.add(fl2);
+    const rim=new THREE.DirectionalLight(0xffffff,.3);rim.position.set(2,2,2);scene.add(rim);
+    const dr=buildDracula();scene.add(dr.root);
+    const resize=()=>{
+      const w=titleEl.clientWidth||360,h=titleEl.clientHeight||640;r.setSize(w,h,false);cam.aspect=w/h;
+      cam.fov=w/h<.8?48:38;
+      const dist=w/h<.8?3.0:3.6;cam.position.set(0,1.45,dist);cam.lookAt(0,.95,0);cam.updateProjectionMatrix();
+    };
+    T3.resize=resize;
+    T3.render=t=>{
+      dr.head.rotation.set(-.33+Math.sin(t*.8)*.02,.8+Math.sin(t*.5)*.05,.05);
+      dr.root.scale.set(1,1+Math.sin(t*1.4)*.006,1);
+      dr.root.rotation.y=Math.sin(t*.35)*.04;
+      cam.position.x=Math.sin(t*.25)*.12;cam.lookAt(0,.95,0);
+      moon.intensity=1.4+(flash*2);
+      r.render(scene,cam);
+    };
+    resize();T3.ready=true;$("fig").style.display="none";
+  }catch(e){T3.ready=false}
+}
+
+// render the same mesh once, front-on, and use it as Dracula's in-game body
+function bakeDracSprite(){
+  if(!window.THREE)return;
+  try{
+    const w=80,h=112;
+    const r=new THREE.WebGLRenderer({antialias:false,alpha:true,preserveDrawingBuffer:true});r.setPixelRatio(1);r.setSize(w,h,false);r.setClearColor(0x000000,0);
+    const sc=new THREE.Scene(),d=buildDracula();sc.add(d.root);d.head.rotation.set(0,0,0);
+    sc.add(new THREE.AmbientLight(0xffffff,.95));const dl=new THREE.DirectionalLight(0xffffff,1.3);dl.position.set(.6,1,3);sc.add(dl);
+    const cam=new THREE.OrthographicCamera(-.7,.7,1.96,0,.1,20);cam.position.set(0,0,6);
+    r.render(sc,cam);
+    const c=document.createElement("canvas");c.width=w;c.height=h;const g=c.getContext("2d");g.drawImage(r.domElement,0,0);
+    const px=g.getImageData(0,0,w,h).data,o=new Uint8Array(w*h*2);let solid=0;
+    for(let i=0;i<w*h;i++){o[i*2]=px[i*4];o[i*2+1]=px[i*4+3]>110?255:0;if(px[i*4+3]>110)solid++}
+    r.dispose();
+    if(solid>w*h*.12)SPR.drac={w,h,d:o};
+  }catch(e){}
+}
+
 /* ---------- boot ---------- */
 let last=0;
 function frame(t){
@@ -648,11 +755,11 @@ function frame(t){
   const dt=Math.min(.05,(t-last)/1000||0);last=t;
   if(!wallTex)return;
   if(state==="play")update(dt);
-  else if(state==="menu"){time+=dt;P.x=1.45;P.y=2.5;P.a=Math.sin(time*.3)*.18;P.bob=time*.7;flash=Math.max(0,flash-dt*3);flashT-=dt;if(flashT<=0){flash=1;flashT=7+Math.random()*8}}
-  render();
+  else if(state==="menu"){time+=dt;if(T3.ready)T3.render(time);P.x=1.45;P.y=2.5;P.a=Math.sin(time*.3)*.18;P.bob=time*.7;flash=Math.max(0,flash-dt*3);flashT-=dt;if(flashT<=0){flash=1;flashT=7+Math.random()*8}}
+  if(!(state==="menu"&&T3.ready))render();
   if(state==="play")drawMini();
 }
-resize();setList();setLives();drawFigure();
+resize();setList();setLives();drawFigure();bakeDracSprite();initTitle3D();
 Promise.all([loadTex(WALL_SRC),loadTex(FLOOR_SRC)]).then(r=>{wallTex=r[0];floorTex=r[1]});
 requestAnimationFrame(frame);
 })();
