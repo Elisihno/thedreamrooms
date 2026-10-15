@@ -91,6 +91,24 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 #hideov[hidden]{display:none}
 #fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
 #daytxt{position:absolute;left:0;right:0;bottom:max(12%,env(safe-area-inset-bottom,0px));text-align:center;font:400 clamp(34px,11vw,60px)/1 var(--display);letter-spacing:.22em;color:var(--ink);opacity:0;transition:opacity 1s;pointer-events:none;text-shadow:0 0 14px rgba(255,255,255,.25)}
+#tmain{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;transition:opacity .5s}
+#title.choosing #tmain{opacity:0;pointer-events:none}
+#title>#choose{position:absolute!important;left:0;right:0;bottom:0;box-sizing:border-box;padding:0 max(16px,env(safe-area-inset-right,0px)) max(18px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:10px;opacity:0;pointer-events:none;transition:opacity .6s}
+#title.choosing>#choose{opacity:1;pointer-events:auto;transition-delay:.7s}
+#choose h2{margin:0;font:400 20px var(--display);letter-spacing:.14em;color:var(--ink);text-shadow:0 0 10px #000}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:440px}
+.modes button{font:400 21px var(--display);letter-spacing:.06em;color:var(--ink);background:rgba(0,0,0,.7);border:1px solid var(--dim);padding:9px 6px;cursor:pointer;touch-action:manipulation}
+.modes button small{display:block;font:400 12px var(--mono);letter-spacing:0;color:#bdbdbd;margin-top:4px}
+.modes button.sel{background:var(--ink);color:#000;border-color:var(--ink)}
+.modes button.sel small{color:#333}
+#fx2{width:100%;max-width:440px;box-sizing:border-box;background:rgba(6,6,6,.86);border:1px solid var(--dim);padding:6px 12px;font-size:13px;line-height:1.3;display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+#fx2 div{display:flex;flex-direction:column;padding:4px 0;border-bottom:1px solid #222}
+#fx2 b{font-weight:400;color:#a8a8a8}
+#fx2 span{font-size:15px}
+#begin{width:100%;max-width:440px;font:400 22px var(--display);letter-spacing:.18em;color:#000;background:var(--ink);border:0;padding:14px;cursor:pointer;touch-action:manipulation}
+#back{background:none;border:0;color:#c4c4c4;font:400 14px var(--mono);padding:4px 10px;cursor:pointer;touch-action:manipulation}
+.lid{position:absolute;left:0;right:0;background:#000;pointer-events:none;height:0;filter:blur(4px)}
+#lidT{top:-4px}#lidB{bottom:-4px}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 
@@ -101,6 +119,7 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
   <div id="hideov" hidden></div>
   <div id="grain"></div>
   <div id="fade"></div>
+  <div class="lid" id="lidT"></div><div class="lid" id="lidB"></div>
   <div id="daytxt"></div>
 
   <div class="hud" id="hud" hidden>
@@ -118,17 +137,23 @@ body{font-family:var(--mono);-webkit-user-select:none;user-select:none;-webkit-t
 
   <div id="title">
     <canvas id="tcanvas"></canvas><div id="shade"></div>
-    <h1>Dracula's<br>Haunted House</h1>
-    <button type="button" id="play">PLAY</button>
-    <div id="figure"><canvas id="fig" width="400" height="720"></canvas></div>
-    <div class="diffs" id="diffs">
-      <button type="button" data-d="easy">Easy</button>
-      <button type="button" data-d="normal">Normal</button>
-      <button type="button" data-d="hard">Hard</button>
-      <button type="button" data-d="practice">Practice</button>
+    <div id="tmain">
+      <h1>Dracula's<br>Haunted House</h1>
+      <button type="button" id="play">PLAY</button>
     </div>
-    <div id="more">Scroll down to compare the modes ▾</div>
-    <div id="dtab"></div>
+    <div id="figure"><canvas id="fig" width="400" height="720"></canvas></div>
+    <div id="choose">
+      <h2>Choose your nights</h2>
+      <div class="modes" id="modes">
+        <button type="button" data-d="easy">Easy<small>7 days, slower Dracula</small></button>
+        <button type="button" data-d="normal">Normal<small>5 days, the real thing</small></button>
+        <button type="button" data-d="hard">Hard<small>3 days, fast and dark</small></button>
+        <button type="button" data-d="practice">Practice<small>No Dracula, explore</small></button>
+      </div>
+      <div id="fx2"></div>
+      <button type="button" id="begin">BEGIN</button>
+      <button type="button" id="back">Back</button>
+    </div>
   </div>
 
   <div class="screen" id="screen" hidden>
@@ -758,9 +783,10 @@ function render(){
   const cf=LCFG[CL];
   for(let l=0;l<4;l++)LG[l].visible=(l===CL);
   const cam=R3.cam;
-  let y=EYE+Math.sin(P.bob)*.014+stairOffset(CL,P.x,P.y)+camDrop;
+  const wk=wake.on?clamp((wake.t-1.3)/3.1,0,1):1,wke=wk*wk*(3-2*wk);
+  let y=EYE+Math.sin(P.bob)*.014+stairOffset(CL,P.x,P.y)+camDrop-.55*(1-wke);
   if(P.hid){const t=P.hid.type;y=t==="bed"||t==="bigbed"?.14:t==="bathtub"?.34:t==="dtable"?.22:t==="freezer"?.85:.7}
-  cam.position.set(P.x,y,P.y);if(state==="fall")cam.position.add(new THREE.Vector3((Math.random()-.5)*.03,0,(Math.random()-.5)*.03));if(state==="bite"&&biteK>.85&&bitePhase<2)cam.position.add(new THREE.Vector3((Math.random()-.5)*.05,(Math.random()-.5)*.05,(Math.random()-.5)*.05));{const rn=runAt(CL,P.x,P.y),tp=window.__pitch!=null?window.__pitch:(state==="bite"?biteK*.3:state==="fall"?.35:rn&&!P.hid?(rn.dir==="d"?-.5:.16):0);P.pitch=(P.pitch||0)+(tp-(P.pitch||0))*Math.min(1,dt*5);cam.rotation.order="YXZ";cam.rotation.set(P.pitch,-P.a-Math.PI/2,0)}
+  cam.position.set(P.x,y,P.y);if(state==="fall")cam.position.add(new THREE.Vector3((Math.random()-.5)*.03,0,(Math.random()-.5)*.03));if(state==="bite"&&biteK>.85&&bitePhase<2)cam.position.add(new THREE.Vector3((Math.random()-.5)*.05,(Math.random()-.5)*.05,(Math.random()-.5)*.05));{const rn=runAt(CL,P.x,P.y),tp=window.__pitch!=null?window.__pitch:(state==="bite"?biteK*.3:state==="fall"?.35:rn&&!P.hid?(rn.dir==="d"?-.5:.16):0);P.pitch=(P.pitch||0)+(tp+.6*(1-wke)-(P.pitch||0))*Math.min(1,dt*5);cam.rotation.order="YXZ";cam.rotation.set(P.pitch,-P.a-Math.PI/2,0)}
   const lt=state==="menu"?1:cfg.light*cf.light;
   R3.spot.intensity=1.4*lt;R3.near.intensity=.55*lt;R3.amb.intensity=.2*Math.min(1.3,lt)+flash*1.1;
   R3.scene.fog.density=state==="menu"?.17:(.17/Math.max(.7,lt*.95));
@@ -876,7 +902,7 @@ function update(dt){
   if(keys.KeyD)st+=1;if(keys.KeyA)st-=1;
   if(keys.ArrowLeft)P.a-=2.2*dt;if(keys.ArrowRight)P.a+=2.2*dt;
   if(joy.id!==null){const jx=Math.max(-1,Math.min(1,(joy.x-joy.sx)/46)),jy=Math.max(-1,Math.min(1,(joy.y-joy.sy)/46));st+=jx;fw-=jy}
-  if(P.hid){fw=0;st=0}
+  if(P.hid||(wake.on&&wake.t<3.6)){fw=0;st=0}
   const mag=Math.hypot(fw,st);if(mag>1){fw/=mag;st/=mag}
   const wantRun=(runHeld||keys.ShiftLeft||keys.ShiftRight)&&mag>.1;
   const running=wantRun&&!P.tired&&P.stam>0;
@@ -1046,7 +1072,7 @@ function updateBite(dt){
   if(t>5.6&&bitePhase<3){
     bitePhase=3;daytxtEl.style.opacity=0;biteK=0;dangerEl.style.opacity=0;
     if(lives>0){
-      resetPlayer();resetDracula(5);P.pitch=0;hud.hidden=false;state="play";
+      resetPlayer();resetDracula(5);P.pitch=0;hud.hidden=false;state="play";startWake(false);
       requestAnimationFrame(()=>{fadeEl.style.transition="opacity 1.2s";fadeEl.style.opacity=0});
     }else{
       state="over";showScreen("No days<br>left","That was your last day. The house goes quiet and you never made it out.","Back to title",false);
@@ -1080,7 +1106,21 @@ const INTRO_P=[
  "Stairs join the attic, upper floor, ground floor and basement. Some floorboards are rotten and will give way. When you have all five relics, open the casket in the basement."
 ];
 let INTRO_CUR=INTRO,di=0;
-function startIntro(){INTRO_CUR=diffKey==="practice"?INTRO_P:INTRO;state="intro";di=0;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=true;dialog.hidden=false;dtext.textContent=INTRO_CUR[0]}
+const wake={on:false,t:0,pend:false};
+const lidT=$("lidT"),lidB=$("lidB");
+const WLID=[[0,0],[.5,0],[1.3,.45],[1.7,.12],[2.3,.65],[2.7,.3],[3.3,.85],[4.1,1]];
+function updateWake(dt){
+  if(!wake.on)return;
+  wake.t+=dt;const tt=wake.t;
+  let a=1;for(let i=1;i<WLID.length;i++){if(tt<=WLID[i][0]){const q=(tt-WLID[i-1][0])/(WLID[i][0]-WLID[i-1][0]);a=WLID[i-1][1]+(WLID[i][1]-WLID[i-1][1])*(q*q*(3-2*q));break}}
+  lidT.style.height=lidB.style.height=(50*(1-a)).toFixed(1)+"%";
+  const bl=Math.max(0,1-tt/4.4);
+  view.style.filter=bl>0?"blur("+(bl*bl*14).toFixed(1)+"px) brightness("+(.5+.5*(1-bl)).toFixed(2)+")":"";
+  if(wake.pend&&tt>3.1){wake.pend=false;dialog.hidden=false}
+  if(tt>4.6){wake.on=false;lidT.style.height=lidB.style.height="0";view.style.filter=""}
+}
+function startWake(withDialog){wake.on=true;wake.t=0;wake.pend=!!withDialog;if(withDialog)dialog.hidden=true;updateWake(0)}
+function startIntro(){INTRO_CUR=diffKey==="practice"?INTRO_P:INTRO;state="intro";di=0;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=true;dialog.hidden=false;dtext.textContent=INTRO_CUR[0];startWake(true)}
 function nextDialog(){
   di++;
   if(di>=INTRO_CUR.length){dialog.hidden=true;hud.hidden=false;state="play";return}
@@ -1093,20 +1133,16 @@ function tap(el,fn){
 }
 tap(dialog,()=>{if(state==="intro")nextDialog()});
 tap(actBtn,doAct);
-function toTitle(){state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;if(T3.resize)T3.resize();dangerEl.style.opacity=0;view.style.transform="";hideOv.hidden=true;CL=1}
+function toTitle(){titleEl.classList.remove("choosing");T3.target=0;T3.k=0;state="menu";hud.hidden=true;dialog.hidden=true;screenEl.hidden=true;titleEl.hidden=false;if(T3.resize)T3.resize();dangerEl.style.opacity=0;view.style.transform="";hideOv.hidden=true;CL=1}
 const ROWS=["Days","Dracula speed","Sees you from","Gives up after","Stamina","Light","Wakes after"];
 const TBL={practice:["No limit","None","-","-","Long","Bright","-"],easy:["7","Slower than you","Close","2 sec","Long","Bright","6 sec"],normal:["5","Normal","Normal","3 sec","Normal","Normal","3 sec"],hard:["3","Faster","Far","5 sec","Short","Dark","1 sec"]};
-(()=>{
-  let h="<div class='c0 hd'>Mode</div>";
-  ["easy","normal","hard","practice"].forEach(k=>h+="<button type='button' class='hd' data-d='"+k+"'>"+DIFF[k].name+"</button>");
-  ROWS.forEach((r,i)=>{h+="<div class='c0'>"+r+"</div>";["easy","normal","hard","practice"].forEach(k=>h+="<div class='cell' data-d='"+k+"'>"+TBL[k][i]+"</div>")});
-  $("dtab").innerHTML=h;
-})();
-function setDiff(k){diffKey=k;document.querySelectorAll("#dtab [data-d],#diffs [data-d]").forEach(n=>n.classList.toggle("sel",n.dataset.d===k))}
-tap($("dtab"),e=>{const n=e.target.closest&&e.target.closest("[data-d]");if(n)setDiff(n.dataset.d)});
-tap($("diffs"),e=>{const n=e.target.closest&&e.target.closest("[data-d]");if(n)setDiff(n.dataset.d)});
+function renderChoose(){$("fx2").innerHTML=ROWS.map((r,i)=>"<div><b>"+r+"</b><span>"+TBL[diffKey][i]+"</span></div>").join("")}
+function setDiff(k){diffKey=k;document.querySelectorAll("#modes [data-d]").forEach(n=>n.classList.toggle("sel",n.dataset.d===k));renderChoose()}
+tap($("modes"),e=>{const n=e.target.closest&&e.target.closest("[data-d]");if(n)setDiff(n.dataset.d)});
 setDiff("normal");
-tap($("play"),()=>{if(state!=="menu")return;if(!AC)initAudio();newGame();startIntro()});
+tap($("play"),()=>{if(state!=="menu")return;if(!AC)initAudio();titleEl.classList.add("choosing");T3.target=1});
+tap($("back"),()=>{titleEl.classList.remove("choosing");T3.target=0});
+tap($("begin"),()=>{if(state!=="menu")return;titleEl.classList.remove("choosing");T3.target=0;newGame();startIntro()});
 tap($("sbtn"),()=>{
   if(state==="over"||state==="win")toTitle();
   else if(state==="caught"){screenEl.hidden=true;dangerEl.style.opacity=0;resetPlayer();resetDracula(5);state="play"}
@@ -1354,10 +1390,11 @@ function initTitle3D(){
     T3.resize=resize;
     T3.render=t=>{
       const o=window.__dbg||{};
-      dr.head.rotation.set(o.pitch!=null?o.pitch:-.34+Math.sin(t*.7)*.018,o.yaw!=null?o.yaw:.85+Math.sin(t*.45)*.05,.06);
+      const k0=T3.k||0;T3.k=k0+((T3.target||0)-k0)*Math.min(1,Math.max(0,t-(T3.lt||t))*2.6);T3.lt=t;const kk=T3.k,k=kk*kk*(3-2*kk);
+      dr.head.rotation.set(o.pitch!=null?o.pitch:(-.34+Math.sin(t*.7)*.018)*(1-k)+.3*k,o.yaw!=null?o.yaw:(.85+Math.sin(t*.45)*.05)*(1-k),.06);
       dr.root.rotation.y=.28+Math.sin(t*.3)*.035;
       dr.root.scale.set(1,1+Math.sin(t*1.3)*.005,1);
-      const dd=o.dist||T3.dist,lk=o.look||T3.look;cam.position.set(Math.sin(t*.22)*.1,lk+.1,dd);cam.lookAt(0,lk,0);
+      const dd=o.dist||T3.dist,lk=o.look||T3.look;cam.position.set(Math.sin(t*.22)*.1*(1-k),lk+.1+(1.8-lk-.1)*k,dd+(dd*.72-dd)*k);cam.lookAt(0,lk*(1-k),1.6*k);
       moon.intensity=1.6+flash*2.5;
       const a=dg.attributes.position;for(let i=0;i<N;i++){let y=a.getY(i)-.0006;if(y<0)y=2.5;a.setY(i,y);a.setX(i,a.getX(i)+Math.sin(t+i)*.0005)}a.needsUpdate=true;
       r.render(scene,cam);
@@ -1370,7 +1407,7 @@ function initTitle3D(){
 let last=0,wasPlay=false;
 function frame(t){
   requestAnimationFrame(frame);
-  const dt=Math.min(.05,(t-last)/1000||0);last=t;
+  const dt=Math.min(.05,(t-last)/1000||0);last=t;updateWake(dt);
   if(!wallTex)return;
   if(state==="play")update(dt);else if(state==="bite")updateBite(dt);else if(state==="fall")updateFall(dt);
   else if(state==="menu"){time+=dt;if(T3.ready)T3.render(time);CL=1;P.x=START.x;P.y=START.y;P.a=START.a+Math.sin(time*.3)*.4;P.bob=time*.7;flash=Math.max(0,flash-dt*3);flashT-=dt;if(flashT<=0){flash=1;flashT=7+Math.random()*8}}
@@ -1380,6 +1417,6 @@ function frame(t){
 resize();setList();setLives();drawFigure();initTitle3D();
 Promise.all([loadImg(WALL_SRC),loadImg(FLOOR_SRC)]).then(r=>{wallTex=1;const ok=r[0]&&r[1]&&initWorld(r[0],r[1]);if(!ok)$("play").textContent="3D FAILED TO LOAD"});
 requestAnimationFrame(frame);
-if(location.hash==="#debug")window.__g={bfs3,updateBite,updateFall,WK,LG,get R3(){return R3},P,D,LV,ITEMS,BELL,DEC,update,render,doAct,nearestAct,openThing,tp:(l,x,y,a)=>{CL=l;P.x=x;P.y=y;if(a!=null)P.a=a;lvlEl.textContent=FLOORS[l].toUpperCase()},begin:k=>{if(k)diffKey=k;newGame();dialog.hidden=true;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=false;state="play"},get CL(){return CL},get state(){return state},get carried(){return carried},giveAll:()=>{ITEMS.forEach(i=>i.got=true);carried=5;setList()}};
+if(location.hash==="#debug")window.__g={wake,bfs3,updateBite,updateFall,WK,LG,get R3(){return R3},P,D,LV,ITEMS,BELL,DEC,update,render,doAct,nearestAct,openThing,tp:(l,x,y,a)=>{CL=l;P.x=x;P.y=y;if(a!=null)P.a=a;lvlEl.textContent=FLOORS[l].toUpperCase()},begin:k=>{if(k)diffKey=k;newGame();dialog.hidden=true;titleEl.hidden=true;screenEl.hidden=true;hud.hidden=false;state="play"},get CL(){return CL},get state(){return state},get carried(){return carried},giveAll:()=>{ITEMS.forEach(i=>i.got=true);carried=5;setList()}};
 })();
 </script>
