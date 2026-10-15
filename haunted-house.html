@@ -736,7 +736,7 @@ function openThing(d){
   if(d.open){
     if(d.holds&&!d.holds.got){d.itemMesh.visible=true;d.collectT=.7;toast("You open it and find: "+d.holds.name+"!",2600)}
     else toast("Nothing but dust.",1400);
-    if(d.b.loud&&D.lvl===CL&&Math.hypot(D.x-d.cx,D.y-d.cy)<8){alertDracula(CL,d.cx,d.cy);toast("It creaks loudly...",1600)}
+    if(d.b.loud&&D.lvl===CL&&Math.hypot(D.x-d.cx,D.y-d.cy)<12){alertDracula(CL,d.cx,d.cy);toast("It creaks loudly...",1600)}
   }
 }
 
@@ -818,7 +818,7 @@ function changeLevel(n){
 }
 function alertDracula(l,x,y){
   D.stun=0;if(D.mode==="chase")return;
-  D.mode="search";D.last=[l,Math.floor(x),Math.floor(y)];D.path=[];D.repath=0;D.wait=0;
+  D.mode="search";D.hurry=true;D.last=[l,Math.floor(x),Math.floor(y)];D.path=[];D.repath=0;D.wait=0;
 }
 function nearestAct(){
   if(P.hid)return {kind:"out",label:"GET OUT"};
@@ -955,7 +955,7 @@ function updateDracula(dt,running,mag){
   const los=same&&!P.hid&&dist<14&&lineClear(D.x,D.y,P.x,P.y);
   const range=(running?12:(mag<.5?5:8))*cfg.see;
   if(los&&dist<range){
-    if(D.mode!=="chase"){D.mode="chase";D.repath=0;sfx.growl();buzz(120);toast("He has seen you. RUN!",1800)}
+    if(D.mode!=="chase"){D.mode="chase";D.hurry=false;D.repath=0;sfx.growl();buzz(120);toast("He has seen you. RUN!",1800)}
     D.last=[CL,Math.floor(P.x),Math.floor(P.y)];D.lose=0;
   }else if(D.mode==="chase"){
     D.lose+=dt;if(D.lose>cfg.lose||P.hid){D.mode="search";D.path=[];D.repath=0;D.wait=0}
@@ -970,9 +970,9 @@ function updateDracula(dt,running,mag){
       follow(dt,speed);
     }
   }else if(D.mode==="search"){
-    const speed=(1.3+base*.08)*cfg.speed;
+    const speed=(D.hurry?2.1+base*.08:1.3+base*.08)*cfg.speed;
     if(D.repath<=0&&D.last){D.path=bfs3(D.lvl,cl,cy,D.last[0],D.last[1],D.last[2]);D.repath=.8}
-    if(follow(dt,speed)){D.wait+=dt;if(D.wait>2.5){D.mode="patrol";D.path=[];D.wait=0}}
+    if(follow(dt,speed)){D.wait+=dt;D.face=(D.face||0)+dt*1.3;if(D.wait>4){D.mode="patrol";D.hurry=false;D.path=[];D.wait=0}}
   }else{
     const speed=(.9+base*.09)*cfg.speed;
     if(!D.path.length){const n=randomNode();D.path=bfs3(D.lvl,cl,cy,n[0],n[1],n[2])}
