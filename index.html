@@ -628,7 +628,7 @@ const ent = new THREE.Group();
   tex.colorSpace = THREE.SRGBColorSpace;
   const EH = 2.7, EW = EH * 320 / 420;
   const geo = new THREE.PlaneGeometry(EW, EH); geo.translate(0, EH / 2, 0);
-  const mat = new THREE.MeshLambertMaterial({ map: tex, emissiveMap: tex, emissive: 0x808080, transparent: true, alphaTest: 0.35, side: THREE.DoubleSide });
+  const mat = new THREE.MeshLambertMaterial({ map: tex, color: 0x8a8a8a, emissiveMap: tex, emissive: 0x2a2a2a, transparent: true, alphaTest: 0.35, side: THREE.DoubleSide });
   ent.add(new THREE.Mesh(geo, mat)); // always turned to face you
 }
 ent.visible = false; scene.add(ent);
@@ -657,9 +657,9 @@ function updateJump(dt) {
   if (!j.screamed && p > 0.55) { j.screamed = true; scream(); if (humGain) humGain.gain.value = 0; }
   if (j.screamed) {
     const k = j.t - 0.22;
-    flashEl.style.background = Math.random() < 0.35 ? '#a00' : '#fff';
-    flashEl.style.opacity = k < 1.0 ? (Math.random() < 0.5 ? 0.55 : 0.04) : 0;
-    dip = Math.random() < 0.5 ? 1 : 0.1;
+    flashEl.style.background = Math.random() < 0.12 ? '#ddd' : '#8a0000';
+    flashEl.style.opacity = k < 1.0 ? (Math.random() < 0.5 ? 0.5 : 0.04) : 0;
+    dip = Math.random() < 0.5 ? 0.35 : 0.05;
     renderer.domElement.style.transform = `scale(${1 + Math.random() * 0.08}) translate(${(Math.random() - 0.5) * 18}px, ${(Math.random() - 0.5) * 18}px)`;
   } else dip = 0;
   if (j.t > 1.45) {
