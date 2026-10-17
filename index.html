@@ -40,6 +40,9 @@
   #vaseBtn { position: absolute; left: 50%; bottom: calc(120px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     pointer-events: auto; background: none; border: 0; padding: 14px 24px; color: #fff; font: 22px "Courier New", monospace;
     letter-spacing: 5px; white-space: nowrap; text-shadow: 0 0 8px #000, 0 0 3px #000; }
+  #map { position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px));
+    width: 168px; height: 152px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.35); pointer-events: auto; }
+  #map.big { width: 336px; height: 304px; max-width: 90vw; }
   #bal { position: absolute; left: 50%; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); width: 200px; height: 4px; margin-left: -100px;
     background: rgba(255,255,255,.25); border-radius: 2px; }
   #bal::before { content: ''; position: absolute; left: 50%; top: -6px; width: 2px; height: 16px; background: rgba(255,255,255,.5); }
@@ -74,6 +77,7 @@
 <div id="hud">
   <div id="hint">LISTEN FOR THE STATIC</div>
   <div id="alert"></div>
+  <canvas id="map" width="252" height="228"></canvas>
   <div id="cross" hidden></div>
   <div id="bal" hidden><span>BALANCE</span><i></i></div>
   <button id="vaseBtn" hidden></button>
@@ -636,7 +640,7 @@ function stickReset() {
   base.style.left = '28px'; base.style.bottom = '36px'; base.style.top = '';
 }
 window.addEventListener('touchstart', e => {
-  if (!running || e.target.closest('button, #pose')) return; // let buttons and the stance icon receive their tap
+  if (!running || e.target.closest('button, #pose, #map')) return; // let buttons and the stance icon receive their tap
   for (const t of e.changedTouches) {
     if (t.clientX < window.innerWidth * 0.45 && stickId === null) {
       stickId = t.identifier;
@@ -684,11 +688,11 @@ function lockPointer() {
 }
 document.addEventListener('pointerlockchange', () => { if (locked()) plFail = false; });
 document.addEventListener('pointerlockerror', () => { plFail = true; });
-window.addEventListener('keydown', e => { if (e.code === 'KeyC' && !e.repeat) manualCrouch = !manualCrouch; if (e.code === 'Space' && !e.repeat) vaseAction(); keys[e.code] = true; if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
+window.addEventListener('keydown', e => { if (e.code === 'KeyC' && !e.repeat) manualCrouch = !manualCrouch; if (e.code === 'KeyM' && !e.repeat) mapEl.hidden = !mapEl.hidden; if (e.code === 'Space' && !e.repeat) vaseAction(); keys[e.code] = true; if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseIn = false; });
 window.addEventListener('mousedown', e => {
-  if (!fine || e.target.closest('button, #pose')) return;
+  if (!fine || e.target.closest('button, #pose, #map')) return;
   if (running && !ending) { if ((aimed || aimedVase) && (locked() || plFail)) tryHand(); else if (!locked()) lockPointer(); }
 });
 document.addEventListener('mouseleave', () => { mouseIn = false; });
@@ -699,6 +703,37 @@ window.addEventListener('mousemove', e => {
   yaw -= cl(e.movementX) * 0.0022; pitch -= cl(e.movementY) * 0.0022;
   pitch = Math.max(-1.4, Math.min(1.4, pitch));
 });
+
+// ---------- temporary map: shows the route and where the exit is ----------
+const mapEl = document.getElementById('map'), mctx = mapEl.getContext('2d');
+mapEl.addEventListener('click', () => mapEl.classList.toggle('big'));
+const MX0 = -6, MZ0 = -68, MSC = 3;                  // world -> map pixels
+const mx_ = x => (x - MX0) * MSC, mz_ = z => (z - MZ0) * MSC;
+const mapBg = document.createElement('canvas'); mapBg.width = 252; mapBg.height = 228;
+{
+  const g = mapBg.getContext('2d');
+  g.fillStyle = 'rgba(40,36,24,0.9)'; g.fillRect(0, 0, 252, 228);
+  g.fillStyle = 'rgba(190,170,110,0.35)';                                   // the open route from the spawn
+  g.fillRect(mx_(0), mz_(-56), 4 * MSC, 60 * MSC);                          // up the spawn column
+  g.fillRect(mx_(0), mz_(-56), 52 * MSC, 4 * MSC);                          // across to the room
+  g.fillStyle = 'rgba(190,170,110,0.55)'; g.fillRect(mx_(0), mz_(0), 4 * MSC, 4 * MSC); // spawn cell
+  g.fillStyle = '#6a604a'; g.fillRect(mx_(48), mz_(-64), 24 * MSC, 20 * MSC); // the pit room
+  g.fillStyle = '#0a0907';                                                    // the holes
+  for (let i = 13; i <= 16; i++) for (let j = -16; j <= -12; j++) g.fillRect(mx_(i * S + WALK), mz_(j * S + WALK), (S - 2 * WALK) * MSC, (S - 2 * WALK) * MSC);
+  g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 1; g.strokeRect(mx_(48), mz_(-64), 24 * MSC, 20 * MSC);
+  g.fillStyle = '#7fe36f'; g.fillRect(mx_(EXIT.x) - 3, mz_(EXIT.z) - 9, 6, 18);  // the door
+  g.fillStyle = '#fff'; g.font = '11px "Courier New", monospace'; g.textAlign = 'right';
+  g.fillText('EXIT', mx_(EXIT.x) - 6, mz_(EXIT.z) - 12);
+  g.textAlign = 'left'; g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillText('START', mx_(5), mz_(2) + 4);
+}
+function drawMap() {
+  if (mapEl.hidden) return;
+  mctx.drawImage(mapBg, 0, 0);
+  if (ent.visible && evt.phase === 'dark') { mctx.fillStyle = '#ff4a3a'; mctx.beginPath(); mctx.arc(mx_(ent.position.x), mz_(ent.position.z), 4, 0, 6.3); mctx.fill(); }
+  const px = mx_(player.x), pz = mz_(player.z), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+  mctx.fillStyle = '#fff'; mctx.beginPath();                                  // you, pointing where you look
+  mctx.moveTo(px + fx * 7, pz + fz * 7); mctx.lineTo(px - fx * 4 - fz * 4, pz - fz * 4 + fx * 4); mctx.lineTo(px - fx * 4 + fz * 4, pz - fz * 4 - fx * 4); mctx.closePath(); mctx.fill();
+}
 
 // ---------- game state ----------
 const player = new THREE.Vector3(S / 2, 0, S / 2);
@@ -1155,6 +1190,7 @@ function frame(now) {
     showEnd('LEVEL 1', 'You step through the door.<br>The hum fades. Something concrete waits below.<br><br>To be continued...', 'BACK TO LEVEL 0');
   }
 
+  drawMap();
   renderer.render(scene, camera);
 }
 
