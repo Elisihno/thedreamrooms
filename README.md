@@ -10,3 +10,10 @@ A mobile-friendly 3D Backrooms level (three.js, no build step).
 
 Run it: `python3 -m http.server` in this folder, open `http://<your-ip>:8000` on your phone
 (or host it on GitHub Pages).
+
+## Level 1 - The Habitable Zone
+A flooded concrete parking garage (numbered pillars, red pipes, parked cars, puddles). The skin stealer
+patrols it. It sees you from far away when you stand, much less when you crouch, and it hears footsteps
+(puddles are loud). Cars and pillars block its view. Find the stairwell door on the far east wall.
+
+The skin stealer model is `models/skinstealer.glb` (textures shrunk to 1024px, mesh simplified).
