@@ -20,11 +20,22 @@
   #overlay button:active { background: #d8d27a; color: #000; }
   #vig { position: fixed; inset: 0; pointer-events: none; z-index: 4;
     background: radial-gradient(ellipse at center, rgba(0,0,0,0) 38%, rgba(0,0,0,.72) 100%); }
-  #hud { position: fixed; inset: 0; pointer-events: none; display: none; }
+  #hud { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 5; }
   #stickBase { position: absolute; left: 28px; bottom: 36px; width: 120px; height: 120px; border-radius: 50%;
     border: 2px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); }
   #stickKnob { position: absolute; left: 40px; top: 40px; width: 40px; height: 40px; border-radius: 50%;
     background: rgba(255,255,255,.28); }
+  [hidden] { display: none !important; }
+  #pose { position: absolute; left: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); display: flex; align-items: flex-end;
+    height: 80px; opacity: .9; padding: 6px 10px; border-radius: 8px; background: rgba(0,0,0,.5); }
+  #pose img { display: block; }
+  #handBtn { position: absolute; width: 74px; height: 74px; margin: -37px 0 0 -37px; pointer-events: auto; padding: 0;
+    background: rgba(0,0,0,.35); border: 2px solid rgba(255,255,255,.7); border-radius: 50%; color: #fff;
+    animation: pulse 1.1s ease-in-out infinite; }
+  #handBtn svg { width: 46px; height: 46px; display: block; margin: 0 auto; }
+  #handBtn span { display: block; font: 10px "Courier New", monospace; letter-spacing: 2px; margin-top: -2px; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.5); } 50% { box-shadow: 0 0 0 10px rgba(255,255,255,0); } }
+  #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 6; }
   #alert { position: absolute; top: 44px; left: 0; right: 0; text-align: center; color: #e8c86a;
     font-size: 14px; letter-spacing: 3px; text-shadow: 0 0 8px #000; }
   #vig.hid { background: radial-gradient(ellipse at center, rgba(0,0,0,.25) 12%, rgba(0,0,0,.94) 80%); }
@@ -44,14 +55,26 @@
   <h2>THE LOBBY</h2>
   <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
      Left thumb: move &nbsp; Right thumb: look<br>
-     Find where reality is thin. Listen.<br>When the lights fail, walk under a table and stay still.<br><br>
+     Find where reality is thin. Listen.<br>When the lights fail, tap the hand on a table to hide under it, and stay still.<br><br>
      <i>Headphones recommended.</i></p>
   <button id="start">ENTER</button>
 </div>
 <div id="vig"></div>
+<div id="flash"></div>
 <div id="hud">
   <div id="hint">LISTEN FOR THE STATIC</div>
   <div id="alert"></div>
+  <div id="pose"><img id="poseImg" alt=""></div>
+  <button id="handBtn" hidden aria-label="Hide under table">
+    <svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
+      <rect x="14" y="26" width="8" height="22" rx="4" transform="rotate(-8 18 37)"/>
+      <rect x="23" y="8" width="8" height="34" rx="4"/>
+      <rect x="32" y="5" width="8" height="37" rx="4"/>
+      <rect x="41" y="10" width="8" height="32" rx="4" transform="rotate(6 45 26)"/>
+      <path d="M12 40c0-3 2-5 5-5l30 0c4 0 7 3 7 7v6c0 8-6 14-14 14H30c-8 0-14-6-14-14z"/>
+      <rect x="2" y="30" width="8" height="22" rx="4" transform="rotate(-48 6 41)"/>
+    </svg><span>HIDE</span>
+  </button>
   <div id="stickBase"><div id="stickKnob"></div></div>
 </div>
 <div id="fade"></div>
@@ -106,6 +129,16 @@ function tableRot(i, j) { return hash(i, j, 13) < 0.5 ? 0 : 1; }
 function tableLocal(i, j, px, pz) {
   const dx = px - (i * S + S / 2), dz = pz - (j * S + S / 2);
   return tableRot(i, j) ? { lx: -dz, lz: dx } : { lx: dx, lz: dz };
+}
+function nearestTable(px, pz) {
+  const ci = Math.floor(px / S), cj = Math.floor(pz / S);
+  let best = null;
+  for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
+    if (!tableAt(i, j)) continue;
+    const cx = i * S + S / 2, cz = j * S + S / 2, d = Math.hypot(px - cx, pz - cz);
+    if (!best || d < best.d) best = { i, j, cx, cz, d };
+  }
+  return best;
 }
 // 0 = clear, 1 = close enough to crouch, 2 = hidden under it
 function tableState(px, pz) {
@@ -377,6 +410,10 @@ function collide(pos) {
       if (wallH(i, j)) pushFromBox(pos, i * S - h, j * S - h, (i + 1) * S + h, j * S + h);
       if (tableAt(i, j)) {
         const rot = tableRot(i, j), cxw = i * S + S / 2, czw = j * S + S / 2;
+        if (!hiding && !underTable) { // the table top blocks you; tap the hand to slide under
+          const hw = (rot ? TD : TW) / 2, hd = (rot ? TW : TD) / 2;
+          pushFromBox(pos, cxw - hw, czw - hd, cxw + hw, czw + hd);
+        }
         for (const [lx, lz] of tableLegs(TW, TD)) {
           const x = cxw + (rot ? lz : lx), z = czw + (rot ? -lx : lz);
           pushFromBox(pos, x - 0.03, z - 0.03, x + 0.03, z + 0.03);
@@ -430,6 +467,25 @@ function footstep(vol = 1, deep = 0) {
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
   s.connect(lp); lp.connect(g); g.connect(actx.destination);
   s.start(t, Math.random(), 0.25);
+}
+
+function scream() {
+  if (!actx || !window.__noise) return;
+  const t = actx.currentTime, out = actx.createGain();
+  out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(1, t + 0.04);
+  out.gain.setValueAtTime(1, t + 0.7); out.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+  const ws = actx.createWaveShaper(), curve = new Float32Array(256);
+  for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * 6); }
+  ws.curve = curve; ws.connect(out); out.connect(actx.destination);
+  [[620, 150], [770, 210], [95, 55]].forEach(([a, b], k) => {
+    const o = actx.createOscillator(); o.type = k < 2 ? 'sawtooth' : 'square';
+    o.frequency.setValueAtTime(a, t); o.frequency.exponentialRampToValueAtTime(b, t + 1.2);
+    const g = actx.createGain(); g.gain.value = k < 2 ? 0.28 : 0.4; o.connect(g); g.connect(ws); o.start(t); o.stop(t + 1.35);
+  });
+  const n = actx.createBufferSource(); n.buffer = window.__noise;
+  const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.8;
+  bp.frequency.setValueAtTime(900, t); bp.frequency.exponentialRampToValueAtTime(3600, t + 0.9);
+  const ng = actx.createGain(); ng.gain.value = 0.9; n.connect(bp); bp.connect(ng); ng.connect(ws); n.start(t, 0, 1.3);
 }
 
 // ---------- input ----------
@@ -503,7 +559,22 @@ window.addEventListener('mousemove', e => {
 // ---------- game state ----------
 const player = new THREE.Vector3(S / 2, 0, S / 2);
 let bob = 0, stepAcc = 0, ending = false, running = false, last = 0, hintT = 0;
-let gt = 0, camY = 1.6, hidden = false;
+let gt = 0, camY = 1.6, hidden = false, hiding = false, underTable = false, hideT = 1, roll = 0;
+const hideFrom = new THREE.Vector3(), hideTo = new THREE.Vector3(), projV = new THREE.Vector3();
+let jump = null, poseState = '';
+const IMG_STAND = 'textures/stand.webp', IMG_CROUCH = 'textures/crouch.webp';
+const poseImg = document.getElementById('poseImg'), handBtn = document.getElementById('handBtn');
+const flashEl = document.getElementById('flash');
+function setPose(crouched) {
+  const k = crouched ? 'c' : 's';
+  if (k === poseState) return;
+  poseState = k; poseImg.src = crouched ? IMG_CROUCH : IMG_STAND; poseImg.style.height = crouched ? '50px' : '80px';
+}
+handBtn.addEventListener('click', () => {
+  const nt = nearestTable(player.x, player.z);
+  if (!nt || nt.d > 3.4 || hiding || ending) return;
+  hiding = true; hideT = 0; hideFrom.copy(player); hideTo.set(nt.cx, 0, nt.cz);
+});
 const vig = document.getElementById('vig');
 const alertEl = document.getElementById('alert');
 const endTitle = document.getElementById('endTitle'), endText = document.getElementById('endText'), againBtn = document.getElementById('again');
@@ -526,14 +597,45 @@ let entStep = 0;
 const WARN = 2.4, DARK = 15, RECOVER = 1.3;
 const evt = { phase: 'idle', t: 0, next: 40, miniNext: 14, miniUntil: 0 };
 
-function showEnd(title, text, btn) {
+function startJump() {
+  const dx = player.x - ent.position.x, dz = player.z - ent.position.z, d = Math.hypot(dx, dz) || 1;
+  ending = true; hiding = false;
+  jump = { t: 0, d0: d, ux: dx / d, uz: dz / d, yaw: Math.atan2(dx / d, dz / d), sx: ent.position.x, sz: ent.position.z, screamed: false };
+  yaw = jump.yaw; pitch = 0.1;
+  handBtn.hidden = true; setAlert('');
+}
+function updateJump(dt) {
+  const j = jump; j.t += dt;
+  const p = Math.min(1, j.t / 0.4), e = p * p * p; // fast lunge
+  yaw = j.yaw; pitch = 0.04;
+  const dist = j.d0 + (0.8 - j.d0) * e, sc = 1 + e * 0.9;
+  ent.visible = true; ent.scale.setScalar(sc);
+  ent.position.set(player.x - j.ux * dist, e * (camY - 2.38 * sc), player.z - j.uz * dist);
+  ent.rotation.y = Math.atan2(j.ux, j.uz); ent.rotation.z = (Math.random() - 0.5) * 0.12 * e;
+  roll = (Math.random() - 0.5) * 0.3 * e;
+  if (!j.screamed && p > 0.55) { j.screamed = true; scream(); if (humGain) humGain.gain.value = 0; }
+  if (j.screamed) {
+    const k = j.t - 0.22;
+    flashEl.style.background = Math.random() < 0.35 ? '#a00' : '#fff';
+    flashEl.style.opacity = k < 1.0 ? (Math.random() < 0.5 ? 0.55 : 0.04) : 0;
+    dip = Math.random() < 0.5 ? 1 : 0.1;
+    renderer.domElement.style.transform = `scale(${1 + Math.random() * 0.08}) translate(${(Math.random() - 0.5) * 18}px, ${(Math.random() - 0.5) * 18}px)`;
+  } else dip = 0;
+  if (j.t > 1.45) {
+    jump = null; flashEl.style.opacity = 0; renderer.domElement.style.transform = ''; roll = 0;
+    ent.visible = false; ent.scale.setScalar(1);
+    showEnd('FOUND', 'You were not hidden.<br>It found you in the dark.', 'TRY AGAIN', true);
+  }
+}
+function showEnd(title, text, btn, fast) {
   ending = true;
   endTitle.textContent = title; endText.innerHTML = text; againBtn.textContent = btn;
-  fade.style.transition = 'opacity 2.5s'; fade.style.opacity = 1;
-  setTimeout(() => { endEl.style.display = 'flex'; if (actx) actx.suspend(); }, 3000);
+  fade.style.transition = fast ? 'opacity 0.12s' : 'opacity 2.5s'; fade.style.opacity = 1;
+  setTimeout(() => { endEl.style.display = 'flex'; if (actx) actx.suspend(); }, fast ? 500 : 3000);
 }
 
 function updateEvent(dt) {
+  if (jump) { updateJump(dt); return; }
   if (evt.phase === 'idle') {
     if (gt > evt.miniNext) { evt.miniUntil = gt + 0.45; evt.miniNext = gt + 12 + Math.random() * 14; }
     dip = gt < evt.miniUntil ? (Math.random() < 0.55 ? 0.06 : 0.85) : 1;
@@ -562,7 +664,7 @@ function updateEvent(dt) {
         entStep -= dt;
         if (entStep <= 0) { entStep = chase ? 0.42 : 0.8; footstep(Math.min(1, 1.2 - d / 20), 1); }
       }
-      if (!hidden && d < 0.9) showEnd('FOUND', 'You were not hidden.<br>It found you in the dark.', 'TRY AGAIN');
+      if (!hidden && d < 0.9) startJump();
     }
     if (droneGain) droneGain.gain.value = 0.28 * Math.max(0, 1 - d / 22);
     if (gt - evt.t > DARK) { evt.phase = 'recover'; evt.t = gt; ent.visible = false; }
@@ -579,7 +681,8 @@ const hint = document.getElementById('hint');
 
 function resetGame() {
   player.set(S / 2, 0, S / 2); yaw = pitch = 0; ending = false;
-  evt.phase = 'idle'; evt.next = gt + 30; ent.visible = false; camY = 1.6; dip = 1;
+  evt.phase = 'idle'; evt.next = gt + 30; ent.visible = false; ent.scale.setScalar(1); camY = 1.6; dip = 1;
+  hiding = false; jump = null; roll = 0; flashEl.style.opacity = 0; renderer.domElement.style.transform = '';
   if (droneGain) droneGain.gain.value = 0;
   fade.style.transition = 'none'; fade.style.opacity = 0;
   endEl.style.display = 'none';
@@ -600,7 +703,12 @@ function frame(now) {
   if (keys.KeyW || keys.ArrowUp) my -= 1;
   if (keys.KeyS || keys.ArrowDown) my += 1;
   const mag = Math.min(1, Math.hypot(mx, my));
-  if (!ending && mag > 0.05) {
+  if (hiding && hideT >= 1 && mag > 0.35 && !ending) hiding = false; // moving brings you out
+  if (hiding && hideT < 1) { // slide under the table
+    hideT = Math.min(1, hideT + dt / 0.6);
+    const k = hideT * hideT * (3 - 2 * hideT);
+    player.x = hideFrom.x + (hideTo.x - hideFrom.x) * k; player.z = hideFrom.z + (hideTo.z - hideFrom.z) * k;
+  } else if (!ending && !hiding && mag > 0.05) {
     const speed = 2.6 * mag * (camY < 1.0 ? 0.55 : 1);
     // forward is (-sin yaw, -cos yaw), right is (cos yaw, -sin yaw); stick up is -y
     const dirX = (-Math.sin(yaw) * -my + Math.cos(yaw) * mx) / Math.hypot(mx, my);
@@ -615,14 +723,30 @@ function frame(now) {
   updateChunks(player.x, player.z);
 
   // crouch near and under tables
-  const ts = tableState(player.x, player.z);
-  hidden = ts === 2;
-  camY += ((ts ? 0.5 : 1.6) - camY) * Math.min(1, dt * 7);
+  underTable = tableState(player.x, player.z) === 2;
+  hidden = hiding && underTable;
+  const crouched = hiding || underTable;
+  camY += ((crouched ? 0.5 : 1.6) - camY) * Math.min(1, dt * 7);
   vig.classList.toggle('hid', hidden);
+  setPose(crouched);
 
   // camera
   camera.position.set(player.x, camY + Math.sin(bob) * (camY < 1 ? 0.012 : 0.035), player.z);
-  camera.rotation.set(pitch, yaw, 0);
+  camera.rotation.set(pitch, yaw, roll);
+  camera.updateMatrixWorld();
+
+  // the hand shows on the nearest table: tap it to hide
+  let showHand = false;
+  const nt = nearestTable(player.x, player.z);
+  if (!hiding && !ending && !underTable && nt && nt.d < 3.2) {
+    projV.set(nt.cx, 0.9, nt.cz).project(camera);
+    if (projV.z < 1 && Math.abs(projV.x) < 1 && Math.abs(projV.y) < 1) {
+      handBtn.style.left = ((projV.x + 1) / 2 * window.innerWidth) + 'px';
+      handBtn.style.top = ((1 - projV.y) / 2 * window.innerHeight) + 'px';
+      showHand = true;
+    }
+  }
+  handBtn.hidden = !showHand;
 
   // flicker
   const t = now / 1000;
