@@ -12,8 +12,12 @@ Run it: `python3 -m http.server` in this folder, open `http://<your-ip>:8000` on
 (or host it on GitHub Pages).
 
 ## Level 1 - The Habitable Zone
-A flooded concrete parking garage (numbered pillars, red pipes, parked cars, puddles). The skin stealer
-patrols it. It sees you from far away when you stand, much less when you crouch, and it hears footsteps
-(puddles are loud). Cars and pillars block its view. Find the stairwell door on the far east wall.
+Laid out after the Escape the Backrooms floor 4 map: a long main hall with numbered pillars, side rooms,
+puddles, a stem down to the elevator where you start, and an upper area up a ramp.
+
+- The exit door turns up in one of nine places each run, and it is locked.
+- The keycard is in the drawer of the office in the upper area.
+- The skin stealer patrols, hears footsteps (puddles are loud) and sees you from far away when you stand
+  and from much less when you crouch. Crates and pillars block its view.
 
 The skin stealer model is `models/skinstealer.glb` (textures shrunk to 1024px, mesh simplified).
