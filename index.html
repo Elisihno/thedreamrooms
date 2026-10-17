@@ -104,7 +104,7 @@ function hash(i, j, k) {
 // noclip spot: a cell far from spawn where reality is thin
 const EXIT = { i: 19, j: -14 };
 function density(i, j) {
-  return 0.18 + 0.42 * hash(Math.floor(i / 4), Math.floor(j / 4), 9);
+  return 0.1 + 0.3 * hash(Math.floor(i / 4), Math.floor(j / 4), 9);
 }
 function nearSpawn(i, j) { return Math.abs(i) <= 1 && Math.abs(j) <= 1; }
 // wall on the west edge of cell (i,j)
@@ -116,6 +116,11 @@ function wallV(i, j) {
 function wallH(i, j) {
   if (nearSpawn(i, j) || nearSpawn(i, j - 1)) return false;
   return hash(i, j, 2) < density(i, j);
+}
+// thick square pillars standing on cell corners
+const PW = 0.95;
+function pillarAt(i, j) {
+  return !(Math.abs(i) <= 2 && Math.abs(j) <= 2) && hash(i, j, 20) < 0.16;
 }
 function lightAt(i, j) { return nearSpawn(i, j) || hash(i, j, 3) < 0.42; }
 function lightFlicker(i, j) { return !nearSpawn(i, j) && hash(i, j, 4) < 0.3; }
@@ -178,21 +183,22 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const FOG = 0xb8b060;
-scene.background = new THREE.Color(0x0e0d06);
-scene.fog = new THREE.Fog(0x0e0d06, 1, 21);
+scene.background = new THREE.Color(0x231e0d);
+scene.fog = new THREE.Fog(0x231e0d, 3, 36);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.05, 60);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 
-const hemi = new THREE.HemisphereLight(0xd8d09a, 0x302e24, 0.55);
+const hemi = new THREE.HemisphereLight(0xe8d9a0, 0x5a5238, 1.15);
 scene.add(hemi);
-const torch = new THREE.PointLight(0xffe9b0, 4, 9, 1.6);
+const torch = new THREE.PointLight(0xffe9b0, 2.2, 9, 1.6);
 camera.add(torch);
 
 // the three nearest ceiling fixtures light the room for real
 const pool = [0, 1, 2].map(() => {
-  const l = new THREE.PointLight(0xfff2cc, 0, 11, 1.5);
+  const l = new THREE.PointLight(0xffefc0, 0, 16, 1.3);
   scene.add(l); return l;
 });
 function updatePool(px, pz) {
@@ -207,7 +213,7 @@ function updatePool(px, pz) {
     const f = c[k];
     if (!f) { l.intensity = 0; return; }
     l.position.set(f.x, H - 0.4, f.z);
-    l.intensity = 9 * dip * (lightFlicker(f.i, f.j) ? flk[flickGroup(f.i, f.j)].lvl : 1);
+    l.intensity = 14 * dip * (lightFlicker(f.i, f.j) ? flk[flickGroup(f.i, f.j)].lvl : 1);
   });
 }
 // each flickering fixture group has its own stutter; now and then one dies for a moment
@@ -227,7 +233,7 @@ window.addEventListener('resize', () => {
 
 // ---------- textures ----------
 const loader = new THREE.TextureLoader();
-const wallTex = loader.load('textures/wall.webp');
+const wallTex = loader.load('textures/wall_beige.webp');
 wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
 wallTex.colorSpace = THREE.SRGBColorSpace;
 wallTex.anisotropy = 4;
@@ -245,32 +251,32 @@ function canvasTex(w, h, draw, rx, ry) {
 }
 function rnd(n) { return Math.random() * n; }
 
-// worn gray carpet, slightly damp
+// worn greige carpet: fine grain, a few damp patches (one texture tile = 2 m of floor)
 const carpetTex = canvasTex(256, 256, (g, w, h) => {
-  g.fillStyle = '#7d7d7a'; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 16000; i++) {
-    const v = 95 + rnd(55);
-    g.fillStyle = `rgba(${v},${v},${v - 4},${0.25 + rnd(0.3)})`;
-    g.fillRect(rnd(w), rnd(h), 1 + rnd(2), 1 + rnd(2));
+  g.fillStyle = '#a49e8c'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 26000; i++) {
+    const v = 120 + rnd(70);
+    g.fillStyle = `rgba(${v},${v - 4},${v - 18},${0.2 + rnd(0.35)})`;
+    g.fillRect(rnd(w), rnd(h), 1, 1 + rnd(2));
   }
-  for (let i = 0; i < 22; i++) { // damp stains
-    const x = rnd(w), y = rnd(h), r = 20 + rnd(50);
+  for (let i = 0; i < 14; i++) { // damp stains
+    const x = rnd(w), y = rnd(h), r = 25 + rnd(60);
     const gr = g.createRadialGradient(x, y, 0, x, y, r);
-    gr.addColorStop(0, 'rgba(40,40,40,0.28)'); gr.addColorStop(1, 'rgba(40,40,40,0)');
+    gr.addColorStop(0, 'rgba(60,54,36,0.1)'); gr.addColorStop(1, 'rgba(60,54,36,0)');
     g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
   }
-}, S / 2, S / 2);
+}, CH * S / 2, CH * S / 2);
 
-// tan acoustic ceiling tiles: fine speckle, thin grid lines (0.5 m tiles)
+// small beige acoustic ceiling tiles (0.64 m), speckled, with a thin grid
 const ceilTex = canvasTex(128, 128, (g, w, h) => {
-  g.fillStyle = '#9c8a62'; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 9000; i++) {
-    const dark = Math.random() < 0.6;
-    g.fillStyle = dark ? `rgba(70,55,30,${rnd(0.35)})` : `rgba(200,185,140,${rnd(0.3)})`;
-    g.fillRect(rnd(w), rnd(h), 1, 1);
+  g.fillStyle = '#cdb98a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 7000; i++) {
+    const dark = Math.random() < 0.55;
+    g.fillStyle = dark ? `rgba(90,72,40,${rnd(0.4)})` : `rgba(225,210,160,${rnd(0.35)})`;
+    g.fillRect(rnd(w), rnd(h), 1, 1 + rnd(1));
   }
-  g.strokeStyle = 'rgba(50,40,20,0.85)'; g.lineWidth = 4; g.strokeRect(0, 0, w, h);
-}, S / 0.5, S / 0.5);
+  g.strokeStyle = 'rgba(80,64,34,0.55)'; g.lineWidth = 2; g.strokeRect(0, 0, w, h);
+}, CH * S / 0.64, CH * S / 0.64);
 
 // ---------- materials & shared geometry ----------
 const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
@@ -295,6 +301,11 @@ const wallGeo = new THREE.BoxGeometry(S + T, H, T);
 {
   const uv = wallGeo.attributes.uv;
   for (let k = 0; k < uv.count; k++) uv.setX(k, uv.getX(k) * 1.5);
+}
+const pillarGeo = new THREE.BoxGeometry(PW, H, PW);
+{
+  const uv = pillarGeo.attributes.uv;
+  for (let k = 0; k < uv.count; k++) uv.setX(k, uv.getX(k) * 0.34);
 }
 // wall outlets: cream plate with two slots and a screw
 const outletTex = canvasTex(64, 96, (g, w, h) => {
@@ -325,7 +336,7 @@ const chunks = new Map();
 function buildChunk(cx, cz) {
   const group = new THREE.Group();
   const i0 = cx * CH, j0 = cz * CH;
-  const wallM = [], panels = [], flickA = [[], []], outl = [], tops = [], legs = [];
+  const wallM = [], panels = [], flickA = [[], []], outl = [], tops = [], legs = [], pillars = [];
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
   const qv = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
   const qh = new THREE.Quaternion();
@@ -349,6 +360,7 @@ function buildChunk(cx, cz) {
           m.compose(p, side > 0 ? qh : qNZ, one); outl.push(m.clone());
         }
       }
+      if (pillarAt(i, j)) { p.set(i * S, H / 2, j * S); m.compose(p, qh, one); pillars.push(m.clone()); }
       if (tableAt(i, j)) {
         const rot = tableRot(i, j), cxw = i * S + S / 2, czw = j * S + S / 2;
         p.set(cxw, TY - 0.025, czw); m.compose(p, rot ? qPX : qh, one); tops.push(m.clone());
@@ -373,6 +385,7 @@ function buildChunk(cx, cz) {
     group.add(im);
   }
   inst(wallGeo, wallMat, wallM);
+  inst(pillarGeo, wallMat, pillars);
   inst(outletGeo, outletMat, outl);
   inst(panelGeo, lightMat, panels);
   inst(panelGeo, flickMats[0], flickA[0]);
@@ -423,6 +436,7 @@ function collide(pos) {
   const h = T / 2;
   for (let i = ci - 1; i <= ci + 2; i++) {
     for (let j = cj - 1; j <= cj + 2; j++) {
+      if (pillarAt(i, j)) pushFromBox(pos, i * S - PW / 2, j * S - PW / 2, i * S + PW / 2, j * S + PW / 2);
       if (wallV(i, j)) pushFromBox(pos, i * S - h, j * S - h, i * S + h, (j + 1) * S + h);
       if (wallH(i, j)) pushFromBox(pos, i * S - h, j * S - h, (i + 1) * S + h, j * S + h);
       if (tableAt(i, j)) {
@@ -956,8 +970,8 @@ function frame(now) {
   updatePool(player.x, player.z);
   lightMat.color.setScalar(dip);
   flickMats.forEach((mm, k) => mm.color.setScalar(0.05 + 0.95 * flk[k].lvl * dip));
-  hemi.intensity = 0.07 + 0.48 * dip;
-  torch.intensity = 1.5 + 2.5 * dip * (0.9 + 0.1 * flk[0].lvl);
+  hemi.intensity = 0.07 + 1.08 * dip;
+  torch.intensity = 1.2 + 1.0 * dip * (0.9 + 0.1 * flk[0].lvl);
 
   // the thin spot: static grows as you approach
   const ex = EXIT.i * S + S / 2, ez = EXIT.j * S + S / 2;
