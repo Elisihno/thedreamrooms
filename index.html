@@ -64,7 +64,7 @@
   <h1>LEVEL 0</h1>
   <h2>THE LOBBY</h2>
   <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
-     Phone: left thumb moves, right thumb looks, tap the figure in the corner to crouch<br>Somewhere out there is a room of holes. Keep your balance on the narrow walkways: lean the opposite way.<br>Take the vase from the table (Space, or tap TAKE) and drop it far away. The thing in the dark goes for it first.<br>Computer: WASD to move, mouse to look (the cursor is hidden), arrow keys or Q/E to turn, C to crouch<br>
+     Phone: left thumb moves, right thumb looks, tap the figure in the corner to crouch<br>Somewhere out there is a room of holes. Keep your balance on the narrow walkways: lean the opposite way.<br>Aim at the vase until the hand appears, click it to pick it up, and drop it far away (Space, or tap DROP). The thing in the dark goes for it first.<br>Computer: WASD to move, mouse to look (the cursor is hidden), arrow keys or Q/E to turn, C to crouch<br>
      Find where reality is thin. Listen.<br>When the lights fail, aim at a table until the hand appears, tap it to hide under, and stay quiet. It only comes if it hears you.<br><br>
      <i>Headphones recommended.</i></p>
   <button id="start">ENTER</button>
@@ -689,7 +689,7 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseIn = false; });
 window.addEventListener('mousedown', e => {
   if (!fine || e.target.closest('button, #pose')) return;
-  if (running && !ending) { if (aimed && (locked() || plFail)) tryHide(); else if (!locked()) lockPointer(); }
+  if (running && !ending) { if ((aimed || aimedVase) && (locked() || plFail)) tryHand(); else if (!locked()) lockPointer(); }
 });
 document.addEventListener('mouseleave', () => { mouseIn = false; });
 window.addEventListener('mousemove', e => {
@@ -707,7 +707,7 @@ let gt = 0, camY = 1.6, hidden = false, hiding = false, underTable = false, hide
 const hideFrom = new THREE.Vector3(), hideTo = new THREE.Vector3(), projV = new THREE.Vector3();
 let jump = null, poseState = '';
 const IMG_STAND = 'textures/stand.webp', IMG_CROUCH = 'textures/crouch.webp', IMG_HAND = 'textures/hand.webp';
-let aimed = null;
+let aimed = null, aimedVase = false;
 document.getElementById('handImg').src = IMG_HAND;
 const poseImg = document.getElementById('poseImg'), handBtn = document.getElementById('handBtn');
 const flashEl = document.getElementById('flash');
@@ -722,7 +722,9 @@ function tryHide() {
   hiding = true; hideT = 0; hideFrom.copy(player); hideTo.set(nt.cx, 0, nt.cz); velX = velZ = 0;
   emitNoise(player.x, player.z, 6); // shuffling under the table is faintly audible
 }
-handBtn.addEventListener('click', tryHide);
+// the hand: over the vase it picks it up, over a table it hides you
+function tryHand() { if (aimedVase) takeVase(); else tryHide(); }
+handBtn.addEventListener('click', tryHand);
 let velX = 0, velZ = 0;
 let manualCrouch = false; // C key or tapping the figure toggles crouching
 document.getElementById('pose').addEventListener('click', () => { manualCrouch = !manualCrouch; });
@@ -898,8 +900,8 @@ function vaseReset() {
 const vaseAvail = () => vs.state === 'table' || vs.state === 'ground';
 function canTake() {
   if (evt.phase !== 'idle' || hiding || ending || jump) return false;
-  if (vs.state === 'table') return Math.hypot(player.x - vaseTable.x, player.z - vaseTable.z) < 2.6;
-  if (vs.state === 'ground') return Math.hypot(player.x - vase.position.x, player.z - vase.position.z) < 1.5;
+  if (vs.state === 'table') return Math.hypot(player.x - vaseTable.x, player.z - vaseTable.z) < 3.4;
+  if (vs.state === 'ground') return Math.hypot(player.x - vase.position.x, player.z - vase.position.z) < 2.8;
   return false;
 }
 function takeVase() {
@@ -915,7 +917,7 @@ function dropVase(reach) {
 }
 function vaseAction() {
   if (ending || jump || hiding || !running) return;
-  if (vs.state === 'carried') dropVase(0.9); else if (canTake()) takeVase();
+  if (vs.state === 'carried') dropVase(0.9);
 }
 vaseBtn.addEventListener('click', vaseAction);
 
@@ -1108,14 +1110,26 @@ function frame(now) {
 
   // the hand appears like a cursor when you aim at a table: tap it to hide
   aimed = (!hiding && !ending && !underTable) ? aimTable(camera, player.x, player.z) : null;
-  handBtn.hidden = !aimed;
+  aimedVase = false;
+  if (!hiding && !ending && !jump && !underTable && canTake()) { // is the screen centre on the vase?
+    camera.getWorldDirection(aimDir);
+    vase.getWorldPosition(wp);
+    const cx = wp.x - camera.position.x, cy = wp.y + 0.3 - camera.position.y, cz = wp.z - camera.position.z;
+    const along = cx * aimDir.x + cy * aimDir.y + cz * aimDir.z;
+    if (along > 0) {
+      const ox = cx - aimDir.x * along, oy = cy - aimDir.y * along, oz = cz - aimDir.z * along;
+      aimedVase = ox * ox + oy * oy + oz * oz < 0.4 * 0.4;
+    }
+  }
+  const handOn = aimedVase || !!aimed;
+  handBtn.hidden = !handOn;
   let vlabel = '';
-  if (!ending && !jump && !hiding) vlabel = vs.state === 'carried' ? 'DROP' : (canTake() ? 'TAKE' : '');
+  if (!ending && !jump && !hiding && vs.state === 'carried') vlabel = 'DROP';
   if (fine && vlabel) vlabel += '  [SPACE]';
   if (vaseBtn.textContent !== vlabel) vaseBtn.textContent = vlabel;
   vaseBtn.hidden = !vlabel;
   updateShards(dt);
-  crossEl.hidden = !(fine && !aimed && !ending);
+  crossEl.hidden = !(fine && !handOn && !ending);
   lockMsg.textContent = plFail ? 'MOVE THE MOUSE LEFT OR RIGHT OF THE CENTER TO TURN  ·  CLICK TO CAPTURE IT' : 'CLICK TO LOOK AROUND';
   lockMsg.hidden = !(fine && !locked() && !ending && (!plFail || gt < 15));
 
