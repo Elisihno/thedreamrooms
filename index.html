@@ -338,6 +338,7 @@ function stickReset() {
   base.style.left = '28px'; base.style.bottom = '36px'; base.style.top = '';
 }
 window.addEventListener('touchstart', e => {
+  if (!running || e.target.closest('button')) return; // let menu buttons receive their tap
   for (const t of e.changedTouches) {
     if (t.clientX < window.innerWidth * 0.45 && stickId === null) {
       stickId = t.identifier;
@@ -351,6 +352,7 @@ window.addEventListener('touchstart', e => {
   e.preventDefault();
 }, { passive: false });
 window.addEventListener('touchmove', e => {
+  if (!running) return;
   for (const t of e.changedTouches) {
     if (t.identifier === stickId) stickUpdate(t.clientX, t.clientY);
     else if (t.identifier === lookId) {
