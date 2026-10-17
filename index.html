@@ -40,6 +40,11 @@
   #vaseBtn { position: absolute; left: 50%; bottom: calc(120px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     pointer-events: auto; background: none; border: 0; padding: 14px 24px; color: #fff; font: 22px "Courier New", monospace;
     letter-spacing: 5px; white-space: nowrap; text-shadow: 0 0 8px #000, 0 0 3px #000; }
+  #bal { position: absolute; left: 50%; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); width: 200px; height: 4px; margin-left: -100px;
+    background: rgba(255,255,255,.25); border-radius: 2px; }
+  #bal::before { content: ''; position: absolute; left: 50%; top: -6px; width: 2px; height: 16px; background: rgba(255,255,255,.5); }
+  #bal i { position: absolute; top: -7px; left: 50%; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px #000; }
+  #bal span { position: absolute; left: 0; right: 0; top: -30px; text-align: center; color: #fff; font: 12px "Courier New", monospace; letter-spacing: 4px; text-shadow: 0 0 6px #000; }
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 6; }
   #alert { position: absolute; top: 44px; left: 0; right: 0; text-align: center; color: #e8c86a;
     font-size: 14px; letter-spacing: 3px; text-shadow: 0 0 8px #000; }
@@ -59,7 +64,7 @@
   <h1>LEVEL 0</h1>
   <h2>THE LOBBY</h2>
   <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
-     Phone: left thumb moves, right thumb looks, tap the figure in the corner to crouch<br>Take the vase from the table (Space, or tap TAKE) and drop it far away. The thing in the dark goes for it first.<br>Computer: WASD to move, mouse to look (drag if the cursor isn't captured), arrow keys or Q/E to turn, C to crouch<br>
+     Phone: left thumb moves, right thumb looks, tap the figure in the corner to crouch<br>Somewhere out there is a room of holes. Keep your balance on the narrow walkways: lean the opposite way.<br>Take the vase from the table (Space, or tap TAKE) and drop it far away. The thing in the dark goes for it first.<br>Computer: WASD to move, mouse to look (drag if the cursor isn't captured), arrow keys or Q/E to turn, C to crouch<br>
      Find where reality is thin. Listen.<br>When the lights fail, aim at a table until the hand appears, tap it to hide under, and stay quiet. It only comes if it hears you.<br><br>
      <i>Headphones recommended.</i></p>
   <button id="start">ENTER</button>
@@ -70,6 +75,7 @@
   <div id="hint">LISTEN FOR THE STATIC</div>
   <div id="alert"></div>
   <div id="cross" hidden></div>
+  <div id="bal" hidden><span>BALANCE</span><i></i></div>
   <button id="vaseBtn" hidden></button>
   <div id="lockMsg" hidden>CLICK TO LOOK AROUND</div>
   <div id="pose"><img id="poseImg" alt=""></div>
@@ -101,33 +107,60 @@ function hash(i, j, k) {
   h = Math.imul(h ^ (h >>> 16), 2246822519);
   return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
 }
-// noclip spot: a cell far from spawn where reality is thin
-const EXIT = { i: 19, j: -14 };
+// ---------- the pit room (far from spawn) ----------
+const PIT = { i0: 12, i1: 17, j0: -16, j1: -12 };   // cells of the whole room
+const LAT = { x0: 52, x1: 68, z0: -64, z1: -44 };    // the lattice of walkways between the holes
+const GATE_J = -14;                                  // row of the room's entrance and exit door
+const WALK = 0.5;                                    // half the width of a walkway
+const EXIT = { x: 72, z: -54 };                      // the door
+const inRoom = (i, j) => i >= PIT.i0 && i <= PIT.i1 && j >= PIT.j0 && j <= PIT.j1;
+const pitCell = (i, j) => i >= 13 && i <= 16 && j >= -16 && j <= -12;
+// a guaranteed open route from the spawn to the room
+const onPath = (i, j) => (i === 0 && j <= 0 && j >= GATE_J) || (j === GATE_J && i >= 0 && i < PIT.i0);
+const onLattice = (x, z) => x > LAT.x0 - WALK && x < LAT.x1 + WALK && z > LAT.z0 - WALK && z < LAT.z1 + WALK;
+function overHole(x, z) {
+  if (x < LAT.x0 || x > LAT.x1 || z < LAT.z0 || z > LAT.z1) return false;
+  const fx = (x - LAT.x0) % 4, fz = (z - LAT.z0) % 4;
+  return fx > WALK && fx < 4 - WALK && fz > WALK && fz < 4 - WALK;
+}
+const inPitArea = (x, z) => x > 46 && x < 73 && z > -65 && z < -43;
 function density(i, j) {
   return 0.1 + 0.3 * hash(Math.floor(i / 4), Math.floor(j / 4), 9);
 }
 function nearSpawn(i, j) { return Math.abs(i) <= 1 && Math.abs(j) <= 1; }
 // wall on the west edge of cell (i,j)
 function wallV(i, j) {
+  if (j >= PIT.j0 && j <= PIT.j1) {
+    if (i === PIT.i0) return j !== GATE_J; // west wall with a gap for the entrance
+    if (i === PIT.i1 + 1) return true;     // east wall, with the door
+    if (i > PIT.i0 && i <= PIT.i1) return false;
+  }
   if (nearSpawn(i, j) || nearSpawn(i - 1, j)) return false;
+  if (onPath(i, j) && onPath(i - 1, j)) return false;
   return hash(i, j, 1) < density(i, j);
 }
 // wall on the north edge of cell (i,j)
 function wallH(i, j) {
+  if (i >= PIT.i0 && i <= PIT.i1) {
+    if (j === PIT.j0 || j === PIT.j1 + 1) return true;
+    if (j > PIT.j0 && j <= PIT.j1) return false;
+  }
   if (nearSpawn(i, j) || nearSpawn(i, j - 1)) return false;
+  if (onPath(i, j) && onPath(i, j - 1)) return false;
   return hash(i, j, 2) < density(i, j);
 }
 // thick square pillars standing on cell corners
 const PW = 0.95;
 function pillarAt(i, j) {
+  for (const [a, b] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) if (inRoom(i + a, j + b) || onPath(i + a, j + b)) return false;
   return !(Math.abs(i) <= 2 && Math.abs(j) <= 2) && hash(i, j, 20) < 0.16;
 }
-function lightAt(i, j) { return nearSpawn(i, j) || hash(i, j, 3) < 0.42; }
-function lightFlicker(i, j) { return !nearSpawn(i, j) && hash(i, j, 4) < 0.3; }
+function lightAt(i, j) { return nearSpawn(i, j) || inRoom(i, j) || hash(i, j, 3) < 0.42; }
+function lightFlicker(i, j) { return !nearSpawn(i, j) && !inRoom(i, j) && hash(i, j, 4) < 0.3; }
 function flickGroup(i, j) { return hash(i, j, 12) < 0.5 ? 0 : 1; }
 // tables low enough to crouch under; one is always next to the spawn
 const TW = 1.6, TD = 0.9, TY = 0.72;
-function tableAt(i, j) { return (i === 1 && j === 0) || (!nearSpawn(i, j) && hash(i, j, 11) < 0.028); }
+function tableAt(i, j) { return (i === 1 && j === 0) || (!nearSpawn(i, j) && !inRoom(i, j) && !onPath(i, j) && hash(i, j, 11) < 0.028); }
 function tableRot(i, j) { return hash(i, j, 13) < 0.5 ? 0 : 1; }
 // where the table sits and how a world point maps into its frame
 function tableLocal(i, j, px, pz) {
@@ -185,13 +218,13 @@ const scene = new THREE.Scene();
 const FOG = 0xb8b060;
 scene.background = new THREE.Color(0x231e0d);
 scene.fog = new THREE.Fog(0x231e0d, 3, 36);
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.05, 60);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 
-const hemi = new THREE.HemisphereLight(0xe8d9a0, 0x5a5238, 1.15);
+const hemi = new THREE.HemisphereLight(0xe3d4a2, 0x5a5238, 0.8);
 scene.add(hemi);
 const torch = new THREE.PointLight(0xffe9b0, 2.2, 9, 1.6);
 camera.add(torch);
@@ -213,7 +246,7 @@ function updatePool(px, pz) {
     const f = c[k];
     if (!f) { l.intensity = 0; return; }
     l.position.set(f.x, H - 0.4, f.z);
-    l.intensity = 14 * dip * (lightFlicker(f.i, f.j) ? flk[flickGroup(f.i, f.j)].lvl : 1);
+    l.intensity = 12 * dip * (lightFlicker(f.i, f.j) ? flk[flickGroup(f.i, f.j)].lvl : 1);
   });
 }
 // each flickering fixture group has its own stutter; now and then one dies for a moment
@@ -251,21 +284,16 @@ function canvasTex(w, h, draw, rx, ry) {
 }
 function rnd(n) { return Math.random() * n; }
 
-// worn greige carpet: fine grain, a few damp patches (one texture tile = 2 m of floor)
-const carpetTex = canvasTex(256, 256, (g, w, h) => {
-  g.fillStyle = '#a49e8c'; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 26000; i++) {
-    const v = 120 + rnd(70);
-    g.fillStyle = `rgba(${v},${v - 4},${v - 18},${0.2 + rnd(0.35)})`;
-    g.fillRect(rnd(w), rnd(h), 1, 1 + rnd(2));
+// short, even khaki carpet like the reference: fine grain only, no blotches (one tile = 2 m of floor)
+const carpetTex = canvasTex(512, 512, (g, w, h) => {
+  const img = g.createImageData(w, h), d = img.data;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const n = (Math.random() - 0.5) * 30 + (Math.random() - 0.5) * 12;
+    const k = (y * w + x) * 4;
+    d[k] = 138 + n; d[k + 1] = 123 + n; d[k + 2] = 90 + n * 0.85; d[k + 3] = 255;
   }
-  for (let i = 0; i < 14; i++) { // damp stains
-    const x = rnd(w), y = rnd(h), r = 25 + rnd(60);
-    const gr = g.createRadialGradient(x, y, 0, x, y, r);
-    gr.addColorStop(0, 'rgba(60,54,36,0.1)'); gr.addColorStop(1, 'rgba(60,54,36,0)');
-    g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
-  }
-}, CH * S / 2, CH * S / 2);
+  g.putImageData(img, 0, 0);
+}, 1, 1);
 
 // small beige acoustic ceiling tiles (0.64 m), speckled, with a thin grid
 const ceilTex = canvasTex(128, 128, (g, w, h) => {
@@ -318,11 +346,64 @@ const outletTex = canvasTex(64, 96, (g, w, h) => {
 }, 1, 1);
 const outletMat = new THREE.MeshLambertMaterial({ map: outletTex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
 const outletGeo = new THREE.PlaneGeometry(0.09, 0.14);
+// hand-scrawled HELP messages
+function helpTex(text) {
+  return canvasTex(512, 256, (g, w, h) => {
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const size = text.length > 6 ? 84 : 120, step = size * 0.62, x0 = w / 2 - (text.length - 1) * step / 2;
+    for (let k = 0; k < text.length; k++) {
+      const ch = text[k]; if (ch === ' ') continue;
+      const x = x0 + k * step + (Math.random() - 0.5) * 8, y = h / 2 + (Math.random() - 0.5) * 20;
+      g.save(); g.translate(x, y); g.rotate((Math.random() - 0.5) * 0.35);
+      g.font = `bold ${size * (0.9 + Math.random() * 0.25)}px "Marker Felt", "Comic Sans MS", "Bradley Hand", cursive`;
+      g.fillStyle = '#2e0b07'; g.strokeStyle = '#2e0b07'; g.lineWidth = 5; g.strokeText(ch, 0, 0); g.fillText(ch, 0, 0);
+      g.restore();
+      if (Math.random() < 0.45) { // drips
+        g.fillStyle = 'rgba(46,11,7,0.85)'; g.fillRect(x + (Math.random() - 0.5) * size * 0.4, y + size * 0.3, 3 + Math.random() * 2, 12 + Math.random() * 40);
+      }
+    }
+  }, 1, 1);
+}
+const helpMats = ['HELP', 'HELP ME', 'PLEASE HELP'].map(t => new THREE.MeshLambertMaterial({
+  map: helpTex(t), transparent: true, alphaTest: 0.3, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+const helpGeo = new THREE.PlaneGeometry(1.7, 0.85);
+// some areas are covered in them, most have none
+const helpProb = (i, j) => 0.03 + (hash(Math.floor(i / 5), Math.floor(j / 5), 40) < 0.3 ? 0.4 : 0);
 const panelGeo = new THREE.PlaneGeometry(1.3, 1.2);
 panelGeo.rotateX(Math.PI / 2);
 
-const floorGeo = new THREE.PlaneGeometry(CH * S, CH * S);
-floorGeo.rotateX(-Math.PI / 2);
+// floor made per chunk so the pit cells can have real holes (uv = world position / 2 m)
+function chunkFloorGeo(i0, j0) {
+  const P = [], U = [];
+  const quad = (x0, z0, x1, z1) => {
+    for (const [x, z] of [[x0, z0], [x0, z1], [x1, z1], [x0, z0], [x1, z1], [x1, z0]]) { P.push(x, 0, z); U.push(x / 2, z / 2); }
+  };
+  let pits = false;
+  for (let i = i0; i < i0 + CH && !pits; i++) for (let j = j0; j < j0 + CH; j++) if (pitCell(i, j)) { pits = true; break; }
+  if (!pits) quad(i0 * S, j0 * S, (i0 + CH) * S, (j0 + CH) * S);
+  else for (let i = i0; i < i0 + CH; i++) for (let j = j0; j < j0 + CH; j++) {
+    const x0 = i * S, x1 = x0 + S, z0 = j * S, z1 = z0 + S, w = WALK * 2 / 2;
+    if (!pitCell(i, j)) quad(x0, z0, x1, z1);
+    else { quad(x0, z0, x1, z0 + w); quad(x0, z1 - w, x1, z1); quad(x0, z0 + w, x0 + w, z1 - w); quad(x1 - w, z0 + w, x1, z1 - w); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(P.map((v, k) => (k % 3 === 1 ? 1 : 0)), 3));
+  return g;
+}
+// each hole: a deep square shaft that fades to black (we look at its inside faces)
+const HOLE = S - WALK * 2, HOLE_D = 9;
+const pitGeo = new THREE.BoxGeometry(HOLE, HOLE_D, HOLE);
+{
+  const pos = pitGeo.attributes.position, col = new Float32Array(pos.count * 3);
+  for (let k = 0; k < pos.count; k++) {
+    const t = (pos.getY(k) + HOLE_D / 2) / HOLE_D, b = 0.9 * Math.pow(t, 3.2);
+    col[k * 3] = col[k * 3 + 1] = col[k * 3 + 2] = b;
+  }
+  pitGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+}
+const pitMat = new THREE.MeshLambertMaterial({ color: 0xb4a578, vertexColors: true, side: THREE.BackSide });
 const ceilGeo = new THREE.PlaneGeometry(CH * S, CH * S);
 ceilGeo.rotateX(Math.PI / 2);
 
@@ -336,7 +417,7 @@ const chunks = new Map();
 function buildChunk(cx, cz) {
   const group = new THREE.Group();
   const i0 = cx * CH, j0 = cz * CH;
-  const wallM = [], panels = [], flickA = [[], []], outl = [], tops = [], legs = [], pillars = [];
+  const wallM = [], panels = [], flickA = [[], []], outl = [], tops = [], legs = [], pillars = [], help = [[], [], []];
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
   const qv = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
   const qh = new THREE.Quaternion();
@@ -352,12 +433,22 @@ function buildChunk(cx, cz) {
           p.set(i * S + side * OFF, 0.32, j * S + S * (0.25 + 0.5 * hash(i, j, 7)));
           m.compose(p, side > 0 ? qPX : qNX, one); outl.push(m.clone());
         }
+        if (hash(i, j, 30) < helpProb(i, j)) {
+          const side = hash(i, j, 32) < 0.5 ? 1 : -1;
+          p.set(i * S + side * OFF, 1.1 + hash(i, j, 33) * 0.7, j * S + S * (0.25 + 0.5 * hash(i, j, 34)));
+          m.compose(p, side > 0 ? qPX : qNX, one); help[Math.floor(hash(i, j, 31) * 3)].push(m.clone());
+        }
       }
       if (wallH(i, j)) { p.set(i * S + S / 2, H / 2, j * S); m.compose(p, qh, one); wallM.push(m.clone());
         if (hash(i, j, 8) < 0.4) {
           const side = hash(i, j, 9) < 0.5 ? 1 : -1;
           p.set(i * S + S * (0.25 + 0.5 * hash(i, j, 10)), 0.32, j * S + side * OFF);
           m.compose(p, side > 0 ? qh : qNZ, one); outl.push(m.clone());
+        }
+        if (hash(i, j, 35) < helpProb(i, j)) {
+          const side = hash(i, j, 36) < 0.5 ? 1 : -1;
+          p.set(i * S + S * (0.25 + 0.5 * hash(i, j, 37)), 1.1 + hash(i, j, 38) * 0.7, j * S + side * OFF);
+          m.compose(p, side > 0 ? qh : qNZ, one); help[Math.floor(hash(i, j, 39) * 3)].push(m.clone());
         }
       }
       if (pillarAt(i, j)) { p.set(i * S, H / 2, j * S); m.compose(p, qh, one); pillars.push(m.clone()); }
@@ -387,13 +478,17 @@ function buildChunk(cx, cz) {
   inst(wallGeo, wallMat, wallM);
   inst(pillarGeo, wallMat, pillars);
   inst(outletGeo, outletMat, outl);
+  help.forEach((arr, k) => inst(helpGeo, helpMats[k], arr));
   inst(panelGeo, lightMat, panels);
   inst(panelGeo, flickMats[0], flickA[0]);
   inst(panelGeo, flickMats[1], flickA[1]);
   inst(topGeo, woodMat, tops);
   inst(legGeo, woodMat, legs);
   const cxm = (i0 + CH / 2) * S, czm = (j0 + CH / 2) * S;
-  const fl = new THREE.Mesh(floorGeo, floorMat); fl.position.set(cxm, 0, czm); group.add(fl);
+  const fl = new THREE.Mesh(chunkFloorGeo(i0, j0), floorMat); group.add(fl);
+  for (let i = i0; i < i0 + CH; i++) for (let j = j0; j < j0 + CH; j++) if (pitCell(i, j)) {
+    const pm = new THREE.Mesh(pitGeo, pitMat); pm.position.set(i * S + S / 2, -HOLE_D / 2, j * S + S / 2); group.add(pm);
+  }
   const ce = new THREE.Mesh(ceilGeo, ceilMat); ce.position.set(cxm, H, czm); group.add(ce);
   scene.add(group);
   return group;
@@ -714,7 +809,7 @@ function updateEvent(dt) {
     if (gt > evt.miniNext) { evt.miniUntil = gt + 0.45; evt.miniNext = gt + 12 + Math.random() * 14; }
     dip = gt < evt.miniUntil ? (Math.random() < 0.55 ? 0.06 : 0.85) : 1;
     if (vs.state === 'broken' && gt > vs.respawnAt) vaseReset();
-    if (gt > evt.next && !ending) {
+    if (gt > evt.next && !ending && !inPitArea(player.x, player.z)) {
       evt.phase = 'warn'; evt.t = gt;
       if (vs.state === 'carried') { // it slips from your hands
         dropVase(0.5); hint.textContent = 'THE VASE SLIPPED FROM YOUR HANDS'; hint.style.opacity = 1; hintT = 10;
@@ -876,12 +971,52 @@ function breakVase() {
 }
 vaseReset();
 
+let lean = 0, fall = null, checkpoint = null, endKind = 'dead';
+const balEl = document.getElementById('bal'), balDot = balEl.querySelector('i');
+
+// the exit: a brown door in the far wall, with a smiley face and an arrow painted beside it
+{
+  const doorTex = canvasTex(128, 256, (g, w, h) => {
+    g.fillStyle = '#7a4a2b'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 1200; i++) { g.fillStyle = `rgba(40,20,8,${Math.random() * 0.15})`; g.fillRect(Math.random() * w, Math.random() * h, 1, 12 + Math.random() * 30); }
+    g.strokeStyle = '#4a2a15'; g.lineWidth = 5;
+    g.strokeRect(18, 18, w - 36, 92); g.strokeRect(18, 126, w - 36, 112);
+  }, 1, 1);
+  const door = new THREE.Group();
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.2, 1.1), new THREE.MeshLambertMaterial({ map: doorTex }));
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.32, 1.3), new THREE.MeshLambertMaterial({ color: 0x3b2414 }));
+  frame.position.x = 0.012; slab.position.x = -0.02;
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), new THREE.MeshPhongMaterial({ color: 0xc9a24a, shininess: 80 }));
+  knob.position.set(-0.09, 0, 0.4);
+  door.add(frame, slab, knob);
+  door.position.set(EXIT.x - T / 2 - 0.06, 1.16, EXIT.z);
+  scene.add(door);
+
+  const msgTex = canvasTex(512, 256, (g, w, h) => {
+    g.strokeStyle = '#1b0f08'; g.fillStyle = '#1b0f08'; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 9;
+    g.beginPath(); // face outline, a bit wobbly
+    for (let a = 0; a <= 6.4; a += 0.2) { const r = 78 + Math.sin(a * 3) * 3, x = 125 + Math.cos(a) * r, y = 128 + Math.sin(a) * r; a === 0 ? g.moveTo(x, y) : g.lineTo(x, y); }
+    g.stroke();
+    g.beginPath(); g.moveTo(98, 100); g.lineTo(100, 122); g.moveTo(152, 98); g.lineTo(150, 120); g.stroke(); // eyes
+    g.beginPath(); g.arc(125, 128, 44, 0.25, 2.9); g.stroke();                                              // smile
+    g.beginPath(); g.moveTo(240, 150); g.quadraticCurveTo(330, 60, 440, 120); g.stroke();                   // arrow shaft
+    g.beginPath(); g.moveTo(405, 80); g.lineTo(448, 122); g.lineTo(398, 150); g.stroke();                   // arrow head
+  }, 1, 1);
+  const msg = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), new THREE.MeshLambertMaterial({
+    map: msgTex, transparent: true, alphaTest: 0.3, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  msg.rotation.y = -Math.PI / 2; // faces west, into the room; its right side points at the door
+  msg.position.set(EXIT.x - T / 2 - 0.01, 1.7, EXIT.z - 2.2);
+  scene.add(msg);
+}
+
 const fade = document.getElementById('fade');
 const endEl = document.getElementById('end');
 const hint = document.getElementById('hint');
 
 function resetGame() {
-  player.set(S / 2, 0, S / 2); yaw = pitch = 0; ending = false;
+  if (checkpoint) { player.set(checkpoint.x, 0, checkpoint.z); yaw = checkpoint.yaw; pitch = 0; }
+  else { player.set(S / 2, 0, S / 2); yaw = pitch = 0; }
+  ending = false; lean = 0; fall = null;
   evt.phase = 'idle'; evt.next = gt + 30; ent.visible = false; ent.scale.setScalar(1); camY = 1.6; dip = 1;
   vaseReset(); for (const sh of shards) scene.remove(sh.m); shards.length = 0; brain.mode = 'wander'; hint.textContent = 'LISTEN FOR THE STATIC';
   hiding = false; manualCrouch = false; velX = velZ = 0; jump = null; roll = 0; flashEl.style.opacity = 0; renderer.domElement.style.transform = '';
@@ -899,6 +1034,7 @@ function frame(now) {
   if (hintT > 14) hint.style.opacity = 0;
 
   // movement
+  const onLatNow = !ending && onLattice(player.x, player.z);
   let mx = move.x, my = move.y;
   if (keys.KeyA) mx -= 1;
   if (keys.KeyD) mx += 1;
@@ -917,7 +1053,7 @@ function frame(now) {
     // ease toward the wanted velocity so starting and stopping feel smooth
     let tx = 0, tz = 0;
     if (!ending && !hiding && mag > 0.05) {
-      const speed = 2.6 * mag * (camY < 1.0 ? 0.55 : 1);
+      const speed = 2.6 * mag * (camY < 1.0 ? 0.55 : 1) * (onLatNow ? 0.6 : 1);
       // forward is (-sin yaw, -cos yaw), right is (cos yaw, -sin yaw); stick up is -y
       const len = Math.hypot(mx, my);
       tx = (-Math.sin(yaw) * -my + Math.cos(yaw) * mx) / len * speed;
@@ -935,13 +1071,31 @@ function frame(now) {
     }
   }
 
+  // balancing on the narrow walkways: you keep tipping one way, so lean the other way
+  if (onLatNow && !hiding) {
+    lean += ((Math.random() - 0.5) * 4.2 + lean * 0.9) * dt + mx * 2.2 * dt;
+    lean = Math.max(-1.5, Math.min(1.5, lean));
+    player.x += Math.cos(yaw) * lean * 0.7 * dt; player.z += -Math.sin(yaw) * lean * 0.7 * dt;
+    if (overHole(player.x, player.z)) {
+      fall = { t: 0, vy: 0 }; ending = true; hiding = false;
+      fade.style.transition = 'opacity 0.9s'; fade.style.opacity = 1; footstep(1, 1);
+    }
+  } else lean *= Math.max(0, 1 - dt * 4);
+  balEl.hidden = !(onLatNow && !fall);
+  balDot.style.left = (50 + lean / 1.5 * 45) + '%';
+  if (!jump) roll = lean * 0.22;
+  if (player.x > 48.3 && player.x < 72 && player.z > -64 && player.z < -44 && !checkpoint) checkpoint = { x: 50, z: EXIT.z, yaw: -Math.PI / 2 };
+
   updateChunks(player.x, player.z);
 
   // crouch near and under tables
   underTable = tableState(player.x, player.z) === 2;
   hidden = hiding && underTable;
   const crouched = hiding || underTable || manualCrouch || keys.ControlLeft;
-  camY += ((crouched ? 0.5 : 1.6) - camY) * Math.min(1, dt * 7);
+  if (fall) {
+    fall.t += dt; fall.vy += 18 * dt; camY -= fall.vy * dt; pitch = Math.min(1.2, pitch + dt * 1.4);
+    if (fall.t > 1.1) { fall = null; showEnd('YOU FELL', 'The floor was not where you left it.', 'TRY AGAIN', true); }
+  } else camY += ((crouched ? 0.5 : 1.6) - camY) * Math.min(1, dt * 7);
   vig.classList.toggle('hid', hidden);
   setPose(crouched);
 
@@ -970,19 +1124,19 @@ function frame(now) {
   updatePool(player.x, player.z);
   lightMat.color.setScalar(dip);
   flickMats.forEach((mm, k) => mm.color.setScalar(0.05 + 0.95 * flk[k].lvl * dip));
-  hemi.intensity = 0.07 + 1.08 * dip;
+  hemi.intensity = 0.06 + 0.74 * dip;
   torch.intensity = 1.2 + 1.0 * dip * (0.9 + 0.1 * flk[0].lvl);
 
   // the thin spot: static grows as you approach
-  const ex = EXIT.i * S + S / 2, ez = EXIT.j * S + S / 2;
-  const dist = Math.hypot(player.x - ex, player.z - ez);
+  const dist = Math.hypot(player.x - EXIT.x, player.z - EXIT.z);
   if (staticGain) {
-    const near = Math.max(0, 1 - dist / 55);
+    const near = Math.max(0, 1 - dist / 80);
     staticGain.gain.value = near * near * 0.5;
     humGain.gain.value = 0.16 * (1 - near * 0.7) * (0.3 + 0.7 * dip);
   }
-  if (!ending && dist < 1.2) {
-    showEnd('LEVEL 1', 'You noclipped out of bounds.<br>The hum fades. Something concrete waits below.<br><br>To be continued...', 'BACK TO LEVEL 0');
+  if (!ending && dist < 1.5) {
+    endKind = 'win';
+    showEnd('LEVEL 1', 'You step through the door.<br>The hum fades. Something concrete waits below.<br><br>To be continued...', 'BACK TO LEVEL 0');
   }
 
   renderer.render(scene, camera);
@@ -998,7 +1152,7 @@ document.getElementById('start').addEventListener('click', () => {
   if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
   running = true; last = performance.now();
 });
-document.getElementById('again').addEventListener('click', () => { resetGame(); lockPointer(); });
+document.getElementById('again').addEventListener('click', () => { if (endKind === 'win') checkpoint = null; endKind = 'dead'; resetGame(); lockPointer(); });
 
 updateChunks(player.x, player.z);
 requestAnimationFrame(frame);
