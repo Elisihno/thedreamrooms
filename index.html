@@ -57,7 +57,7 @@
   <h2>THE LOBBY</h2>
   <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
      Phone: left thumb moves, right thumb looks, tap the figure in the corner to crouch<br>Computer: WASD to move, mouse to look (drag if the cursor isn't captured), arrow keys or Q/E to turn, C to crouch<br>
-     Find where reality is thin. Listen.<br>When the lights fail, aim at a table until the hand appears, tap it to hide under, and stay still.<br><br>
+     Find where reality is thin. Listen.<br>When the lights fail, aim at a table until the hand appears, tap it to hide under, and stay quiet. It only comes if it hears you.<br><br>
      <i>Headphones recommended.</i></p>
   <button id="start">ENTER</button>
 </div>
@@ -611,6 +611,7 @@ function tryHide() {
   const nt = aimed;
   if (!nt || hiding || ending) return;
   hiding = true; hideT = 0; hideFrom.copy(player); hideTo.set(nt.cx, 0, nt.cz); velX = velZ = 0;
+  emitNoise(player.x, player.z, 6); // shuffling under the table is faintly audible
 }
 handBtn.addEventListener('click', tryHide);
 let velX = 0, velZ = 0;
@@ -634,6 +635,18 @@ const ent = new THREE.Group();
 }
 ent.visible = false; scene.add(ent);
 let entStep = 0;
+// it roams the halls and only goes to a place when it hears something there
+const brain = { mode: 'wander', tx: 0, tz: 0, wait: 0, wanderT: 0 };
+function pickWander() {
+  const a = Math.random() * 6.283, r = 7 + Math.random() * 8;
+  brain.tx = player.x + Math.sin(a) * r; brain.tz = player.z + Math.cos(a) * r; brain.wanderT = 7;
+}
+function emitNoise(x, z, radius) {
+  if (evt.phase !== 'dark' || !ent.visible || jump) return;
+  if (Math.hypot(ent.position.x - x, ent.position.z - z) < radius) {
+    brain.mode = 'investigate'; brain.tx = x; brain.tz = z;
+  }
+}
 
 // blackout events: warn -> dark (it walks toward you) -> recover
 const WARN = 2.4, DARK = 15, RECOVER = 1.3;
@@ -692,16 +705,38 @@ function updateEvent(dt) {
       evt.phase = 'dark'; evt.t = gt;
       const a = Math.random() * 6.283;
       ent.position.set(player.x + Math.sin(a) * 18, 0, player.z + Math.cos(a) * 18);
-      ent.visible = true; entStep = 0;
+      ent.visible = true; entStep = 0; brain.mode = 'wander'; pickWander();
     }
   } else if (evt.phase === 'dark') {
     dip = Math.random() < 0.006 ? 0.12 : 0;
-    setAlert(hidden ? 'STAY STILL' : 'HIDE UNDER A TABLE');
     const dx = player.x - ent.position.x, dz = player.z - ent.position.z, d = Math.hypot(dx, dz) || 1e-3;
-    const chase = !hidden && d < 9;
-    const speed = hidden ? (d > 2 ? 1.7 : 0) : (chase ? 3.3 : 1.9);
+    setAlert(hidden ? (brain.mode === 'investigate' ? 'IT HEARD SOMETHING' : 'STAY STILL') : 'HIDE UNDER A TABLE');
+    let speed = 0, mx = 0, mz = 0, chase = false;
+    if (!hidden && d < 9) { // it sees you in the open
+      chase = true; brain.mode = 'chase'; mx = dx; mz = dz; speed = 3.3;
+    } else {
+      if (brain.mode === 'chase') { brain.mode = 'search'; brain.wait = 2 + Math.random() * 2; } // lost you
+      if (brain.mode === 'search') {
+        brain.wait -= dt;
+        if (brain.wait <= 0) { brain.mode = 'wander'; pickWander(); }
+      } else {
+        mx = brain.tx - ent.position.x; mz = brain.tz - ent.position.z;
+        const dd = Math.hypot(mx, mz);
+        if (dd < 1.4) { // arrived: look around a while
+          if (brain.mode === 'investigate') { brain.mode = 'search'; brain.wait = 3 + Math.random() * 3; }
+          else pickWander();
+        } else {
+          speed = brain.mode === 'investigate' ? 2.3 : 1.4;
+          mx /= dd; mz /= dd;
+          brain.wanderT -= dt; if (brain.mode === 'wander' && brain.wanderT <= 0) pickWander();
+        }
+      }
+    }
     if (!ending) {
-      ent.position.x += dx / d * speed * dt; ent.position.z += dz / d * speed * dt;
+      if (speed > 0) {
+        const l = Math.hypot(mx, mz) || 1;
+        ent.position.x += mx / l * speed * dt; ent.position.z += mz / l * speed * dt;
+      }
       ent.rotation.y = Math.atan2(dx, dz); ent.rotation.z = Math.sin(gt * 2.2) * 0.05;
       if (speed > 0) {
         entStep -= dt;
@@ -772,7 +807,7 @@ function frame(now) {
       collide(player);
       bob += dt * sp * 3.4;
       stepAcc += dt * sp;
-      if (stepAcc > 1.4) { stepAcc = 0; footstep(camY < 1.0 ? 0.4 : 1); }
+      if (stepAcc > 1.4) { stepAcc = 0; footstep(camY < 1.0 ? 0.4 : 1); emitNoise(player.x, player.z, camY < 1.0 ? 5 : 12); }
     }
   }
 
