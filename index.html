@@ -25,6 +25,9 @@
     border: 2px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); }
   #stickKnob { position: absolute; left: 40px; top: 40px; width: 40px; height: 40px; border-radius: 50%;
     background: rgba(255,255,255,.28); }
+  #alert { position: absolute; top: 44px; left: 0; right: 0; text-align: center; color: #e8c86a;
+    font-size: 14px; letter-spacing: 3px; text-shadow: 0 0 8px #000; }
+  #vig.hid { background: radial-gradient(ellipse at center, rgba(0,0,0,.25) 12%, rgba(0,0,0,.94) 80%); }
   #hint { position: absolute; top: 14px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,.55);
     font-size: 12px; letter-spacing: 2px; transition: opacity 2s; }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 2.5s; z-index: 5; }
@@ -41,19 +44,20 @@
   <h2>THE LOBBY</h2>
   <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
      Left thumb: move &nbsp; Right thumb: look<br>
-     Find where reality is thin. Listen.<br><br>
+     Find where reality is thin. Listen.<br>When the lights fail, walk under a table and stay still.<br><br>
      <i>Headphones recommended.</i></p>
   <button id="start">ENTER</button>
 </div>
 <div id="vig"></div>
 <div id="hud">
   <div id="hint">LISTEN FOR THE STATIC</div>
+  <div id="alert"></div>
   <div id="stickBase"><div id="stickKnob"></div></div>
 </div>
 <div id="fade"></div>
 <div id="end">
-  <h1>LEVEL 1</h1>
-  <p>You noclipped out of bounds.<br>The hum fades. Something concrete waits below.<br><br>To be continued...</p>
+  <h1 id="endTitle">LEVEL 1</h1>
+  <p id="endText">You noclipped out of bounds.<br>The hum fades. Something concrete waits below.<br><br>To be continued...</p>
   <button id="again">BACK TO LEVEL 0</button>
 </div>
 
@@ -92,7 +96,29 @@ function wallH(i, j) {
   return hash(i, j, 2) < density(i, j);
 }
 function lightAt(i, j) { return nearSpawn(i, j) || hash(i, j, 3) < 0.42; }
-function lightFlicker(i, j) { return !nearSpawn(i, j) && hash(i, j, 4) < 0.18; }
+function lightFlicker(i, j) { return !nearSpawn(i, j) && hash(i, j, 4) < 0.3; }
+function flickGroup(i, j) { return hash(i, j, 12) < 0.5 ? 0 : 1; }
+// tables low enough to crouch under; one is always next to the spawn
+const TW = 1.6, TD = 0.9, TY = 0.72;
+function tableAt(i, j) { return (i === 1 && j === 0) || (!nearSpawn(i, j) && hash(i, j, 11) < 0.07); }
+function tableRot(i, j) { return hash(i, j, 13) < 0.5 ? 0 : 1; }
+// where the table sits and how a world point maps into its frame
+function tableLocal(i, j, px, pz) {
+  const dx = px - (i * S + S / 2), dz = pz - (j * S + S / 2);
+  return tableRot(i, j) ? { lx: -dz, lz: dx } : { lx: dx, lz: dz };
+}
+// 0 = clear, 1 = close enough to crouch, 2 = hidden under it
+function tableState(px, pz) {
+  const ci = Math.floor(px / S), cj = Math.floor(pz / S);
+  let st = 0;
+  for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
+    if (!tableAt(i, j)) continue;
+    const { lx, lz } = tableLocal(i, j, px, pz);
+    if (Math.abs(lx) < TW / 2 - 0.15 && Math.abs(lz) < TD / 2 - 0.1) return 2;
+    if (Math.abs(lx) < TW / 2 + 0.4 && Math.abs(lz) < TD / 2 + 0.4) st = 1;
+  }
+  return st;
+}
 
 // ---------- renderer ----------
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
@@ -109,7 +135,8 @@ const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerH
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 
-scene.add(new THREE.HemisphereLight(0xd8d09a, 0x302e24, 0.55));
+const hemi = new THREE.HemisphereLight(0xd8d09a, 0x302e24, 0.55);
+scene.add(hemi);
 const torch = new THREE.PointLight(0xffe9b0, 4, 9, 1.6);
 camera.add(torch);
 
@@ -130,10 +157,17 @@ function updatePool(px, pz) {
     const f = c[k];
     if (!f) { l.intensity = 0; return; }
     l.position.set(f.x, H - 0.4, f.z);
-    l.intensity = 9 * (lightFlicker(f.i, f.j) ? flickLevel : 1);
+    l.intensity = 9 * dip * (lightFlicker(f.i, f.j) ? flk[flickGroup(f.i, f.j)].lvl : 1);
   });
 }
-let flickLevel = 1;
+// each flickering fixture group has its own stutter; now and then one dies for a moment
+const flk = [{ lvl: 1, off: 0, seed: 0 }, { lvl: 1, off: 0, seed: 2.1 }];
+function stepFlick(f, t) {
+  if (t < f.off) { f.lvl = Math.random() < 0.3 ? 0.3 : 0.03; return; }
+  if (Math.random() < 0.007) f.off = t + 0.12 + Math.random() * 0.7;
+  f.lvl = Math.random() < 0.1 ? 0.25 : (Math.sin(t * 47 + f.seed) > 0.95 ? 0.5 : 1);
+}
+let dip = 1; // global brightness: power dips and blackouts
 
 window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -201,7 +235,10 @@ const fixtureTex = canvasTex(128, 128, (g, w, h) => {
   g.fillRect(0, 0, 4, h); g.fillRect(w - 4, 0, 4, h);
 }, 1, 1);
 const lightMat = new THREE.MeshBasicMaterial({ map: fixtureTex, fog: false });
-const flickMat = new THREE.MeshBasicMaterial({ map: fixtureTex, color: 0xffffff, fog: false });
+const flickMats = [0, 1].map(() => new THREE.MeshBasicMaterial({ map: fixtureTex, color: 0xffffff, fog: false }));
+const woodMat = new THREE.MeshLambertMaterial({ color: 0x4b3d2a });
+const topGeo = new THREE.BoxGeometry(TW, 0.05, TD);
+const legGeo = new THREE.BoxGeometry(0.06, TY, 0.06);
 
 // wall box: long faces repeat the wallpaper twice across so chevrons stay a believable size
 const wallGeo = new THREE.BoxGeometry(S + T, H, T);
@@ -228,12 +265,17 @@ floorGeo.rotateX(-Math.PI / 2);
 const ceilGeo = new THREE.PlaneGeometry(CH * S, CH * S);
 ceilGeo.rotateX(Math.PI / 2);
 
+function tableLegs(w, d) {
+  const x = w / 2 - 0.07, z = d / 2 - 0.07;
+  return [[x, z], [-x, z], [x, -z], [-x, -z]];
+}
+
 // ---------- chunks ----------
 const chunks = new Map();
 function buildChunk(cx, cz) {
   const group = new THREE.Group();
   const i0 = cx * CH, j0 = cz * CH;
-  const wallM = [], panels = [], flick = [], outl = [];
+  const wallM = [], panels = [], flickA = [[], []], outl = [], tops = [], legs = [];
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
   const qv = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
   const qh = new THREE.Quaternion();
@@ -257,8 +299,15 @@ function buildChunk(cx, cz) {
           m.compose(p, side > 0 ? qh : qNZ, one); outl.push(m.clone());
         }
       }
+      if (tableAt(i, j)) {
+        const rot = tableRot(i, j), cxw = i * S + S / 2, czw = j * S + S / 2;
+        p.set(cxw, TY - 0.025, czw); m.compose(p, rot ? qPX : qh, one); tops.push(m.clone());
+        for (const [lx, lz] of tableLegs(TW, TD)) {
+          p.set(cxw + (rot ? lz : lx), TY / 2, czw + (rot ? -lx : lz)); m.compose(p, qh, one); legs.push(m.clone());
+        }
+      }
       if (lightAt(i, j)) {
-        const dst = lightFlicker(i, j) ? flick : panels;
+        const dst = lightFlicker(i, j) ? flickA[flickGroup(i, j)] : panels;
         for (const dz of [-0.75, 0.75]) {
           p.set(i * S + S / 2, H - 0.01, j * S + S / 2 + dz); m.compose(p, qh, one);
           dst.push(m.clone());
@@ -276,7 +325,10 @@ function buildChunk(cx, cz) {
   inst(wallGeo, wallMat, wallM);
   inst(outletGeo, outletMat, outl);
   inst(panelGeo, lightMat, panels);
-  inst(panelGeo, flickMat, flick);
+  inst(panelGeo, flickMats[0], flickA[0]);
+  inst(panelGeo, flickMats[1], flickA[1]);
+  inst(topGeo, woodMat, tops);
+  inst(legGeo, woodMat, legs);
   const cxm = (i0 + CH / 2) * S, czm = (j0 + CH / 2) * S;
   const fl = new THREE.Mesh(floorGeo, floorMat); fl.position.set(cxm, 0, czm); group.add(fl);
   const ce = new THREE.Mesh(ceilGeo, ceilMat); ce.position.set(cxm, H, czm); group.add(ce);
@@ -323,12 +375,19 @@ function collide(pos) {
     for (let j = cj - 1; j <= cj + 2; j++) {
       if (wallV(i, j)) pushFromBox(pos, i * S - h, j * S - h, i * S + h, (j + 1) * S + h);
       if (wallH(i, j)) pushFromBox(pos, i * S - h, j * S - h, (i + 1) * S + h, j * S + h);
+      if (tableAt(i, j)) {
+        const rot = tableRot(i, j), cxw = i * S + S / 2, czw = j * S + S / 2;
+        for (const [lx, lz] of tableLegs(TW, TD)) {
+          const x = cxw + (rot ? lz : lx), z = czw + (rot ? -lx : lz);
+          pushFromBox(pos, x - 0.03, z - 0.03, x + 0.03, z + 0.03);
+        }
+      }
     }
   }
 }
 
 // ---------- audio ----------
-let actx = null, staticGain = null, humGain = null;
+let actx = null, staticGain = null, humGain = null, droneGain = null;
 function initAudio() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return;
@@ -356,14 +415,18 @@ function initAudio() {
   const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2500; bp.Q.value = 0.6;
   staticGain = actx.createGain(); staticGain.gain.value = 0;
   ns.connect(bp); bp.connect(staticGain); staticGain.connect(master); ns.start();
+
+  // low dread drone, only audible while something is close
+  droneGain = actx.createGain(); droneGain.gain.value = 0; droneGain.connect(master);
+  [41, 43.5].forEach(f => { const o = actx.createOscillator(); o.frequency.value = f; o.connect(droneGain); o.start(); });
 }
-function footstep() {
+function footstep(vol = 1, deep = 0) {
   if (!actx || !window.__noise) return;
   const s = actx.createBufferSource(); s.buffer = window.__noise;
-  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380 + Math.random() * 120;
+  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = (380 + Math.random() * 120) * (deep ? 0.45 : 1);
   const g = actx.createGain(), t = actx.currentTime;
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.35, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.35 * vol), t + 0.015);
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
   s.connect(lp); lp.connect(g); g.connect(actx.destination);
   s.start(t, Math.random(), 0.25);
@@ -440,12 +503,88 @@ window.addEventListener('mousemove', e => {
 // ---------- game state ----------
 const player = new THREE.Vector3(S / 2, 0, S / 2);
 let bob = 0, stepAcc = 0, ending = false, running = false, last = 0, hintT = 0;
+let gt = 0, camY = 1.6, hidden = false;
+const vig = document.getElementById('vig');
+const alertEl = document.getElementById('alert');
+const endTitle = document.getElementById('endTitle'), endText = document.getElementById('endText'), againBtn = document.getElementById('again');
+function setAlert(t) { if (alertEl.textContent !== t) alertEl.textContent = t; }
+
+// the thing that walks the halls when the lights fail
+const ent = new THREE.Group();
+{
+  const mat = new THREE.MeshLambertMaterial({ color: 0x1b1916 });
+  const add = (geo, x, y, z) => { const mm = new THREE.Mesh(geo, mat); mm.position.set(x, y, z); ent.add(mm); };
+  add(new THREE.BoxGeometry(0.5, 1.2, 0.26), 0, 1.35, 0);
+  add(new THREE.SphereGeometry(0.17, 8, 8), 0, 2.18, 0);
+  add(new THREE.BoxGeometry(0.07, 1.25, 0.07), -0.32, 1.3, 0);
+  add(new THREE.BoxGeometry(0.07, 1.25, 0.07), 0.32, 1.3, 0);
+  add(new THREE.BoxGeometry(0.13, 0.85, 0.13), -0.12, 0.42, 0);
+  add(new THREE.BoxGeometry(0.13, 0.85, 0.13), 0.12, 0.42, 0);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xfff2d0, fog: false });
+  [-0.07, 0.07].forEach(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 6), eyeMat); e.position.set(x, 2.2, 0.15); ent.add(e); });
+}
+ent.visible = false; scene.add(ent);
+let entStep = 0;
+
+// blackout events: warn -> dark (it walks toward you) -> recover
+const WARN = 2.4, DARK = 15, RECOVER = 1.3;
+const evt = { phase: 'idle', t: 0, next: 40, miniNext: 14, miniUntil: 0 };
+
+function showEnd(title, text, btn) {
+  ending = true;
+  endTitle.textContent = title; endText.innerHTML = text; againBtn.textContent = btn;
+  fade.style.transition = 'opacity 2.5s'; fade.style.opacity = 1;
+  setTimeout(() => { endEl.style.display = 'flex'; if (actx) actx.suspend(); }, 3000);
+}
+
+function updateEvent(dt) {
+  if (evt.phase === 'idle') {
+    if (gt > evt.miniNext) { evt.miniUntil = gt + 0.45; evt.miniNext = gt + 12 + Math.random() * 14; }
+    dip = gt < evt.miniUntil ? (Math.random() < 0.55 ? 0.06 : 0.85) : 1;
+    if (gt > evt.next && !ending) { evt.phase = 'warn'; evt.t = gt; }
+    setAlert('');
+  } else if (evt.phase === 'warn') {
+    const f = (gt - evt.t) / WARN;
+    dip = Math.random() < 0.2 + 0.6 * f ? 0 : 1;
+    setAlert('THE LIGHTS ARE FAILING');
+    if (f >= 1) {
+      evt.phase = 'dark'; evt.t = gt;
+      const a = Math.random() * 6.283;
+      ent.position.set(player.x + Math.sin(a) * 18, 0, player.z + Math.cos(a) * 18);
+      ent.visible = true; entStep = 0;
+    }
+  } else if (evt.phase === 'dark') {
+    dip = Math.random() < 0.006 ? 0.12 : 0;
+    setAlert(hidden ? 'STAY STILL' : 'HIDE UNDER A TABLE');
+    const dx = player.x - ent.position.x, dz = player.z - ent.position.z, d = Math.hypot(dx, dz) || 1e-3;
+    const chase = !hidden && d < 9;
+    const speed = hidden ? (d > 2 ? 1.7 : 0) : (chase ? 3.3 : 1.9);
+    if (!ending) {
+      ent.position.x += dx / d * speed * dt; ent.position.z += dz / d * speed * dt;
+      ent.rotation.y = Math.atan2(dx, dz); ent.rotation.z = Math.sin(gt * 2.2) * 0.04;
+      if (speed > 0) {
+        entStep -= dt;
+        if (entStep <= 0) { entStep = chase ? 0.42 : 0.8; footstep(Math.min(1, 1.2 - d / 20), 1); }
+      }
+      if (!hidden && d < 0.9) showEnd('FOUND', 'You weren't hidden.<br>It found you in the dark.', 'TRY AGAIN');
+    }
+    if (droneGain) droneGain.gain.value = 0.28 * Math.max(0, 1 - d / 22);
+    if (gt - evt.t > DARK) { evt.phase = 'recover'; evt.t = gt; ent.visible = false; }
+  } else { // recover
+    dip = Math.random() < 0.55 ? 1 : 0;
+    setAlert('');
+    if (droneGain) droneGain.gain.value = 0;
+    if (gt - evt.t > RECOVER) { evt.phase = 'idle'; evt.next = gt + 55 + Math.random() * 40; dip = 1; }
+  }
+}
 const fade = document.getElementById('fade');
 const endEl = document.getElementById('end');
 const hint = document.getElementById('hint');
 
 function resetGame() {
   player.set(S / 2, 0, S / 2); yaw = pitch = 0; ending = false;
+  evt.phase = 'idle'; evt.next = gt + 30; ent.visible = false; camY = 1.6; dip = 1;
+  if (droneGain) droneGain.gain.value = 0;
   fade.style.transition = 'none'; fade.style.opacity = 0;
   endEl.style.display = 'none';
   if (actx) actx.resume();
@@ -455,7 +594,7 @@ function resetGame() {
 function frame(now) {
   requestAnimationFrame(frame);
   if (!running) return;
-  const dt = Math.min((now - last) / 1000, 0.05); last = now; hintT += dt;
+  const dt = Math.min((now - last) / 1000, 0.05); last = now; hintT += dt; gt += dt;
   if (hintT > 14) hint.style.opacity = 0;
 
   // movement
@@ -466,7 +605,7 @@ function frame(now) {
   if (keys.KeyS || keys.ArrowDown) my += 1;
   const mag = Math.min(1, Math.hypot(mx, my));
   if (!ending && mag > 0.05) {
-    const speed = 2.6 * mag;
+    const speed = 2.6 * mag * (camY < 1.0 ? 0.55 : 1);
     // forward is (-sin yaw, -cos yaw), right is (cos yaw, -sin yaw); stick up is -y
     const dirX = (-Math.sin(yaw) * -my + Math.cos(yaw) * mx) / Math.hypot(mx, my);
     const dirZ = (-Math.cos(yaw) * -my - Math.sin(yaw) * mx) / Math.hypot(mx, my);
@@ -474,22 +613,30 @@ function frame(now) {
     collide(player);
     bob += dt * speed * 3.6;
     stepAcc += dt * speed;
-    if (stepAcc > 1.4) { stepAcc = 0; footstep(); }
+    if (stepAcc > 1.4) { stepAcc = 0; footstep(camY < 1.0 ? 0.4 : 1); }
   }
 
   updateChunks(player.x, player.z);
 
+  // crouch near and under tables
+  const ts = tableState(player.x, player.z);
+  hidden = ts === 2;
+  camY += ((ts ? 0.5 : 1.6) - camY) * Math.min(1, dt * 7);
+  vig.classList.toggle('hid', hidden);
+
   // camera
-  camera.position.set(player.x, 1.6 + Math.sin(bob) * 0.035, player.z);
+  camera.position.set(player.x, camY + Math.sin(bob) * (camY < 1 ? 0.012 : 0.035), player.z);
   camera.rotation.set(pitch, yaw, 0);
 
   // flicker
   const t = now / 1000;
-  const fl = Math.random() < 0.08 ? 0.25 : (Math.sin(t * 40) > 0.97 ? 0.5 : 1);
-  flickLevel = fl;
+  flk.forEach(f => stepFlick(f, t));
+  updateEvent(dt);
   updatePool(player.x, player.z);
-  flickMat.color.setScalar(0.85 * fl + 0.15);
-  torch.intensity = 4 * (0.93 + 0.07 * fl);
+  lightMat.color.setScalar(dip);
+  flickMats.forEach((mm, k) => mm.color.setScalar(0.05 + 0.95 * flk[k].lvl * dip));
+  hemi.intensity = 0.07 + 0.48 * dip;
+  torch.intensity = 1.5 + 2.5 * dip * (0.9 + 0.1 * flk[0].lvl);
 
   // the thin spot: static grows as you approach
   const ex = EXIT.i * S + S / 2, ez = EXIT.j * S + S / 2;
@@ -497,12 +644,10 @@ function frame(now) {
   if (staticGain) {
     const near = Math.max(0, 1 - dist / 55);
     staticGain.gain.value = near * near * 0.5;
-    humGain.gain.value = 0.16 * (1 - near * 0.7);
+    humGain.gain.value = 0.16 * (1 - near * 0.7) * (0.3 + 0.7 * dip);
   }
   if (!ending && dist < 1.2) {
-    ending = true;
-    fade.style.transition = 'opacity 2.5s'; fade.style.opacity = 1;
-    setTimeout(() => { endEl.style.display = 'flex'; if (actx) actx.suspend(); }, 3000);
+    showEnd('LEVEL 1', 'You noclipped out of bounds.<br>The hum fades. Something concrete waits below.<br><br>To be continued...', 'BACK TO LEVEL 0');
   }
 
   renderer.render(scene, camera);
