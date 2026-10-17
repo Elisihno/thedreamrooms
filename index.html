@@ -122,7 +122,7 @@ function lightFlicker(i, j) { return !nearSpawn(i, j) && hash(i, j, 4) < 0.3; }
 function flickGroup(i, j) { return hash(i, j, 12) < 0.5 ? 0 : 1; }
 // tables low enough to crouch under; one is always next to the spawn
 const TW = 1.6, TD = 0.9, TY = 0.72;
-function tableAt(i, j) { return (i === 1 && j === 0) || (!nearSpawn(i, j) && hash(i, j, 11) < 0.07); }
+function tableAt(i, j) { return (i === 1 && j === 0) || (!nearSpawn(i, j) && hash(i, j, 11) < 0.028); }
 function tableRot(i, j) { return hash(i, j, 13) < 0.5 ? 0 : 1; }
 // where the table sits and how a world point maps into its frame
 function tableLocal(i, j, px, pz) {
