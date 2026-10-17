@@ -27,8 +27,8 @@
     background: rgba(255,255,255,.28); }
   [hidden] { display: none !important; }
   #pose { position: absolute; left: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); display: flex; align-items: flex-end;
-    height: min(26vh, 200px); opacity: .9; padding: 8px 14px; border-radius: 8px; background: rgba(0,0,0,.5); }
-  #pose img { display: block; }
+    height: min(26vh, 200px); opacity: .9; pointer-events: auto; cursor: pointer; }
+  #pose img { display: block; filter: drop-shadow(0 0 3px rgba(0,0,0,.9)) drop-shadow(0 0 8px rgba(0,0,0,.6)); }
   #handBtn { position: absolute; left: 50%; top: 50%; width: 150px; height: 150px; margin: -40px 0 0 -62px; padding: 0;
     pointer-events: auto; background: none; border: 0; }
   #handBtn img { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,.8)) drop-shadow(0 0 4px rgba(255,255,255,.5)); }
@@ -56,7 +56,7 @@
   <h1>LEVEL 0</h1>
   <h2>THE LOBBY</h2>
   <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
-     Phone: left thumb moves, right thumb looks<br>Computer: WASD to move, mouse to look (drag if the cursor isn't captured), arrow keys or Q/E to turn<br>
+     Phone: left thumb moves, right thumb looks, tap the figure in the corner to crouch<br>Computer: WASD to move, mouse to look (drag if the cursor isn't captured), arrow keys or Q/E to turn, C to crouch<br>
      Find where reality is thin. Listen.<br>When the lights fail, aim at a table until the hand appears, tap it to hide under, and stay still.<br><br>
      <i>Headphones recommended.</i></p>
   <button id="start">ENTER</button>
@@ -523,7 +523,7 @@ function stickReset() {
   base.style.left = '28px'; base.style.bottom = '36px'; base.style.top = '';
 }
 window.addEventListener('touchstart', e => {
-  if (!running || e.target.closest('button')) return; // let menu buttons receive their tap
+  if (!running || e.target.closest('button, #pose')) return; // let buttons and the stance icon receive their tap
   for (const t of e.changedTouches) {
     if (t.clientX < window.innerWidth * 0.45 && stickId === null) {
       stickId = t.identifier;
@@ -575,11 +575,11 @@ function lockPointer() {
 }
 document.addEventListener('pointerlockchange', () => { if (locked()) everLocked = true; });
 document.addEventListener('pointerlockerror', failLock);
-window.addEventListener('keydown', e => { keys[e.code] = true; if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
+window.addEventListener('keydown', e => { if (e.code === 'KeyC' && !e.repeat) manualCrouch = !manualCrouch; keys[e.code] = true; if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseDown = false; });
 window.addEventListener('mousedown', e => {
-  if (!fine || e.target.closest('button')) return;
+  if (!fine || e.target.closest('button, #pose')) return;
   mouseDown = true;
   if (running && !ending) { if (locked()) { if (aimed) tryHide(); } else lockPointer(); }
 });
@@ -614,6 +614,8 @@ function tryHide() {
 }
 handBtn.addEventListener('click', tryHide);
 let velX = 0, velZ = 0;
+let manualCrouch = false; // C key or tapping the figure toggles crouching
+document.getElementById('pose').addEventListener('click', () => { manualCrouch = !manualCrouch; });
 const crossEl = document.getElementById('cross'), lockMsg = document.getElementById('lockMsg');
 const vig = document.getElementById('vig');
 const alertEl = document.getElementById('alert');
@@ -723,7 +725,7 @@ const hint = document.getElementById('hint');
 function resetGame() {
   player.set(S / 2, 0, S / 2); yaw = pitch = 0; ending = false;
   evt.phase = 'idle'; evt.next = gt + 30; ent.visible = false; ent.scale.setScalar(1); camY = 1.6; dip = 1;
-  hiding = false; velX = velZ = 0; jump = null; roll = 0; flashEl.style.opacity = 0; renderer.domElement.style.transform = '';
+  hiding = false; manualCrouch = false; velX = velZ = 0; jump = null; roll = 0; flashEl.style.opacity = 0; renderer.domElement.style.transform = '';
   if (droneGain) droneGain.gain.value = 0;
   fade.style.transition = 'none'; fade.style.opacity = 0;
   endEl.style.display = 'none';
@@ -779,7 +781,7 @@ function frame(now) {
   // crouch near and under tables
   underTable = tableState(player.x, player.z) === 2;
   hidden = hiding && underTable;
-  const crouched = hiding || underTable;
+  const crouched = hiding || underTable || manualCrouch || keys.ControlLeft;
   camY += ((crouched ? 0.5 : 1.6) - camY) * Math.min(1, dt * 7);
   vig.classList.toggle('hid', hidden);
   setPose(crouched);
