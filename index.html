@@ -64,7 +64,7 @@
   <h1>LEVEL 0</h1>
   <h2>THE LOBBY</h2>
   <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
-     Phone: left thumb moves, right thumb looks, tap the figure in the corner to crouch<br>Somewhere out there is a room of holes. Keep your balance on the narrow walkways: lean the opposite way.<br>Take the vase from the table (Space, or tap TAKE) and drop it far away. The thing in the dark goes for it first.<br>Computer: WASD to move, mouse to look (drag if the cursor isn't captured), arrow keys or Q/E to turn, C to crouch<br>
+     Phone: left thumb moves, right thumb looks, tap the figure in the corner to crouch<br>Somewhere out there is a room of holes. Keep your balance on the narrow walkways: lean the opposite way.<br>Take the vase from the table (Space, or tap TAKE) and drop it far away. The thing in the dark goes for it first.<br>Computer: WASD to move, mouse to look (the cursor is hidden), arrow keys or Q/E to turn, C to crouch<br>
      Find where reality is thin. Listen.<br>When the lights fail, aim at a table until the hand appears, tap it to hide under, and stay quiet. It only comes if it hears you.<br><br>
      <i>Headphones recommended.</i></p>
   <button id="start">ENTER</button>
@@ -670,35 +670,31 @@ function touchEnd(e) {
 window.addEventListener('touchend', touchEnd);
 window.addEventListener('touchcancel', touchEnd);
 
-// desktop: WASD to move, mouse to look. The pointer is locked (and hidden) while playing;
-// if the page can't lock it, holding the button and dragging still looks around.
+// desktop: WASD to move, mouse to look. The pointer is locked and hidden while playing.
+// If this page isn't allowed to lock it, the mouse still looks around without being held:
+// the cursor stays hidden and its distance from the screen centre turns and tilts the view.
 const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 const cv = renderer.domElement;
-let plFail = false, mouseDown = false, everLocked = false;
+let plFail = false, mouseX = 0, mouseY = 0, mouseIn = false;
 const locked = () => document.pointerLockElement === cv;
-function failLock() { // the page can't capture the mouse here: drag to look, and show the cursor again
-  if (everLocked || plFail) return;
-  plFail = true; document.body.classList.remove('fine');
-}
 function lockPointer() {
-  if (!fine || plFail || locked()) return;
-  if (!cv.requestPointerLock) { failLock(); return; }
-  try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(failLock); } catch (err) { failLock(); }
-  setTimeout(() => { if (!locked()) failLock(); }, 500);
+  if (!fine || locked() || !cv.requestPointerLock) { if (fine && !locked()) plFail = true; return; }
+  try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => { plFail = true; }); } catch (err) { plFail = true; }
+  setTimeout(() => { if (!locked()) plFail = true; }, 500);
 }
-document.addEventListener('pointerlockchange', () => { if (locked()) everLocked = true; });
-document.addEventListener('pointerlockerror', failLock);
+document.addEventListener('pointerlockchange', () => { if (locked()) plFail = false; });
+document.addEventListener('pointerlockerror', () => { plFail = true; });
 window.addEventListener('keydown', e => { if (e.code === 'KeyC' && !e.repeat) manualCrouch = !manualCrouch; if (e.code === 'Space' && !e.repeat) vaseAction(); keys[e.code] = true; if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
-window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseDown = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseIn = false; });
 window.addEventListener('mousedown', e => {
   if (!fine || e.target.closest('button, #pose')) return;
-  mouseDown = true;
-  if (running && !ending) { if (locked()) { if (aimed) tryHide(); } else lockPointer(); }
+  if (running && !ending) { if (aimed && (locked() || plFail)) tryHide(); else if (!locked()) lockPointer(); }
 });
-window.addEventListener('mouseup', () => { mouseDown = false; });
+document.addEventListener('mouseleave', () => { mouseIn = false; });
 window.addEventListener('mousemove', e => {
-  if (!(locked() || (plFail && mouseDown)) || ending) return;
+  mouseX = e.clientX; mouseY = e.clientY; mouseIn = true;
+  if (!locked() || ending) return;
   const cl = v => Math.max(-120, Math.min(120, v)); // browsers sometimes report huge jumps
   yaw -= cl(e.movementX) * 0.0022; pitch -= cl(e.movementY) * 0.0022;
   pitch = Math.max(-1.4, Math.min(1.4, pitch));
@@ -796,7 +792,7 @@ function updateJump(dt) {
   }
 }
 function showEnd(title, text, btn, fast) {
-  ending = true;
+  ending = true; document.body.classList.remove('fine');
   if (document.exitPointerLock) document.exitPointerLock();
   endTitle.textContent = title; endText.innerHTML = text; againBtn.textContent = btn;
   fade.style.transition = fast ? 'opacity 0.12s' : 'opacity 2.5s'; fade.style.opacity = 1;
@@ -1041,6 +1037,12 @@ function frame(now) {
   // arrow keys and Q/E turn, so you can always look around
   const turn = ((keys.ArrowLeft || keys.KeyQ) ? 1 : 0) - ((keys.ArrowRight || keys.KeyE) ? 1 : 0);
   if (turn && !ending) yaw += turn * 1.9 * dt;
+  if (fine && !locked() && plFail && mouseIn && !ending && !fall) {
+    const ox = (mouseX / window.innerWidth - 0.5) * 2, oy = (mouseY / window.innerHeight - 0.5) * 2;
+    const f = v => { const a = Math.max(0, Math.abs(v) - 0.15) / 0.85; return Math.sign(v) * a * a * 1.6; };
+    yaw -= f(ox) * 2.4 * dt;
+    pitch += (Math.max(-0.9, Math.min(0.9, -oy * 0.8)) - pitch) * Math.min(1, dt * 6);
+  }
   if (keys.KeyW || keys.ArrowUp) my -= 1;
   if (keys.KeyS || keys.ArrowDown) my += 1;
   const mag = Math.min(1, Math.hypot(mx, my));
@@ -1059,7 +1061,7 @@ function frame(now) {
       tx = (-Math.sin(yaw) * -my + Math.cos(yaw) * mx) / len * speed;
       tz = (-Math.cos(yaw) * -my - Math.sin(yaw) * mx) / len * speed;
     }
-    const k = Math.min(1, dt * 9);
+    const k = Math.min(1, dt * 14);
     velX += (tx - velX) * k; velZ += (tz - velZ) * k;
     const sp = Math.hypot(velX, velZ);
     if (sp > 0.03) {
@@ -1114,8 +1116,8 @@ function frame(now) {
   vaseBtn.hidden = !vlabel;
   updateShards(dt);
   crossEl.hidden = !(fine && !aimed && !ending);
-  lockMsg.textContent = plFail ? 'DRAG THE MOUSE TO LOOK  ·  OR ARROW KEYS / Q E TO TURN' : 'CLICK TO LOOK AROUND';
-  lockMsg.hidden = !(fine && !locked() && !ending && (!plFail || gt < 12));
+  lockMsg.textContent = plFail ? 'MOVE THE MOUSE LEFT OR RIGHT OF THE CENTER TO TURN  ·  CLICK TO CAPTURE IT' : 'CLICK TO LOOK AROUND';
+  lockMsg.hidden = !(fine && !locked() && !ending && (!plFail || gt < 15));
 
   // flicker
   const t = now / 1000;
@@ -1149,10 +1151,10 @@ document.getElementById('start').addEventListener('click', () => {
   if (actx) actx.resume();
   if (fine) { document.body.classList.add('fine'); lockPointer(); }
   const el = document.documentElement;
-  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  if (!fine && el.requestFullscreen) el.requestFullscreen().catch(() => {});
   running = true; last = performance.now();
 });
-document.getElementById('again').addEventListener('click', () => { if (endKind === 'win') checkpoint = null; endKind = 'dead'; resetGame(); lockPointer(); });
+document.getElementById('again').addEventListener('click', () => { if (endKind === 'win') checkpoint = null; endKind = 'dead'; resetGame(); if (fine) document.body.classList.add('fine'); lockPointer(); });
 
 updateChunks(player.x, player.z);
 requestAnimationFrame(frame);
