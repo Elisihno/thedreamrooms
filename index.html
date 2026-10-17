@@ -33,6 +33,11 @@
     pointer-events: auto; background: none; border: 0; transform-origin: 40% 25%; animation: pulse 0.9s ease-in-out infinite; }
   #handBtn img { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,.8)) drop-shadow(0 0 4px rgba(255,255,255,.5)); }
   @keyframes pulse { 0%,100% { transform: scale(1) rotate(-4deg); } 50% { transform: scale(1.1) rotate(3deg); } }
+  body.fine, body.fine * { cursor: none !important; }
+  #cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+    background: rgba(255,255,255,.55); box-shadow: 0 0 4px #000; }
+  #lockMsg { position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; color: #e8c86a; font-size: 14px;
+    letter-spacing: 3px; text-shadow: 0 0 8px #000; }
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 6; }
   #alert { position: absolute; top: 44px; left: 0; right: 0; text-align: center; color: #e8c86a;
     font-size: 14px; letter-spacing: 3px; text-shadow: 0 0 8px #000; }
@@ -52,7 +57,7 @@
   <h1>LEVEL 0</h1>
   <h2>THE LOBBY</h2>
   <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
-     Left thumb: move &nbsp; Right thumb: look<br>
+     Phone: left thumb moves, right thumb looks<br>Computer: WASD to move, mouse to look (Esc frees the cursor)<br>
      Find where reality is thin. Listen.<br>When the lights fail, aim at a table until the hand appears, tap it to hide under, and stay still.<br><br>
      <i>Headphones recommended.</i></p>
   <button id="start">ENTER</button>
@@ -62,6 +67,8 @@
 <div id="hud">
   <div id="hint">LISTEN FOR THE STATIC</div>
   <div id="alert"></div>
+  <div id="cross" hidden></div>
+  <div id="lockMsg" hidden>CLICK TO LOOK AROUND</div>
   <div id="pose"><img id="poseImg" alt=""></div>
   <button id="handBtn" hidden aria-label="Hide under table"><img id="handImg" alt="" src=""></button>
   <div id="stickBase"><div id="stickKnob"></div></div>
@@ -551,16 +558,31 @@ function touchEnd(e) {
 window.addEventListener('touchend', touchEnd);
 window.addEventListener('touchcancel', touchEnd);
 
-// desktop fallback: WASD + drag to look
-window.addEventListener('keydown', e => { keys[e.code] = true; });
+// desktop: WASD to move, mouse to look. The pointer is locked (and hidden) while playing;
+// if the page can't lock it, holding the button and dragging still looks around.
+const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+const cv = renderer.domElement;
+let plFail = false, mouseDown = false;
+const locked = () => document.pointerLockElement === cv;
+function lockPointer() {
+  if (!fine || plFail || locked() || !cv.requestPointerLock) return;
+  try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => { plFail = true; }); } catch (err) { plFail = true; }
+}
+document.addEventListener('pointerlockerror', () => { plFail = true; });
+window.addEventListener('keydown', e => { keys[e.code] = true; if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
-let mouseDown = false;
-window.addEventListener('mousedown', () => { mouseDown = true; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+window.addEventListener('mousedown', e => {
+  if (!fine || e.target.closest('button')) return;
+  mouseDown = true;
+  if (running && !ending) { if (locked()) { if (aimed) tryHide(); } else lockPointer(); }
+});
 window.addEventListener('mouseup', () => { mouseDown = false; });
 window.addEventListener('mousemove', e => {
-  if (!mouseDown) return;
-  yaw -= e.movementX * 0.004; pitch -= e.movementY * 0.004;
-  pitch = Math.max(-1.2, Math.min(1.2, pitch));
+  if (!(locked() || (plFail && mouseDown)) || ending) return;
+  const cl = v => Math.max(-120, Math.min(120, v)); // browsers sometimes report huge jumps
+  yaw -= cl(e.movementX) * 0.0022; pitch -= cl(e.movementY) * 0.0022;
+  pitch = Math.max(-1.4, Math.min(1.4, pitch));
 });
 
 // ---------- game state ----------
@@ -579,11 +601,14 @@ function setPose(crouched) {
   if (k === poseState) return;
   poseState = k; poseImg.src = crouched ? IMG_CROUCH : IMG_STAND; poseImg.style.height = crouched ? '50px' : '80px';
 }
-handBtn.addEventListener('click', () => {
+function tryHide() {
   const nt = aimed;
   if (!nt || hiding || ending) return;
-  hiding = true; hideT = 0; hideFrom.copy(player); hideTo.set(nt.cx, 0, nt.cz);
-});
+  hiding = true; hideT = 0; hideFrom.copy(player); hideTo.set(nt.cx, 0, nt.cz); velX = velZ = 0;
+}
+handBtn.addEventListener('click', tryHide);
+let velX = 0, velZ = 0;
+const crossEl = document.getElementById('cross'), lockMsg = document.getElementById('lockMsg');
 const vig = document.getElementById('vig');
 const alertEl = document.getElementById('alert');
 const endTitle = document.getElementById('endTitle'), endText = document.getElementById('endText'), againBtn = document.getElementById('again');
@@ -638,6 +663,7 @@ function updateJump(dt) {
 }
 function showEnd(title, text, btn, fast) {
   ending = true;
+  if (document.exitPointerLock) document.exitPointerLock();
   endTitle.textContent = title; endText.innerHTML = text; againBtn.textContent = btn;
   fade.style.transition = fast ? 'opacity 0.12s' : 'opacity 2.5s'; fade.style.opacity = 1;
   setTimeout(() => { endEl.style.display = 'flex'; if (actx) actx.suspend(); }, fast ? 500 : 3000);
@@ -691,7 +717,7 @@ const hint = document.getElementById('hint');
 function resetGame() {
   player.set(S / 2, 0, S / 2); yaw = pitch = 0; ending = false;
   evt.phase = 'idle'; evt.next = gt + 30; ent.visible = false; ent.scale.setScalar(1); camY = 1.6; dip = 1;
-  hiding = false; jump = null; roll = 0; flashEl.style.opacity = 0; renderer.domElement.style.transform = '';
+  hiding = false; velX = velZ = 0; jump = null; roll = 0; flashEl.style.opacity = 0; renderer.domElement.style.transform = '';
   if (droneGain) droneGain.gain.value = 0;
   fade.style.transition = 'none'; fade.style.opacity = 0;
   endEl.style.display = 'none';
@@ -717,16 +743,26 @@ function frame(now) {
     hideT = Math.min(1, hideT + dt / 0.6);
     const k = hideT * hideT * (3 - 2 * hideT);
     player.x = hideFrom.x + (hideTo.x - hideFrom.x) * k; player.z = hideFrom.z + (hideTo.z - hideFrom.z) * k;
-  } else if (!ending && !hiding && mag > 0.05) {
-    const speed = 2.6 * mag * (camY < 1.0 ? 0.55 : 1);
-    // forward is (-sin yaw, -cos yaw), right is (cos yaw, -sin yaw); stick up is -y
-    const dirX = (-Math.sin(yaw) * -my + Math.cos(yaw) * mx) / Math.hypot(mx, my);
-    const dirZ = (-Math.cos(yaw) * -my - Math.sin(yaw) * mx) / Math.hypot(mx, my);
-    player.x += dirX * speed * dt; player.z += dirZ * speed * dt;
-    collide(player);
-    bob += dt * speed * 3.6;
-    stepAcc += dt * speed;
-    if (stepAcc > 1.4) { stepAcc = 0; footstep(camY < 1.0 ? 0.4 : 1); }
+  } else {
+    // ease toward the wanted velocity so starting and stopping feel smooth
+    let tx = 0, tz = 0;
+    if (!ending && !hiding && mag > 0.05) {
+      const speed = 2.6 * mag * (camY < 1.0 ? 0.55 : 1);
+      // forward is (-sin yaw, -cos yaw), right is (cos yaw, -sin yaw); stick up is -y
+      const len = Math.hypot(mx, my);
+      tx = (-Math.sin(yaw) * -my + Math.cos(yaw) * mx) / len * speed;
+      tz = (-Math.cos(yaw) * -my - Math.sin(yaw) * mx) / len * speed;
+    }
+    const k = Math.min(1, dt * 9);
+    velX += (tx - velX) * k; velZ += (tz - velZ) * k;
+    const sp = Math.hypot(velX, velZ);
+    if (sp > 0.03) {
+      player.x += velX * dt; player.z += velZ * dt;
+      collide(player);
+      bob += dt * sp * 3.4;
+      stepAcc += dt * sp;
+      if (stepAcc > 1.4) { stepAcc = 0; footstep(camY < 1.0 ? 0.4 : 1); }
+    }
   }
 
   updateChunks(player.x, player.z);
@@ -747,6 +783,8 @@ function frame(now) {
   // the hand appears like a cursor when you aim at a table: tap it to hide
   aimed = (!hiding && !ending && !underTable) ? aimTable(camera, player.x, player.z) : null;
   handBtn.hidden = !aimed;
+  crossEl.hidden = !(fine && !aimed && !ending && (locked() || plFail));
+  lockMsg.hidden = !(fine && !plFail && !locked() && !ending);
 
   // flicker
   const t = now / 1000;
@@ -778,11 +816,12 @@ document.getElementById('start').addEventListener('click', () => {
   hud.style.display = 'block';
   initAudio();
   if (actx) actx.resume();
+  if (fine) { document.body.classList.add('fine'); lockPointer(); }
   const el = document.documentElement;
   if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
   running = true; last = performance.now();
 });
-document.getElementById('again').addEventListener('click', resetGame);
+document.getElementById('again').addEventListener('click', () => { resetGame(); lockPointer(); });
 
 updateChunks(player.x, player.z);
 requestAnimationFrame(frame);
