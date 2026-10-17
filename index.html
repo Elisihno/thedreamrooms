@@ -354,7 +354,7 @@ const outletGeo = new THREE.PlaneGeometry(0.09, 0.14);
 function helpTex(text) {
   return canvasTex(512, 256, (g, w, h) => {
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    const size = text.length > 6 ? 84 : 120, step = size * 0.62, x0 = w / 2 - (text.length - 1) * step / 2;
+    const step = Math.min(74, 400 / text.length), size = step / 0.62, x0 = w / 2 - (text.length - 1) * step / 2;
     for (let k = 0; k < text.length; k++) {
       const ch = text[k]; if (ch === ' ') continue;
       const x = x0 + k * step + (Math.random() - 0.5) * 8, y = h / 2 + (Math.random() - 0.5) * 20;
@@ -370,7 +370,7 @@ function helpTex(text) {
 }
 const helpMats = ['HELP', 'HELP ME', 'PLEASE HELP'].map(t => new THREE.MeshLambertMaterial({
   map: helpTex(t), transparent: true, alphaTest: 0.3, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-const helpGeo = new THREE.PlaneGeometry(1.7, 0.85);
+const helpGeo = new THREE.PlaneGeometry(1.6, 0.8);
 // some areas are covered in them, most have none
 const helpProb = (i, j) => 0.03 + (hash(Math.floor(i / 5), Math.floor(j / 5), 40) < 0.3 ? 0.4 : 0);
 const panelGeo = new THREE.PlaneGeometry(1.3, 1.2);
@@ -439,7 +439,7 @@ function buildChunk(cx, cz) {
         }
         if (hash(i, j, 30) < helpProb(i, j)) {
           const side = hash(i, j, 32) < 0.5 ? 1 : -1;
-          p.set(i * S + side * OFF, 1.1 + hash(i, j, 33) * 0.7, j * S + S * (0.25 + 0.5 * hash(i, j, 34)));
+          p.set(i * S + side * OFF, 1.2 + hash(i, j, 33) * 0.6, j * S + S * (0.34 + 0.32 * hash(i, j, 34)));
           m.compose(p, side > 0 ? qPX : qNX, one); help[Math.floor(hash(i, j, 31) * 3)].push(m.clone());
         }
       }
@@ -451,7 +451,7 @@ function buildChunk(cx, cz) {
         }
         if (hash(i, j, 35) < helpProb(i, j)) {
           const side = hash(i, j, 36) < 0.5 ? 1 : -1;
-          p.set(i * S + S * (0.25 + 0.5 * hash(i, j, 37)), 1.1 + hash(i, j, 38) * 0.7, j * S + side * OFF);
+          p.set(i * S + S * (0.34 + 0.32 * hash(i, j, 37)), 1.2 + hash(i, j, 38) * 0.6, j * S + side * OFF);
           m.compose(p, side > 0 ? qh : qNZ, one); help[Math.floor(hash(i, j, 39) * 3)].push(m.clone());
         }
       }
@@ -1010,19 +1010,23 @@ const balEl = document.getElementById('bal'), balDot = balEl.querySelector('i');
 // the exit: a brown door in the far wall, with a smiley face and an arrow painted beside it
 {
   const doorTex = canvasTex(128, 256, (g, w, h) => {
-    g.fillStyle = '#7a4a2b'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 1200; i++) { g.fillStyle = `rgba(40,20,8,${Math.random() * 0.15})`; g.fillRect(Math.random() * w, Math.random() * h, 1, 12 + Math.random() * 30); }
-    g.strokeStyle = '#4a2a15'; g.lineWidth = 5;
-    g.strokeRect(18, 18, w - 36, 92); g.strokeRect(18, 126, w - 36, 112);
+    g.fillStyle = '#4a3322'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? '20,12,6' : '120,90,60'},${Math.random() * 0.09})`; g.fillRect(Math.random() * w, Math.random() * h, 1, 20 + Math.random() * 60); }
+    g.lineWidth = 4;                                              // two shallow panels
+    for (const [y0, hh] of [[22, 88], [128, 106]]) {
+      g.strokeStyle = 'rgba(20,12,6,0.65)'; g.strokeRect(20, y0, w - 40, hh);
+      g.strokeStyle = 'rgba(150,115,80,0.25)'; g.strokeRect(24, y0 + 4, w - 48, hh - 8);
+    }
   }, 1, 1);
   const door = new THREE.Group();
-  const slab = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.2, 1.1), new THREE.MeshLambertMaterial({ map: doorTex }));
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.32, 1.3), new THREE.MeshLambertMaterial({ color: 0x3b2414 }));
-  frame.position.x = 0.012; slab.position.x = -0.02;
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), new THREE.MeshPhongMaterial({ color: 0xc9a24a, shininess: 80 }));
-  knob.position.set(-0.09, 0, 0.4);
-  door.add(frame, slab, knob);
-  door.position.set(EXIT.x - T / 2 - 0.06, 1.16, EXIT.z);
+  const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.1, 0.95), new THREE.MeshLambertMaterial({ map: doorTex }));
+  const trimMat = new THREE.MeshLambertMaterial({ color: 0x8c7d5a });
+  const trim = (w, h, y, z) => { const t = new THREE.Mesh(new THREE.BoxGeometry(0.07, h, w), trimMat); t.position.set(0.012, y, z); door.add(t); };
+  trim(0.1, 2.2, 0.05, -0.52); trim(0.1, 2.2, 0.05, 0.52); trim(1.14, 0.1, 1.1, 0);  // slim frame
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), new THREE.MeshPhongMaterial({ color: 0xc4c4bc, shininess: 90 }));
+  knob.position.set(-0.06, 0, 0.36);
+  leaf.position.set(-0.01, 0, 0); door.add(leaf, knob);
+  door.position.set(EXIT.x - T / 2 - 0.06, 1.05, EXIT.z);
   scene.add(door);
 
   const msgTex = canvasTex(512, 256, (g, w, h) => {
