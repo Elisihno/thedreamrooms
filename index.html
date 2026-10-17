@@ -216,15 +216,15 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const FOG = 0xb8b060;
-scene.background = new THREE.Color(0x231e0d);
-scene.fog = new THREE.Fog(0x231e0d, 3, 36);
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+scene.background = new THREE.Color(0x120f06);
+scene.fog = new THREE.Fog(0x120f06, 2, 28);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.85;
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.05, 60);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 
-const hemi = new THREE.HemisphereLight(0xe3d4a2, 0x5a5238, 0.8);
+const hemi = new THREE.HemisphereLight(0xe3d4a2, 0x5a5238, 0.45);
 scene.add(hemi);
 const torch = new THREE.PointLight(0xffe9b0, 2.2, 9, 1.6);
 camera.add(torch);
@@ -246,7 +246,7 @@ function updatePool(px, pz) {
     const f = c[k];
     if (!f) { l.intensity = 0; return; }
     l.position.set(f.x, H - 0.4, f.z);
-    l.intensity = 12 * dip * (lightFlicker(f.i, f.j) ? flk[flickGroup(f.i, f.j)].lvl : 1);
+    l.intensity = 10 * dip * (lightFlicker(f.i, f.j) ? flk[flickGroup(f.i, f.j)].lvl : 1);
   });
 }
 // each flickering fixture group has its own stutter; now and then one dies for a moment
@@ -1124,8 +1124,8 @@ function frame(now) {
   updatePool(player.x, player.z);
   lightMat.color.setScalar(dip);
   flickMats.forEach((mm, k) => mm.color.setScalar(0.05 + 0.95 * flk[k].lvl * dip));
-  hemi.intensity = 0.06 + 0.74 * dip;
-  torch.intensity = 1.2 + 1.0 * dip * (0.9 + 0.1 * flk[0].lvl);
+  hemi.intensity = 0.05 + 0.4 * dip;
+  torch.intensity = 1.0 + 0.6 * dip * (0.9 + 0.1 * flk[0].lvl);
 
   // the thin spot: static grows as you approach
   const dist = Math.hypot(player.x - EXIT.x, player.z - EXIT.z);
