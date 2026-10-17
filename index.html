@@ -106,7 +106,7 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 
-scene.add(new THREE.HemisphereLight(0xfff2b0, 0x8a7a30, 2.4));
+scene.add(new THREE.HemisphereLight(0xfff2b0, 0x808078, 2.4));
 const torch = new THREE.PointLight(0xfff0b8, 22, 18, 1.4);
 camera.add(torch);
 
@@ -136,36 +136,38 @@ function canvasTex(w, h, draw, rx, ry) {
 }
 function rnd(n) { return Math.random() * n; }
 
-// damp, worn, olive-brown carpet
+// worn gray carpet, slightly damp
 const carpetTex = canvasTex(256, 256, (g, w, h) => {
-  g.fillStyle = '#8a7a3a'; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 14000; i++) {
-    const v = 90 + rnd(50);
-    g.fillStyle = `rgba(${v},${v - 12},${v * 0.45},${0.25 + rnd(0.3)})`;
+  g.fillStyle = '#7d7d7a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 16000; i++) {
+    const v = 95 + rnd(55);
+    g.fillStyle = `rgba(${v},${v},${v - 4},${0.25 + rnd(0.3)})`;
     g.fillRect(rnd(w), rnd(h), 1 + rnd(2), 1 + rnd(2));
   }
   for (let i = 0; i < 22; i++) { // damp stains
     const x = rnd(w), y = rnd(h), r = 20 + rnd(50);
     const gr = g.createRadialGradient(x, y, 0, x, y, r);
-    gr.addColorStop(0, 'rgba(50,40,10,0.28)'); gr.addColorStop(1, 'rgba(50,40,10,0)');
+    gr.addColorStop(0, 'rgba(40,40,40,0.28)'); gr.addColorStop(1, 'rgba(40,40,40,0)');
     g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
   }
 }, S / 2, S / 2);
 
-// drop-ceiling tiles
+// tan acoustic ceiling tiles: fine speckle, thin grid lines (0.5 m tiles)
 const ceilTex = canvasTex(128, 128, (g, w, h) => {
-  g.fillStyle = '#c9c196'; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 2500; i++) {
-    g.fillStyle = `rgba(90,80,40,${rnd(0.18)})`; g.fillRect(rnd(w), rnd(h), 1, 1 + rnd(2));
+  g.fillStyle = '#9c8a62'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) {
+    const dark = Math.random() < 0.6;
+    g.fillStyle = dark ? `rgba(70,55,30,${rnd(0.35)})` : `rgba(200,185,140,${rnd(0.3)})`;
+    g.fillRect(rnd(w), rnd(h), 1, 1);
   }
-  g.strokeStyle = '#6e6838'; g.lineWidth = 3; g.strokeRect(0, 0, w, h);
-}, S / 1.2, S / 1.2);
+  g.strokeStyle = 'rgba(50,40,20,0.85)'; g.lineWidth = 4; g.strokeRect(0, 0, w, h);
+}, S / 0.5, S / 0.5);
 
 // ---------- materials & shared geometry ----------
 const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
 const floorMat = new THREE.MeshLambertMaterial({ map: carpetTex });
 const ceilMat = new THREE.MeshLambertMaterial({ map: ceilTex });
-const lightMat = new THREE.MeshBasicMaterial({ color: 0xfffbe0, fog: false });
+const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false });
 const flickMat = new THREE.MeshBasicMaterial({ color: 0xfffbe0, fog: false });
 
 // wall box: long faces repeat the wallpaper twice across so chevrons stay a believable size
@@ -418,7 +420,7 @@ function frame(now) {
   // flicker
   const t = now / 1000;
   const fl = Math.random() < 0.08 ? 0.25 : (Math.sin(t * 40) > 0.97 ? 0.5 : 1);
-  flickMat.color.setScalar(0.85 * fl + 0.15).multiply(new THREE.Color(1, 0.98, 0.88));
+  flickMat.color.setScalar(0.85 * fl + 0.15);
   torch.intensity = 22 * (0.93 + 0.07 * fl);
 
   // the thin spot: static grows as you approach
