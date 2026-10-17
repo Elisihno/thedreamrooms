@@ -57,7 +57,7 @@
   <h1>LEVEL 0</h1>
   <h2>THE LOBBY</h2>
   <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
-     Phone: left thumb moves, right thumb looks<br>Computer: WASD to move, mouse to look (Esc frees the cursor)<br>
+     Phone: left thumb moves, right thumb looks<br>Computer: WASD to move, mouse to look (drag if the cursor isn't captured), arrow keys or Q/E to turn<br>
      Find where reality is thin. Listen.<br>When the lights fail, aim at a table until the hand appears, tap it to hide under, and stay still.<br><br>
      <i>Headphones recommended.</i></p>
   <button id="start">ENTER</button>
@@ -562,16 +562,23 @@ window.addEventListener('touchcancel', touchEnd);
 // if the page can't lock it, holding the button and dragging still looks around.
 const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 const cv = renderer.domElement;
-let plFail = false, mouseDown = false;
+let plFail = false, mouseDown = false, everLocked = false;
 const locked = () => document.pointerLockElement === cv;
-function lockPointer() {
-  if (!fine || plFail || locked() || !cv.requestPointerLock) return;
-  try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => { plFail = true; }); } catch (err) { plFail = true; }
+function failLock() { // the page can't capture the mouse here: drag to look, and show the cursor again
+  if (everLocked || plFail) return;
+  plFail = true; document.body.classList.remove('fine');
 }
-document.addEventListener('pointerlockerror', () => { plFail = true; });
+function lockPointer() {
+  if (!fine || plFail || locked()) return;
+  if (!cv.requestPointerLock) { failLock(); return; }
+  try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(failLock); } catch (err) { failLock(); }
+  setTimeout(() => { if (!locked()) failLock(); }, 500);
+}
+document.addEventListener('pointerlockchange', () => { if (locked()) everLocked = true; });
+document.addEventListener('pointerlockerror', failLock);
 window.addEventListener('keydown', e => { keys[e.code] = true; if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
-window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseDown = false; });
 window.addEventListener('mousedown', e => {
   if (!fine || e.target.closest('button')) return;
   mouseDown = true;
@@ -733,8 +740,11 @@ function frame(now) {
 
   // movement
   let mx = move.x, my = move.y;
-  if (keys.KeyA || keys.ArrowLeft) mx -= 1;
-  if (keys.KeyD || keys.ArrowRight) mx += 1;
+  if (keys.KeyA) mx -= 1;
+  if (keys.KeyD) mx += 1;
+  // arrow keys and Q/E turn, so you can always look around
+  const turn = ((keys.ArrowLeft || keys.KeyQ) ? 1 : 0) - ((keys.ArrowRight || keys.KeyE) ? 1 : 0);
+  if (turn && !ending) yaw += turn * 1.9 * dt;
   if (keys.KeyW || keys.ArrowUp) my -= 1;
   if (keys.KeyS || keys.ArrowDown) my += 1;
   const mag = Math.min(1, Math.hypot(mx, my));
@@ -783,8 +793,9 @@ function frame(now) {
   // the hand appears like a cursor when you aim at a table: tap it to hide
   aimed = (!hiding && !ending && !underTable) ? aimTable(camera, player.x, player.z) : null;
   handBtn.hidden = !aimed;
-  crossEl.hidden = !(fine && !aimed && !ending && (locked() || plFail));
-  lockMsg.hidden = !(fine && !plFail && !locked() && !ending);
+  crossEl.hidden = !(fine && !aimed && !ending);
+  lockMsg.textContent = plFail ? 'DRAG THE MOUSE TO LOOK  ·  OR ARROW KEYS / Q E TO TURN' : 'CLICK TO LOOK AROUND';
+  lockMsg.hidden = !(fine && !locked() && !ending && (!plFail || gt < 12));
 
   // flicker
   const t = now / 1000;
