@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>The Dream Rooms - Level 0</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; font-family: "Courier New", monospace; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #0a0a05; color: #d8d27a; text-align: center; padding: 24px; z-index: 10; }
+  #overlay h1 { font-size: 28px; letter-spacing: 4px; margin: 0 0 4px; font-weight: normal; }
+  #overlay h2 { font-size: 14px; letter-spacing: 3px; margin: 0 0 28px; opacity: .6; font-weight: normal; }
+  #overlay p { max-width: 320px; font-size: 13px; line-height: 1.5; opacity: .75; margin: 0 0 28px; }
+  #overlay button { background: none; border: 1px solid #d8d27a; color: #d8d27a; font: inherit; font-size: 18px;
+    padding: 14px 40px; letter-spacing: 3px; }
+  #overlay button:active { background: #d8d27a; color: #000; }
+  #hud { position: fixed; inset: 0; pointer-events: none; display: none; }
+  #stickBase { position: absolute; left: 28px; bottom: 36px; width: 120px; height: 120px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); }
+  #stickKnob { position: absolute; left: 40px; top: 40px; width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,.28); }
+  #hint { position: absolute; top: 14px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,.55);
+    font-size: 12px; letter-spacing: 2px; transition: opacity 2s; }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 2.5s; z-index: 5; }
+  #end { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+    color: #d8d27a; text-align: center; background: #000; z-index: 20; padding: 24px; }
+  #end h1 { font-weight: normal; letter-spacing: 4px; font-size: 24px; }
+  #end p { opacity: .7; font-size: 13px; max-width: 300px; }
+  #end button { background: none; border: 1px solid #d8d27a; color: #d8d27a; font: inherit; padding: 12px 32px; margin-top: 20px; }
+</style>
+</head>
+<body>
+<div id="overlay">
+  <h1>LEVEL 0</h1>
+  <h2>THE LOBBY</h2>
+  <p>You've noclipped out of reality. The carpet is damp, the lights hum, and it is very quiet.<br><br>
+     Left thumb: move &nbsp; Right thumb: look<br>
+     Find where reality is thin. Listen.<br><br>
+     <i>Headphones recommended.</i></p>
+  <button id="start">ENTER</button>
+</div>
+<div id="hud">
+  <div id="hint">LISTEN FOR THE STATIC</div>
+  <div id="stickBase"><div id="stickKnob"></div></div>
+</div>
+<div id="fade"></div>
+<div id="end">
+  <h1>LEVEL 1</h1>
+  <p>You noclipped out of bounds.<br>The hum fades. Something concrete waits below.<br><br>To be continued...</p>
+  <button id="again">BACK TO LEVEL 0</button>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script>
+(function () {
+'use strict';
+
+// ---------- world generation (infinite, deterministic) ----------
+const S = 4;            // cell size (m)
+const H = 3;            // wall height
+const T = 0.22;         // wall thickness
+const CH = 8;           // chunk size in cells
+const SEED = 1337;
+
+function hash(i, j, k) {
+  let h = (i * 374761393 + j * 668265263 + k * 2147483647 + SEED * 1274126177) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h = Math.imul(h ^ (h >>> 16), 2246822519);
+  return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
+}
+// noclip spot: a cell far from spawn where reality is thin
+const EXIT = { i: 19, j: -14 };
+function density(i, j) {
+  return 0.18 + 0.42 * hash(Math.floor(i / 4), Math.floor(j / 4), 9);
+}
+function nearSpawn(i, j) { return Math.abs(i) <= 1 && Math.abs(j) <= 1; }
+// wall on the west edge of cell (i,j)
+function wallV(i, j) {
+  if (nearSpawn(i, j) || nearSpawn(i - 1, j)) return false;
+  return hash(i, j, 1) < density(i, j);
+}
+// wall on the north edge of cell (i,j)
+function wallH(i, j) {
+  if (nearSpawn(i, j) || nearSpawn(i, j - 1)) return false;
+  return hash(i, j, 2) < density(i, j);
+}
+function lightAt(i, j) { return hash(i, j, 3) < 0.55; }
+function lightFlicker(i, j) { return hash(i, j, 4) < 0.18; }
+
+// ---------- renderer ----------
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const FOG = 0xb8b060;
+scene.background = new THREE.Color(0x4a4416);
+scene.fog = new THREE.Fog(0x4a4416, 2, 30);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.05, 60);
+camera.rotation.order = 'YXZ';
+scene.add(camera);
+
+scene.add(new THREE.HemisphereLight(0xfff2b0, 0x8a7a30, 2.4));
+const torch = new THREE.PointLight(0xfff0b8, 22, 18, 1.4);
+camera.add(torch);
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ---------- textures ----------
+const loader = new THREE.TextureLoader();
+const wallTex = loader.load('textures/wall.webp');
+wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+wallTex.colorSpace = THREE.SRGBColorSpace;
+wallTex.anisotropy = 4;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+function canvasTex(w, h, draw, rx, ry) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(rx, ry);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+function rnd(n) { return Math.random() * n; }
+
+// damp, worn, olive-brown carpet
+const carpetTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#8a7a3a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 14000; i++) {
+    const v = 90 + rnd(50);
+    g.fillStyle = `rgba(${v},${v - 12},${v * 0.45},${0.25 + rnd(0.3)})`;
+    g.fillRect(rnd(w), rnd(h), 1 + rnd(2), 1 + rnd(2));
+  }
+  for (let i = 0; i < 22; i++) { // damp stains
+    const x = rnd(w), y = rnd(h), r = 20 + rnd(50);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, 'rgba(50,40,10,0.28)'); gr.addColorStop(1, 'rgba(50,40,10,0)');
+    g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+}, S / 2, S / 2);
+
+// drop-ceiling tiles
+const ceilTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#c9c196'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2500; i++) {
+    g.fillStyle = `rgba(90,80,40,${rnd(0.18)})`; g.fillRect(rnd(w), rnd(h), 1, 1 + rnd(2));
+  }
+  g.strokeStyle = '#6e6838'; g.lineWidth = 3; g.strokeRect(0, 0, w, h);
+}, S / 1.2, S / 1.2);
+
+// ---------- materials & shared geometry ----------
+const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
+const floorMat = new THREE.MeshLambertMaterial({ map: carpetTex });
+const ceilMat = new THREE.MeshLambertMaterial({ map: ceilTex });
+const lightMat = new THREE.MeshBasicMaterial({ color: 0xfffbe0, fog: false });
+const flickMat = new THREE.MeshBasicMaterial({ color: 0xfffbe0, fog: false });
+
+// wall box: long faces repeat the wallpaper twice across so chevrons stay a believable size
+const wallGeo = new THREE.BoxGeometry(S + T, H, T);
+{
+  const uv = wallGeo.attributes.uv;
+  for (let k = 0; k < uv.count; k++) uv.setX(k, uv.getX(k) * 1.5);
+}
+const panelGeo = new THREE.PlaneGeometry(1.2, 0.6);
+panelGeo.rotateX(Math.PI / 2);
+
+const floorGeo = new THREE.PlaneGeometry(CH * S, CH * S);
+floorGeo.rotateX(-Math.PI / 2);
+const ceilGeo = new THREE.PlaneGeometry(CH * S, CH * S);
+ceilGeo.rotateX(Math.PI / 2);
+
+// ---------- chunks ----------
+const chunks = new Map();
+function buildChunk(cx, cz) {
+  const group = new THREE.Group();
+  const i0 = cx * CH, j0 = cz * CH;
+  const wallM = [], panels = [], flick = [];
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+  const qv = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+  const qh = new THREE.Quaternion();
+  for (let i = i0; i < i0 + CH; i++) {
+    for (let j = j0; j < j0 + CH; j++) {
+      if (wallV(i, j)) { p.set(i * S, H / 2, j * S + S / 2); m.compose(p, qv, one); wallM.push(m.clone()); }
+      if (wallH(i, j)) { p.set(i * S + S / 2, H / 2, j * S); m.compose(p, qh, one); wallM.push(m.clone()); }
+      if (lightAt(i, j)) {
+        p.set(i * S + S / 2, H - 0.01, j * S + S / 2); m.compose(p, qh, one);
+        (lightFlicker(i, j) ? flick : panels).push(m.clone());
+      }
+    }
+  }
+  function inst(geo, mat, mats) {
+    if (!mats.length) return;
+    const im = new THREE.InstancedMesh(geo, mat, mats.length);
+    mats.forEach((mm, k) => im.setMatrixAt(k, mm));
+    im.frustumCulled = false;
+    group.add(im);
+  }
+  inst(wallGeo, wallMat, wallM);
+  inst(panelGeo, lightMat, panels);
+  inst(panelGeo, flickMat, flick);
+  const cxm = (i0 + CH / 2) * S, czm = (j0 + CH / 2) * S;
+  const fl = new THREE.Mesh(floorGeo, floorMat); fl.position.set(cxm, 0, czm); group.add(fl);
+  const ce = new THREE.Mesh(ceilGeo, ceilMat); ce.position.set(cxm, H, czm); group.add(ce);
+  scene.add(group);
+  return group;
+}
+function updateChunks(px, pz) {
+  const ccx = Math.floor(px / (CH * S)), ccz = Math.floor(pz / (CH * S));
+  const want = new Set();
+  for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+    const key = (ccx + dx) + ',' + (ccz + dz);
+    want.add(key);
+    if (!chunks.has(key)) chunks.set(key, buildChunk(ccx + dx, ccz + dz));
+  }
+  for (const [key, g] of chunks) if (!want.has(key)) {
+    scene.remove(g);
+    g.traverse(o => { if (o.isInstancedMesh) o.dispose(); });
+    chunks.delete(key);
+  }
+}
+
+// ---------- collision ----------
+const R = 0.3;
+function pushFromBox(pos, x0, z0, x1, z1) {
+  const cx = Math.max(x0, Math.min(pos.x, x1));
+  const cz = Math.max(z0, Math.min(pos.z, z1));
+  let dx = pos.x - cx, dz = pos.z - cz;
+  const d2 = dx * dx + dz * dz;
+  if (d2 >= R * R) return;
+  if (d2 > 1e-8) {
+    const d = Math.sqrt(d2), k = (R - d) / d;
+    pos.x += dx * k; pos.z += dz * k;
+  } else { // center inside the box: push out along the shortest axis
+    const l = pos.x - x0, r = x1 - pos.x, t = pos.z - z0, b = z1 - pos.z;
+    const mn = Math.min(l, r, t, b);
+    if (mn === l) pos.x = x0 - R; else if (mn === r) pos.x = x1 + R;
+    else if (mn === t) pos.z = z0 - R; else pos.z = z1 + R;
+  }
+}
+function collide(pos) {
+  const ci = Math.floor(pos.x / S), cj = Math.floor(pos.z / S);
+  const h = T / 2;
+  for (let i = ci - 1; i <= ci + 2; i++) {
+    for (let j = cj - 1; j <= cj + 2; j++) {
+      if (wallV(i, j)) pushFromBox(pos, i * S - h, j * S - h, i * S + h, (j + 1) * S + h);
+      if (wallH(i, j)) pushFromBox(pos, i * S - h, j * S - h, (i + 1) * S + h, j * S + h);
+    }
+  }
+}
+
+// ---------- audio ----------
+let actx = null, staticGain = null, humGain = null;
+function initAudio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  actx = new AC();
+  const master = actx.createGain(); master.gain.value = 0.9; master.connect(actx.destination);
+
+  // fluorescent hum: 60 Hz + harmonics, buzzy and slightly unstable
+  humGain = actx.createGain(); humGain.gain.value = 0.16; humGain.connect(master);
+  [60, 120, 180, 240].forEach((f, k) => {
+    const o = actx.createOscillator(); o.type = k ? 'sawtooth' : 'sine'; o.frequency.value = f;
+    const g = actx.createGain(); g.gain.value = [0.5, 0.25, 0.1, 0.06][k];
+    o.connect(g); g.connect(humGain); o.start();
+  });
+  const lfo = actx.createOscillator(); lfo.frequency.value = 0.35;
+  const lg = actx.createGain(); lg.gain.value = 0.03;
+  lfo.connect(lg); lg.connect(humGain.gain); lfo.start();
+
+  // noise buffer, reused for the static and the footsteps
+  const nb = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate);
+  const d = nb.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  window.__noise = nb;
+
+  const ns = actx.createBufferSource(); ns.buffer = nb; ns.loop = true;
+  const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2500; bp.Q.value = 0.6;
+  staticGain = actx.createGain(); staticGain.gain.value = 0;
+  ns.connect(bp); bp.connect(staticGain); staticGain.connect(master); ns.start();
+}
+function footstep() {
+  if (!actx || !window.__noise) return;
+  const s = actx.createBufferSource(); s.buffer = window.__noise;
+  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380 + Math.random() * 120;
+  const g = actx.createGain(), t = actx.currentTime;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.35, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+  s.connect(lp); lp.connect(g); g.connect(actx.destination);
+  s.start(t, Math.random(), 0.25);
+}
+
+// ---------- input ----------
+const hud = document.getElementById('hud');
+const base = document.getElementById('stickBase');
+const knob = document.getElementById('stickKnob');
+const move = { x: 0, y: 0 };
+const keys = {};
+let yaw = 0, pitch = 0;
+let stickId = null, lookId = null, lookX = 0, lookY = 0, stickCx = 0, stickCy = 0;
+const STICK_R = 50;
+
+function stickUpdate(tx, ty) {
+  let dx = tx - stickCx, dy = ty - stickCy;
+  const d = Math.hypot(dx, dy);
+  if (d > STICK_R) { dx *= STICK_R / d; dy *= STICK_R / d; }
+  move.x = dx / STICK_R; move.y = dy / STICK_R;
+  knob.style.transform = `translate(${dx}px, ${dy}px)`;
+}
+function stickReset() {
+  move.x = move.y = 0; knob.style.transform = '';
+  base.style.left = '28px'; base.style.bottom = '36px'; base.style.top = '';
+}
+window.addEventListener('touchstart', e => {
+  for (const t of e.changedTouches) {
+    if (t.clientX < window.innerWidth * 0.45 && stickId === null) {
+      stickId = t.identifier;
+      // floating stick: base appears where the thumb lands
+      base.style.left = (t.clientX - 60) + 'px'; base.style.top = (t.clientY - 60) + 'px'; base.style.bottom = '';
+      stickCx = t.clientX; stickCy = t.clientY;
+    } else if (lookId === null) {
+      lookId = t.identifier; lookX = t.clientX; lookY = t.clientY;
+    }
+  }
+  e.preventDefault();
+}, { passive: false });
+window.addEventListener('touchmove', e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier === stickId) stickUpdate(t.clientX, t.clientY);
+    else if (t.identifier === lookId) {
+      yaw -= (t.clientX - lookX) * 0.006; pitch -= (t.clientY - lookY) * 0.006;
+      pitch = Math.max(-1.2, Math.min(1.2, pitch));
+      lookX = t.clientX; lookY = t.clientY;
+    }
+  }
+  e.preventDefault();
+}, { passive: false });
+function touchEnd(e) {
+  for (const t of e.changedTouches) {
+    if (t.identifier === stickId) { stickId = null; stickReset(); }
+    if (t.identifier === lookId) lookId = null;
+  }
+}
+window.addEventListener('touchend', touchEnd);
+window.addEventListener('touchcancel', touchEnd);
+
+// desktop fallback: WASD + drag to look
+window.addEventListener('keydown', e => { keys[e.code] = true; });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+let mouseDown = false;
+window.addEventListener('mousedown', () => { mouseDown = true; });
+window.addEventListener('mouseup', () => { mouseDown = false; });
+window.addEventListener('mousemove', e => {
+  if (!mouseDown) return;
+  yaw -= e.movementX * 0.004; pitch -= e.movementY * 0.004;
+  pitch = Math.max(-1.2, Math.min(1.2, pitch));
+});
+
+// ---------- game state ----------
+const player = new THREE.Vector3(S / 2, 0, S / 2);
+let bob = 0, stepAcc = 0, ending = false, running = false, last = 0, hintT = 0;
+const fade = document.getElementById('fade');
+const endEl = document.getElementById('end');
+const hint = document.getElementById('hint');
+
+function resetGame() {
+  player.set(S / 2, 0, S / 2); yaw = pitch = 0; ending = false;
+  fade.style.transition = 'none'; fade.style.opacity = 0;
+  endEl.style.display = 'none';
+  if (actx) actx.resume();
+  hintT = 0; hint.style.opacity = 1;
+}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!running) return;
+  const dt = Math.min((now - last) / 1000, 0.05); last = now; hintT += dt;
+  if (hintT > 14) hint.style.opacity = 0;
+
+  // movement
+  let mx = move.x, my = move.y;
+  if (keys.KeyA || keys.ArrowLeft) mx -= 1;
+  if (keys.KeyD || keys.ArrowRight) mx += 1;
+  if (keys.KeyW || keys.ArrowUp) my -= 1;
+  if (keys.KeyS || keys.ArrowDown) my += 1;
+  const mag = Math.min(1, Math.hypot(mx, my));
+  if (!ending && mag > 0.05) {
+    const speed = 2.6 * mag;
+    // forward is (-sin yaw, -cos yaw), right is (cos yaw, -sin yaw); stick up is -y
+    const dirX = (-Math.sin(yaw) * -my + Math.cos(yaw) * mx) / Math.hypot(mx, my);
+    const dirZ = (-Math.cos(yaw) * -my - Math.sin(yaw) * mx) / Math.hypot(mx, my);
+    player.x += dirX * speed * dt; player.z += dirZ * speed * dt;
+    collide(player);
+    bob += dt * speed * 3.6;
+    stepAcc += dt * speed;
+    if (stepAcc > 1.4) { stepAcc = 0; footstep(); }
+  }
+
+  updateChunks(player.x, player.z);
+
+  // camera
+  camera.position.set(player.x, 1.6 + Math.sin(bob) * 0.035, player.z);
+  camera.rotation.set(pitch, yaw, 0);
+
+  // flicker
+  const t = now / 1000;
+  const fl = Math.random() < 0.08 ? 0.25 : (Math.sin(t * 40) > 0.97 ? 0.5 : 1);
+  flickMat.color.setScalar(0.85 * fl + 0.15).multiply(new THREE.Color(1, 0.98, 0.88));
+  torch.intensity = 22 * (0.93 + 0.07 * fl);
+
+  // the thin spot: static grows as you approach
+  const ex = EXIT.i * S + S / 2, ez = EXIT.j * S + S / 2;
+  const dist = Math.hypot(player.x - ex, player.z - ez);
+  if (staticGain) {
+    const near = Math.max(0, 1 - dist / 55);
+    staticGain.gain.value = near * near * 0.5;
+    humGain.gain.value = 0.16 * (1 - near * 0.7);
+  }
+  if (!ending && dist < 1.2) {
+    ending = true;
+    fade.style.transition = 'opacity 2.5s'; fade.style.opacity = 1;
+    setTimeout(() => { endEl.style.display = 'flex'; if (actx) actx.suspend(); }, 3000);
+  }
+
+  renderer.render(scene, camera);
+}
+
+document.getElementById('start').addEventListener('click', () => {
+  document.getElementById('overlay').style.display = 'none';
+  hud.style.display = 'block';
+  initAudio();
+  if (actx) actx.resume();
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  running = true; last = performance.now();
+});
+document.getElementById('again').addEventListener('click', resetGame);
+
+updateChunks(player.x, player.z);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
