@@ -154,12 +154,46 @@ const invEl = document.getElementById('inv');
 const toastEl = document.getElementById('toast');
 let toastTimer = 0;
 const iconSrc = type => globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`;
+// the item in hand: shown at the lower right of the view, highlighted in the strip
+let selected = null;
+const HELD_SIZE = { key: [0.22, 0.125], pliers: [0.18, 0.19] };
+const held = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({
+  transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, depthTest: false, color: 0xe0e0e0,
+}));
+held.renderOrder = 999;
+held.position.set(0.2, -0.17, -0.45);
+held.rotation.z = 0.5;
+held.visible = false;
+camera.add(held);
+const heldTex = {};
+function select(type) {
+  selected = selected === type ? null : type;
+  held.visible = !!selected;
+  if (selected) {
+    if (!heldTex[selected]) {
+      heldTex[selected] = new THREE.TextureLoader().load(iconSrc(selected));
+      heldTex[selected].colorSpace = THREE.SRGBColorSpace;
+    }
+    held.material.map = heldTex[selected];
+    held.material.needsUpdate = true;
+    held.scale.set(...HELD_SIZE[selected], 1);
+  }
+  renderInventory();
+}
+addEventListener('keydown', e => {
+  const n = Number(e.key);
+  const owned = Object.keys(inv).filter(t => inv[t]);
+  if (n >= 1 && n <= owned.length) select(owned[n - 1]);
+});
+
 function renderInventory() {
   invEl.replaceChildren();
   for (const type of Object.keys(inv)) {
     if (!inv[type]) continue;
-    const slot = document.createElement('div');
-    slot.className = 'slot';
+    const slot = document.createElement('button');
+    slot.type = 'button';
+    slot.className = 'slot' + (selected === type ? ' sel' : '');
+    slot.setAttribute('aria-pressed', selected === type);
     const img = document.createElement('img');
     img.src = iconSrc(type);
     img.alt = NAMES[type];
@@ -169,6 +203,8 @@ function renderInventory() {
       n.textContent = inv[type];
       slot.append(n);
     }
+    slot.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); select(type); }, { passive: false });
+    slot.addEventListener('click', () => select(type));
     invEl.append(slot);
   }
 }

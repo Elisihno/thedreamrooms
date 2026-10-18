@@ -14,7 +14,8 @@
   #use { position: fixed; right: 16px; bottom: 16px; padding: 16px 26px; border-radius: 12px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.16); color: #fff; font: 600 16px system-ui, sans-serif; z-index: 2; }
   #use[hidden] { display: none; }
   #inv { position: fixed; top: 40px; right: 12px; display: flex; gap: 8px; pointer-events: none; }
-  .slot { position: relative; width: 52px; height: 52px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+  .slot { padding: 0; cursor: pointer; pointer-events: auto; position: relative; width: 52px; height: 52px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+  .slot.sel { border-color: #fff; background: rgba(255,255,255,.22); box-shadow: 0 0 0 2px rgba(255,255,255,.5); }
   .slot img { max-width: 44px; max-height: 44px; }
   .slot span { position: absolute; right: 3px; bottom: 1px; color: #fff; font: 700 12px system-ui, sans-serif; }
   #toast { position: fixed; left: 0; right: 0; bottom: 72px; text-align: center; color: #fff; font: 600 14px system-ui, sans-serif; pointer-events: none; }
