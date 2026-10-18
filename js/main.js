@@ -21,17 +21,17 @@ const flash = new THREE.SpotLight(0xfff1d6, 3.5, 14, Math.PI / 6, 0.5, 1.2);
 flash.position.set(0.1, -0.1, 0);
 flash.target.position.set(0, 0, -5);
 camera.add(flash, flash.target);
-let flashOn = true;
 
 const house = buildHouse(renderer, seed);
 scene.add(house.group);
 
 // ---- player -------------------------------------------------------------
-const player = { pos: house.spawn.clone(), yaw: 0, pitch: 0, radius: 0.3 };
+const player = { pos: house.spawn.clone(), y: 0, level: 0, yaw: 0, pitch: 0, radius: 0.3 };
 const EYE = 1.6, WALK = 2.2;
 
 function collide(x, z) {
   for (const b of house.colliders) {
+    if (b.level !== player.level) continue;
     const cx = Math.max(b.minX, Math.min(x, b.maxX));
     const cz = Math.max(b.minZ, Math.min(z, b.maxZ));
     const dx = x - cx, dz = z - cz, d2 = dx * dx + dz * dz;
@@ -52,10 +52,7 @@ function collide(x, z) {
 
 // ---- input --------------------------------------------------------------
 const keys = new Set();
-addEventListener('keydown', e => {
-  keys.add(e.code);
-  if (e.code === 'KeyF') toggleFlash();
-});
+addEventListener('keydown', e => keys.add(e.code));
 addEventListener('keyup', e => keys.delete(e.code));
 
 const canvas = renderer.domElement;
@@ -121,19 +118,42 @@ function endTouch(e) {
 canvas.addEventListener('touchend', endTouch);
 canvas.addEventListener('touchcancel', endTouch);
 
-function toggleFlash() {
-  flashOn = !flashOn;
-  flash.visible = flashOn;
-  document.getElementById('flashBtn').classList.toggle('off', !flashOn);
-}
-document.getElementById('flashBtn').addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); toggleFlash(); }, { passive: false });
-document.getElementById('flashBtn').addEventListener('click', toggleFlash);
-
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
 });
+
+// ---- room lights ----------------------------------------------------------
+// A fixed pool of point lights follows the nearest rooms, so the shader cost stays
+// constant however many rooms the house has.
+const pool = Array.from({ length: 4 }, () => {
+  const l = new THREE.PointLight(0xffd9a0, 0, 8, 1.4);
+  l.userData.room = null;
+  scene.add(l);
+  return l;
+});
+let assignTimer = 0;
+function updateLights(t, dt) {
+  assignTimer -= dt;
+  if (assignTimer <= 0) {
+    assignTimer = 0.25;
+    const ranked = house.rooms
+      .map(r => ({ r, d: r.pos.distanceTo(camera.position) }))
+      .sort((a, b) => a.d - b.d);
+    pool.forEach((l, i) => {
+      const first = !l.userData.room;
+      l.userData.room = ranked[i].r;
+      if (first) l.position.copy(ranked[i].r.pos);
+    });
+  }
+  for (const l of pool) {
+    const room = l.userData.room;
+    if (!room) continue;
+    l.position.lerp(room.pos, Math.min(1, dt * 4));
+    l.intensity = 1.4 * room.base * (0.85 + 0.15 * Math.sin(t * (2 + room.base * 3) + room.pos.x));
+  }
+}
 
 // ---- loop ---------------------------------------------------------------
 const clock = new THREE.Clock();
@@ -159,13 +179,20 @@ function frame() {
     player.pos.x = x; player.pos.z = z;
   }
 
+  // height: the stairs are a ramp, everywhere else the floor of the current level
+  const st = house.stair;
+  if (player.pos.x > st.x0 && player.pos.x < st.x1 && player.pos.z >= st.z0 && player.pos.z <= st.z1) {
+    player.y = (player.pos.z - st.z0) / (st.z1 - st.z0) * st.rise;
+    player.level = player.y >= st.rise / 2 ? 1 : 0;
+  } else {
+    player.y = player.level * st.rise;
+  }
+
   const bob = mag > 0.01 ? Math.sin(t * 8) * 0.03 * mag : 0;
-  camera.position.set(player.pos.x, EYE + bob, player.pos.z);
+  camera.position.set(player.pos.x, player.y + EYE + bob, player.pos.z);
   camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
 
-  for (const l of house.lights) {
-    l.intensity = l.userData.base * (0.85 + 0.15 * Math.sin(t * (2 + l.userData.base * 3) + l.id));
-  }
+  updateLights(t, dt);
 
   renderer.render(scene, camera);
   requestAnimationFrame(frame);

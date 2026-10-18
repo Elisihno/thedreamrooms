@@ -9,16 +9,12 @@
   canvas { display: block; width: 100%; height: 100%; }
   #stick { position: fixed; display: none; width: 140px; height: 140px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); pointer-events: none; }
   #knob { position: absolute; left: 45px; top: 45px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.35); }
-  #flashBtn { position: fixed; right: 16px; bottom: 16px; padding: 14px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,.3);
-    background: rgba(255,255,255,.12); color: #fff; font: 600 14px system-ui, sans-serif; z-index: 2; }
-  #flashBtn.off { opacity: .45; }
   #hint { position: fixed; left: 0; right: 0; top: 12px; text-align: center; color: rgba(255,255,255,.5); font: 13px system-ui, sans-serif; pointer-events: none; }
 </style>
 </head>
 <body>
-<div id="hint">Left side: move &middot; Right side: look &middot; (Desktop: WASD, click to look, F = light)</div>
+<div id="hint">Left side: move &middot; Right side: look &middot; (Desktop: WASD, click to look)</div>
 <div id="stick"><div id="knob"></div></div>
-<button id="flashBtn">Light</button>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
