@@ -1,46 +1,87 @@
 import * as THREE from '../vendor/three.module.min.js';
 
 // ---- layout -------------------------------------------------------------
-// One map per storey. Each letter is a room; every character is one CELL x CELL square.
-// Ground floor: room S is the stairwell (cells col 4, rows 3-4), entered from the north.
-// Upper floor: the same cells are the opening above the stairs, inside room U.
-const FLOORS = [
-  [
-    'AAAABBBCC',
-    'AAAABBBCC',
-    'DDDDBBBEE',
-    'DDDDSFFEE',
-    'GGGGSFFHH',
-    'GGGGFFFHH',
-  ],
-  [
-    'PPPPQQQRR',
-    'PPPPQQQRR',
-    'SSSSQQQTT',
-    'SSSSUUUTT',
-    'VVVVUUUWW',
-    'VVVVUUUWW',
-  ],
+// One map per storey, bottom to top. Each letter is a room; every character is one
+// CELL x CELL square. 'S' marks a stairwell that climbs to the storey above (see STAIRS).
+// On the storey above, the stair's two cells plus the cell south of them belong to one
+// room: that is where the stairs arrive.
+const LEVELS = [
+  {
+    name: 'Basement', windows: 0,
+    walls: [0, 1, 4, 6], floors: [1, 5, 6],
+    map: [
+      'AAAABBBBB',
+      'ASAABBBBB',
+      'ASAABBBBB',
+      'CCCCDDDEE',
+      'CCCCDDDEE',
+      'CCCCDDDEE',
+    ],
+  },
+  {
+    name: 'Base Floor', windows: 0.7,
+    walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
+    map: [
+      'PPPQQQRRR',
+      'PPPQQQRRR',
+      'PPPQQQTTT',
+      'PPPUSUTTT',
+      'VVVUSUWWW',
+      'VVVUUUWWW',
+    ],
+  },
+  {
+    name: 'Upper Floor', windows: 0.7,
+    walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
+    map: [
+      'PPPQQQRRR',
+      'PPPQQQRSR',
+      'PPPQQQRSR',
+      'VVVUUUTTT',
+      'VVVUUUTTT',
+      'VVVUUUTTT',
+    ],
+  },
+  {
+    name: 'Attic', windows: 0.45,
+    walls: [2, 5, 7, 9], floors: [0, 2, 3, 4, 7, 9],
+    map: [
+      'AAAAABBBB',
+      'AAAAABBBB',
+      'AAAAABBBB',
+      'CCCCCBBBB',
+      'CCCCCDDDD',
+      'CCCCCDDDD',
+    ],
+  },
+];
+export const GROUND = 1; // index of the Base Floor
+
+// stairs[k] climbs from LEVELS[k] to LEVELS[k+1], running south (+z)
+const STAIR_CELLS = [
+  { col: 1, row: 1 },
+  { col: 4, row: 3 },
+  { col: 7, row: 1 },
 ];
 
 export const CELL = 3;
 export const WALL_H = 3; // also the height of one storey
-const THICK = 0.2;
+const THICK = 0.2, HT = THICK / 2;
 const DOOR_W = 1.2, DOOR_H = 2.2;
 const WIN_W = 1.1, WIN_H = 1.87, WIN_Y = 0.7; // window tiles are ~0.59 aspect
 const TILE_W = 2.5, TILE_H = 4.2;             // world size one texture tile covers
+const SPAN = 2;                                // stair length in cells
 
-// stairs run south (+z) from the ground floor up to the upper floor
-const STAIR = { col: 4, row: 3, cells: 2 };
-export const stair = {
-  x0: STAIR.col * CELL, x1: (STAIR.col + 1) * CELL,
-  z0: STAIR.row * CELL, z1: (STAIR.row + STAIR.cells) * CELL,
-  rise: WALL_H,
-};
-const holeCells = new Set();
-for (let i = 0; i < STAIR.cells; i++) holeCells.add(`${STAIR.col},${STAIR.row + i}`);
-
+export const levelY = i => (i - GROUND) * WALL_H;
 const COUNT = { wall: 10, floor: 10, window: 10 };
+
+export const stairs = STAIR_CELLS.map((s, k) => ({
+  from: k,
+  x0: s.col * CELL, x1: (s.col + 1) * CELL,
+  z0: s.row * CELL, z1: (s.row + SPAN) * CELL,
+  rise: WALL_H,
+  col: s.col, row: s.row,
+}));
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -64,7 +105,8 @@ function loadTextures(renderer) {
       // single-file builds can embed textures as data URIs on globalThis.__DR_TEX
       const t = loader.load(globalThis.__DR_TEX?.[name] ?? `assets/textures/${name}.jpg`);
       t.colorSpace = THREE.SRGBColorSpace;
-      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      // mirrored tiling hides the seams, since the source tiles are not seamless
+      t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
       t.anisotropy = aniso;
       out[kind].push(t);
     }
@@ -79,17 +121,70 @@ function mat(tex, tint = 0xffffff, side = THREE.FrontSide) {
   return matCache.get(key);
 }
 
-// scale a BoxGeometry's UVs so textures keep a constant world size
-function metricUVs(geo, sx, sy, sz) {
-  const uv = geo.attributes.uv;
-  // BoxGeometry face order: +x, -x, +y, -y, +z, -z (4 verts each)
-  const dims = [[sz, sy], [sz, sy], [sx, sz], [sx, sz], [sx, sy], [sx, sy]];
-  for (let f = 0; f < 6; f++) {
-    for (let v = 0; v < 4; v++) {
-      const i = f * 4 + v;
-      uv.setXY(i, uv.getX(i) * dims[f][0] / TILE_W, uv.getY(i) * dims[f][1] / TILE_H);
+// Collects world-space geometry per material and builds one mesh per material.
+// worldUV: texture coordinates come from world position, so a texture runs on
+// unbroken across wall pieces, corners and rooms.
+function makeBatch() {
+  const parts = new Map();
+  const add = (geo, material, worldUV = true) => {
+    const g = geo.index ? geo.toNonIndexed() : geo;
+    let e = parts.get(material);
+    if (!e) parts.set(material, (e = { p: [], n: [], u: [] }));
+    const pos = g.attributes.position.array, nor = g.attributes.normal.array;
+    let uv = g.attributes.uv.array;
+    if (worldUV) {
+      uv = new Float32Array(pos.length / 3 * 2);
+      for (let i = 0; i < pos.length / 3; i++) {
+        const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+        const ax = Math.abs(nor[i * 3]), ay = Math.abs(nor[i * 3 + 1]), az = Math.abs(nor[i * 3 + 2]);
+        let u, v;
+        if (ay >= ax && ay >= az) { u = x / TILE_W; v = z / TILE_H; }
+        else if (ax >= az) { u = z / TILE_W; v = y / TILE_H; }
+        else { u = x / TILE_W; v = y / TILE_H; }
+        uv[i * 2] = u; uv[i * 2 + 1] = v;
+      }
     }
-  }
+    e.p.push(pos); e.n.push(nor); e.u.push(uv);
+  };
+  const cat = (arrs) => {
+    const out = new Float32Array(arrs.reduce((a, b) => a + b.length, 0));
+    let o = 0;
+    for (const a of arrs) { out.set(a, o); o += a.length; }
+    return out;
+  };
+  return {
+    add,
+    // box faces may use different materials: mats = [+x,-x,+y,-y,+z,-z]
+    box(sx, sy, sz, cx, cy, cz, mats) {
+      const geo = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed();
+      geo.translate(cx, cy, cz);
+      for (let f = 0; f < 6; f++) {
+        const s = f * 18, e = s + 18;
+        const part = new THREE.BufferGeometry();
+        part.setAttribute('position', new THREE.BufferAttribute(geo.attributes.position.array.slice(s, e), 3));
+        part.setAttribute('normal', new THREE.BufferAttribute(geo.attributes.normal.array.slice(s, e), 3));
+        part.setAttribute('uv', new THREE.BufferAttribute(geo.attributes.uv.array.slice(f * 12, f * 12 + 12), 2));
+        add(part, mats[f]);
+      }
+    },
+    flush(parent) {
+      for (const [material, e] of parts) {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(cat(e.p), 3));
+        g.setAttribute('normal', new THREE.BufferAttribute(cat(e.n), 3));
+        g.setAttribute('uv', new THREE.BufferAttribute(cat(e.u), 2));
+        const m = new THREE.Mesh(g, material);
+        m.frustumCulled = false;
+        parent.add(m);
+      }
+      parts.clear();
+    },
+  };
+}
+
+function placed(geo, x, y, z, rx = 0, ry = 0) {
+  geo.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, ry, 0)).setPosition(x, y, z));
+  return geo;
 }
 
 // ---- generator ----------------------------------------------------------
@@ -100,40 +195,42 @@ export function buildHouse(renderer, seed = 1) {
   const colliders = []; // {minX,maxX,minZ,maxZ,level}
   const rooms = [];     // {pos, base}: one per room, feeds the light pool
   const outside = mat(tex.wall[4], 0x555555);
+  const pick = arr => arr[Math.floor(rand() * arr.length)];
 
-  FLOORS.forEach((MAP, level) => buildFloor(MAP, level));
-  buildStairs();
+  LEVELS.forEach((cfg, level) => buildFloor(cfg, level));
+  stairs.forEach(buildStairs);
 
-  function buildFloor(MAP, level) {
-    const g = new THREE.Group();
-    g.position.y = level * WALL_H;
-    group.add(g);
+  function buildFloor(cfg, level) {
+    const MAP = cfg.map, Y = levelY(level);
+    const batch = makeBatch();
     const rows = MAP.length, cols = MAP[0].length;
     const at = (c, r) => (r < 0 || c < 0 || r >= rows || c >= cols ? null : MAP[r][c]);
-    const upper = level > 0, lower = level < FLOORS.length - 1;
+    const up = stairs[level];       // stairs leaving this storey
+    const down = stairs[level - 1]; // stairs arriving from below
+    const cellsOf = st => (st ? [0, 1].map(i => `${st.col},${st.row + i}`) : []);
+    const ceilHole = new Set(cellsOf(up)), floorHole = new Set(cellsOf(down));
 
     // per-room look
     const ids = [...new Set(MAP.join(''))];
     const look = {};
     for (const id of ids) {
-      look[id] = {
-        wall: tex.wall[Math.floor(rand() * COUNT.wall)],
-        floor: tex.floor[Math.floor(rand() * COUNT.floor)],
-        sx: 0, sz: 0, n: 0,
-      };
+      look[id] = { wall: tex.wall[pick(cfg.walls)], floor: tex.floor[pick(cfg.floors)], sx: 0, sz: 0, n: 0 };
     }
     const wallMat = id => (id ? mat(look[id].wall) : outside);
 
-    // doors: random spanning tree over room adjacency, plus a few loops.
-    // Edge keys: 'h' = wall on top of cell (c,r), 'v' = wall on left of cell (c,r).
-    const edgesByPair = new Map();
+    // which wall edges exist: 'h' = on top of cell (c,r), 'v' = on its left
     const key = (dir, c, r) => `${dir}${c},${r}`;
+    const has = (dir, c, r) => (dir === 'h' ? at(c, r) !== at(c, r - 1) : at(c, r) !== at(c - 1, r));
+
+    // doors: random spanning tree over room adjacency, plus a few loops
+    const edgesByPair = new Map();
+    const stairDoor = up ? key('h', up.col, up.row) : null;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       for (const [dir, nc, nr] of [['h', c, r - 1], ['v', c - 1, r]]) {
         const a = at(c, r), b = at(nc, nr);
         if (!b || a === b) continue;
-        // the ground-floor stairwell only opens on its north end
-        if (lower && (a === 'S' || b === 'S') && key(dir, c, r) !== key('h', STAIR.col, STAIR.row)) continue;
+        // a stairwell opens only on its north end
+        if ((a === 'S' || b === 'S') && key(dir, c, r) !== stairDoor) continue;
         const pair = [a, b].sort().join('|');
         if (!edgesByPair.has(pair)) edgesByPair.set(pair, []);
         edgesByPair.get(pair).push(key(dir, c, r));
@@ -148,50 +245,42 @@ export function buildHouse(renderer, seed = 1) {
       const list = edgesByPair.get(p);
       if (find(a) !== find(b)) {
         parent[find(a)] = find(b);
-        doors.add(list[Math.floor(rand() * list.length)]);
-      } else if (rand() < 0.25 && !(lower && p.includes('S'))) {
-        doors.add(list[Math.floor(rand() * list.length)]);
+        doors.add(pick(list));
+      } else if (rand() < 0.25 && !p.includes('S')) {
+        doors.add(pick(list));
       }
     }
 
-    // floors & ceilings (the stair opening has neither on the storeys it joins)
+    // floors & ceilings (the stair openings have neither on the storeys they join)
     const ceilTex = tex.floor[3];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      const id = at(c, r), lk = look[id];
+      const id = at(c, r), lk = look[id], k = `${c},${r}`;
       const x = (c + 0.5) * CELL, z = (r + 0.5) * CELL;
-      const hole = holeCells.has(`${c},${r}`);
-      const geo = new THREE.PlaneGeometry(CELL, CELL);
-      const uv = geo.attributes.uv;
-      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * CELL / TILE_W, uv.getY(i) * CELL / TILE_H);
-      if (!(upper && hole)) {
-        const floor = new THREE.Mesh(geo, mat(lk.floor));
-        floor.rotation.x = -Math.PI / 2;
-        floor.position.set(x, 0, z);
-        g.add(floor);
-      }
-      if (!(lower && hole)) {
-        const ceil = new THREE.Mesh(geo, mat(ceilTex, 0xaaaaaa));
-        ceil.rotation.x = Math.PI / 2;
-        ceil.position.set(x, WALL_H, z);
-        g.add(ceil);
-      }
+      if (!floorHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(CELL, CELL), x, Y, z, -Math.PI / 2), mat(lk.floor));
+      if (!ceilHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(CELL, CELL), x, Y + WALL_H, z, Math.PI / 2), mat(ceilTex, 0xaaaaaa));
       lk.sx += x; lk.sz += z; lk.n++;
     }
 
-    // wall piece along X (faces +/-z) or along Z (faces +/-x)
-    function piece(axis, cx, cz, len, y0, y1, posMat, negMat, solid = true) {
-      const h = y1 - y0;
+    // Each wall-junction square is owned by exactly one wall piece (west edge first,
+    // then east, north, south), which reaches over it; the others stop at its border.
+    // That leaves no overlapping coplanar faces, so nothing z-fights at corners.
+    const owner = (vc, vr) => [['h', vc - 1, vr], ['h', vc, vr], ['v', vc, vr - 1], ['v', vc, vr]]
+      .find(([d, c, r]) => has(d, c, r));
+    const reach = (vc, vr, dir, c, r) => {
+      const o = owner(vc, vr);
+      return o && o[0] === dir && o[1] === c && o[2] === r ? HT : -HT;
+    };
+
+    const side = mat(tex.wall[4], 0x333333);
+    // wall piece spanning a0..a1 along `axis` at fixed coordinate `f`
+    function piece(axis, a0, a1, f, y0, y1, posMat, negMat, solid = true) {
+      const len = a1 - a0, h = y1 - y0;
       if (len <= 0.001 || h <= 0.001) return;
+      const mid = (a0 + a1) / 2;
       const sx = axis === 'x' ? len : THICK, sz = axis === 'x' ? THICK : len;
-      const geo = new THREE.BoxGeometry(sx, h, sz);
-      metricUVs(geo, sx, h, sz);
-      const side = mat(tex.wall[4], 0x333333);
-      const mats = axis === 'x'
-        ? [side, side, side, side, posMat, negMat]
-        : [posMat, negMat, side, side, side, side];
-      const m = new THREE.Mesh(geo, mats);
-      m.position.set(cx, y0 + h / 2, cz);
-      g.add(m);
+      const cx = axis === 'x' ? mid : f, cz = axis === 'x' ? f : mid;
+      batch.box(sx, h, sz, cx, Y + y0 + h / 2, cz,
+        axis === 'x' ? [side, side, side, side, posMat, negMat] : [posMat, negMat, side, side, side, side]);
       if (solid) colliders.push({ minX: cx - sx / 2, maxX: cx + sx / 2, minZ: cz - sz / 2, maxZ: cz + sz / 2, level });
     }
 
@@ -201,37 +290,35 @@ export function buildHouse(renderer, seed = 1) {
       const pos = at(c, r);
       if (pos === neg) return;
       const axis = dir === 'h' ? 'x' : 'z';
-      const cx = dir === 'h' ? (c + 0.5) * CELL : c * CELL;
-      const cz = dir === 'h' ? r * CELL : (r + 0.5) * CELL;
+      const f = dir === 'h' ? r * CELL : c * CELL; // wall centre line
+      const start = (dir === 'h' ? c : r) * CELL, end = start + CELL;
+      const v0 = dir === 'h' ? [c, r] : [c, r], v1 = dir === 'h' ? [c + 1, r] : [c, r + 1];
+      const a0 = start - reach(v0[0], v0[1], dir, c, r);
+      const a1 = end + reach(v1[0], v1[1], dir, c, r);
+      const mid = start + CELL / 2;
       const posMat = wallMat(pos), negMat = wallMat(neg);
-      const L = CELL + THICK; // overlap so corners close
-      const along = o => (axis === 'x' ? [cx + o, cz] : [cx, cz + o]);
       const k = key(dir, c, r);
-      const opening = (w) => {
-        const side = (L - w) / 2, off = (w + side) / 2;
-        let [x, z] = along(-off); piece(axis, x, z, side, 0, WALL_H, posMat, negMat);
-        [x, z] = along(off); piece(axis, x, z, side, 0, WALL_H, posMat, negMat);
-        return along(0);
+      const opening = w => {
+        piece(axis, a0, mid - w / 2, f, 0, WALL_H, posMat, negMat);
+        piece(axis, mid + w / 2, a1, f, 0, WALL_H, posMat, negMat);
       };
       if (doors.has(k)) {
-        const [x, z] = opening(DOOR_W);
-        piece(axis, x, z, DOOR_W, DOOR_H, WALL_H, posMat, negMat, false);
-      } else if ((!pos || !neg) && rand() < 0.7) {
-        const [x, z] = opening(WIN_W);
-        piece(axis, x, z, WIN_W, 0, WIN_Y, posMat, negMat, false);
-        piece(axis, x, z, WIN_W, WIN_Y + WIN_H, WALL_H, posMat, negMat, false);
-        const hw = WIN_W / 2, t = THICK / 2;
+        opening(DOOR_W);
+        piece(axis, mid - DOOR_W / 2, mid + DOOR_W / 2, f, DOOR_H, WALL_H, posMat, negMat, false);
+      } else if ((!pos || !neg) && rand() < cfg.windows) {
+        opening(WIN_W);
+        piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, 0, WIN_Y, posMat, negMat, false);
+        piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, WIN_Y + WIN_H, WALL_H, posMat, negMat, false);
+        const hw = WIN_W / 2;
         colliders.push(axis === 'x'
-          ? { minX: x - hw, maxX: x + hw, minZ: z - t, maxZ: z + t, level }
-          : { minX: x - t, maxX: x + t, minZ: z - hw, maxZ: z + hw, level });
-        const glass = new THREE.Mesh(new THREE.PlaneGeometry(WIN_W, WIN_H),
-          mat(tex.window[Math.floor(rand() * COUNT.window)], 0xffffff, THREE.DoubleSide));
-        glass.position.set(x, WIN_Y + WIN_H / 2, z);
-        if (axis === 'z') glass.rotation.y = Math.PI / 2;
-        g.add(glass);
+          ? { minX: mid - hw, maxX: mid + hw, minZ: f - HT, maxZ: f + HT, level }
+          : { minX: f - HT, maxX: f + HT, minZ: mid - hw, maxZ: mid + hw, level });
+        const glass = placed(new THREE.PlaneGeometry(WIN_W, WIN_H),
+          axis === 'x' ? mid : f, Y + WIN_Y + WIN_H / 2, axis === 'x' ? f : mid, 0, axis === 'z' ? Math.PI / 2 : 0);
+        const gm = mat(tex.window[Math.floor(rand() * COUNT.window)], 0xffffff, THREE.DoubleSide);
+        batch.add(glass, gm, false);
       } else {
-        const [x, z] = along(0);
-        piece(axis, x, z, L, 0, WALL_H, posMat, negMat);
+        piece(axis, a0, a1, f, 0, WALL_H, posMat, negMat);
       }
     }
 
@@ -240,43 +327,43 @@ export function buildHouse(renderer, seed = 1) {
       if (r < rows) wallEdge('v', c, r);
     }
 
-    // railings around the stair opening, open on the south side where the stairs arrive
-    if (upper) {
+    // railings around the opening for the stairs arriving here, open on the south side
+    if (down) {
       const rail = mat(tex.floor[2], 0x777777);
+      const t = 0.08, w = down.x1 - down.x0, d = down.z1 - down.z0;
       const add = (x, z, sx, sz) => {
-        const geo = new THREE.BoxGeometry(sx, 1, sz);
-        metricUVs(geo, sx, 1, sz);
-        const m = new THREE.Mesh(geo, rail);
-        m.position.set(x, 0.5, z);
-        g.add(m);
+        batch.box(sx, 1, sz, x, Y + 0.5, z, Array(6).fill(rail));
         colliders.push({ minX: x - sx / 2, maxX: x + sx / 2, minZ: z - sz / 2, maxZ: z + sz / 2, level });
       };
-      const w = stair.x1 - stair.x0, d = stair.z1 - stair.z0, t = 0.08;
-      add(stair.x0 + t / 2, stair.z0 + d / 2, t, d);
-      add(stair.x1 - t / 2, stair.z0 + d / 2, t, d);
-      add(stair.x0 + w / 2, stair.z0 + t / 2, w, t);
+      add(down.x0 + t / 2, down.z0 + d / 2, t, d);
+      add(down.x1 - t / 2, down.z0 + d / 2, t, d);
+      add(down.x0 + w / 2, down.z0 + t / 2, w, t);
     }
 
+    batch.flush(group);
     for (const id of ids) {
       const lk = look[id];
-      rooms.push({ pos: new THREE.Vector3(lk.sx / lk.n, level * WALL_H + WALL_H - 0.4, lk.sz / lk.n), base: 0.6 + rand() * 0.5 });
+      rooms.push({ pos: new THREE.Vector3(lk.sx / lk.n, Y + WALL_H - 0.4, lk.sz / lk.n), base: 0.6 + rand() * 0.5, level });
     }
   }
 
-  function buildStairs() {
-    const steps = 15, run = (stair.z1 - stair.z0) / steps, rise = stair.rise / steps;
-    const w = stair.x1 - stair.x0;
-    const m = mat(tex.floor[2], 0x999999);
+  function buildStairs(st) {
+    const batch = makeBatch();
+    const steps = 15, run = (st.z1 - st.z0) / steps, rise = st.rise / steps, w = st.x1 - st.x0;
+    const m = mat(tex.floor[2], 0x999999), mats = Array(6).fill(m);
+    const y0 = levelY(st.from);
+    // each step is a slab one rise thick, so no faces overlap
     for (let i = 0; i < steps; i++) {
-      const top = (i + 1) * rise;
-      const geo = new THREE.BoxGeometry(w, top, run);
-      metricUVs(geo, w, top, run);
-      const s = new THREE.Mesh(geo, m);
-      s.position.set(stair.x0 + w / 2, top / 2, stair.z0 + run * (i + 0.5));
-      group.add(s);
+      batch.box(w, rise, run, st.x0 + w / 2, y0 + rise * (i + 0.5), st.z0 + run * (i + 0.5), mats);
     }
+    batch.flush(group);
   }
 
-  const size = { w: FLOORS[0][0].length * CELL, d: FLOORS[0].length * CELL };
-  return { group, colliders, rooms, size, stair, levels: FLOORS.length, spawn: new THREE.Vector3(1.5 * CELL, 0, 1.5 * CELL) };
+  const first = LEVELS[0].map;
+  const size = { w: first[0].length * CELL, d: first.length * CELL };
+  return {
+    group, colliders, rooms, size, stairs,
+    levels: LEVELS.map(l => l.name),
+    spawn: new THREE.Vector3(4.5 * CELL, levelY(GROUND), 1.5 * CELL),
+  };
 }

@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
-import { buildHouse } from './house.js';
+import { buildHouse, levelY, GROUND } from './house.js';
 
 const seed = Number(new URLSearchParams(location.search).get('seed')) || 1;
 
@@ -26,7 +26,7 @@ const house = buildHouse(renderer, seed);
 scene.add(house.group);
 
 // ---- player -------------------------------------------------------------
-const player = { pos: house.spawn.clone(), y: 0, level: 0, yaw: 0, pitch: 0, radius: 0.3 };
+const player = { pos: house.spawn.clone(), y: house.spawn.y, level: GROUND, yaw: 0, pitch: 0, radius: 0.3 };
 const EYE = 1.6, WALK = 2.2;
 
 function collide(x, z) {
@@ -49,6 +49,9 @@ function collide(x, z) {
   }
   return [x, z];
 }
+
+const floorLabel = document.getElementById('floor');
+let shownLevel = -1;
 
 // ---- input --------------------------------------------------------------
 const keys = new Set();
@@ -179,13 +182,23 @@ function frame() {
     player.pos.x = x; player.pos.z = z;
   }
 
-  // height: the stairs are a ramp, everywhere else the floor of the current level
-  const st = house.stair;
-  if (player.pos.x > st.x0 && player.pos.x < st.x1 && player.pos.z >= st.z0 && player.pos.z <= st.z1) {
-    player.y = (player.pos.z - st.z0) / (st.z1 - st.z0) * st.rise;
-    player.level = player.y >= st.rise / 2 ? 1 : 0;
-  } else {
-    player.y = player.level * st.rise;
+  // height: each stair is a ramp between two storeys, elsewhere the floor of the current level
+  let onStair = false;
+  for (const st of house.stairs) {
+    const p = player.pos;
+    if ((player.level === st.from || player.level === st.from + 1) &&
+        p.x > st.x0 && p.x < st.x1 && p.z >= st.z0 && p.z <= st.z1) {
+      const f = (p.z - st.z0) / (st.z1 - st.z0);
+      player.y = levelY(st.from) + f * st.rise;
+      player.level = f >= 0.5 ? st.from + 1 : st.from;
+      onStair = true;
+      break;
+    }
+  }
+  if (!onStair) player.y = levelY(player.level);
+  if (player.level !== shownLevel) {
+    shownLevel = player.level;
+    floorLabel.textContent = house.levels[shownLevel];
   }
 
   const bob = mag > 0.01 ? Math.sin(t * 8) * 0.03 * mag : 0;
