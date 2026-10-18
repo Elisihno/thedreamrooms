@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { buildHouse, levelY } from './house.js';
+import { createHeld } from './held.js';
 
 const seed = Number(new URLSearchParams(location.search).get('seed')) || 1;
 
@@ -130,6 +131,7 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
+  heldView.resize(innerWidth / innerHeight);
 });
 
 // ---- using things -----------------------------------------------------------
@@ -156,28 +158,11 @@ let toastTimer = 0;
 const iconSrc = type => globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`;
 // the item in hand: shown at the lower right of the view, highlighted in the strip
 let selected = null;
-const HELD_SIZE = { key: [0.22, 0.125], pliers: [0.18, 0.19] };
-const held = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({
-  transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, depthTest: false, color: 0xe0e0e0,
-}));
-held.renderOrder = 999;
-held.position.set(0.2, -0.17, -0.45);
-held.rotation.z = 0.5;
-held.visible = false;
-camera.add(held);
-const heldTex = {};
+const heldView = createHeld();
+heldView.resize(innerWidth / innerHeight);
 function select(type) {
   selected = selected === type ? null : type;
-  held.visible = !!selected;
-  if (selected) {
-    if (!heldTex[selected]) {
-      heldTex[selected] = new THREE.TextureLoader().load(iconSrc(selected));
-      heldTex[selected].colorSpace = THREE.SRGBColorSpace;
-    }
-    held.material.map = heldTex[selected];
-    held.material.needsUpdate = true;
-    held.scale.set(...HELD_SIZE[selected], 1);
-  }
+  heldView.show(selected);
   renderInventory();
 }
 addEventListener('keydown', e => {
@@ -329,6 +314,7 @@ function updateLights(t, dt) {
 
 // ---- loop ---------------------------------------------------------------
 const clock = new THREE.Clock();
+let lastYaw = player.yaw, lastPitch = player.pitch;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
@@ -378,7 +364,17 @@ function frame() {
   house.update(dt, player);
   updateTarget();
 
+  const yawRate = (player.yaw - lastYaw) / Math.max(dt, 1e-3), pitchRate = (player.pitch - lastPitch) / Math.max(dt, 1e-3);
+  lastYaw = player.yaw; lastPitch = player.pitch;
+  heldView.update(t, dt, mag, yawRate, pitchRate);
+
   renderer.render(scene, camera);
+  if (heldView.visible) {
+    renderer.autoClear = false;
+    renderer.clearDepth();
+    renderer.render(heldView.scene, heldView.camera);
+    renderer.autoClear = true;
+  }
   requestAnimationFrame(frame);
 }
 frame();
