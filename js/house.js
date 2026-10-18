@@ -22,7 +22,13 @@ const LEVELS = [
   },
   {
     name: 'Base Floor', windows: 0.7,
-    roles: { P: 'living', Q: 'dining', R: 'kitchen', T: 'study', U: 'hall', V: 'pantry', W: 'bedroom' },
+    roles: { P: 'living', Q: 'dining', R: 'kitchen', T: 'living', U: 'hall', V: 'pantry', W: 'bedroom' },
+    // kitchen table in the kitchen, a rug and coffee table in each of the two living rooms
+    fixed: [
+      { item: 'tablechairs', cell: [7, 0] },
+      { item: 'livingset', cell: [0, 0] },
+      { item: 'livingset', cell: [7, 2] },
+    ],
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
       'PPPQQQRRR',
@@ -242,6 +248,9 @@ export function buildHouse(renderer, seed = 1) {
   const mannequins = [];
   const parts = [];      // movable furniture parts (drawers, doors, lids)
   const partMeshes = [];
+  const pickables = []; // everything the crosshair can land on
+  const items = [];      // things to find in drawers and chests
+  const itemMeshes = [];
   const partMat = new THREE.MeshLambertMaterial({ map: tex.furniture[0], vertexColors: true });
   const fm = tint => mat(tex.furniture[0], tint);
   const plainCache = new Map();
@@ -256,6 +265,40 @@ export function buildHouse(renderer, seed = 1) {
 
   LEVELS.forEach((cfg, level) => buildFloor(cfg, level));
   stairs.forEach(buildStairs);
+  placeLoot();
+
+  // One pair of cutting pliers in a single drawer, and one key per storey, preferably in a chest.
+  function placeLoot() {
+    const loader = new THREE.TextureLoader();
+    const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 } };
+    const place = (type, part) => {
+      const t = loader.load(globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
+      t.colorSpace = THREE.SRGBColorSpace;
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(spec[type].w, spec[type].h),
+        new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, color: 0xd8d8d8 }));
+      mesh.rotation.order = 'YXZ';
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.rotation.y = (rand() - 0.5) * 1.4;
+      mesh.position.set(...part.loot.pos);
+      part.loot.parent.add(mesh);
+      const item = { kind: 'item', type, part, mesh };
+      mesh.userData.item = item;
+      items.push(item);
+      itemMeshes.push(mesh);
+      part.hasItem = true;
+    };
+    const holders = parts.filter(p => p.loot);
+    const pliersAt = pick(holders.filter(p => p.kind === 'drawer'));
+    place('pliers', pliersAt);
+    for (let lv = 0; lv < LEVELS.length; lv++) {
+      const here = holders.filter(p => p.level === lv && !p.hasItem);
+      if (!here.length) continue;
+      const chests = here.filter(p => p.kind === 'flap');
+      place('key', pick(chests.length ? chests : here));
+    }
+    pickables.push(...partMeshes, ...itemMeshes);
+  }
 
   function buildFloor(cfg, level) {
     const MAP = cfg.map, Y = levelY(level);
@@ -502,6 +545,13 @@ export function buildHouse(renderer, seed = 1) {
         pg.add(mesh);
         itemGroup.add(pg);
         const part = { pg, pivot, level, open: false, t: 0, ...extra };
+        if (extra.kind === 'drawer') {
+          // on top of the drawer box, near its front, so it slides out into view
+          const [, h, d, x, y0, zc] = boxes[0];
+          part.loot = { parent: pg, pos: [x - pivot[0], y0 + h + 0.012 - pivot[1], zc + d * 0.2 - pivot[2]] };
+        } else if (extra.lootPos) {
+          part.loot = { parent: itemGroup, pos: extra.lootPos };
+        }
         mesh.userData.part = part;
         parts.push(part);
         partMeshes.push(mesh);
@@ -509,7 +559,7 @@ export function buildHouse(renderer, seed = 1) {
       const mv = {
         drawer: (boxes, dist) => makePart(boxes, [0, 0, 0], { kind: 'drawer', dist }),
         door: (boxes, hx, hz, hinge) => makePart(boxes, [hx, 0, hz], { kind: 'door', angle: hinge > 0 ? -1.9 : 1.9 }),
-        flap: (boxes, hy, hz, angle) => makePart(boxes, [0, hy, hz], { kind: 'flap', angle }),
+        flap: (boxes, hy, hz, angle, lootPos) => makePart(boxes, [0, hy, hz], { kind: 'flap', angle, lootPos }),
       };
       item.build(b, pal, mv);
 
@@ -556,16 +606,33 @@ export function buildHouse(renderer, seed = 1) {
     parts,
     onThud: null,
     onUse: null,
-    // the movable part the camera is looking at, if close enough to use
+    onPickup: null,
+    items,
+    // what the camera is looking at within reach: an item lying in an opened drawer or
+    // chest (preferred), otherwise a movable part
     pick(camera, player) {
       raycaster.setFromCamera(centre, camera);
-      const hit = raycaster.intersectObjects(partMeshes, false)[0];
-      const part = hit?.object.userData.part;
-      return part && part.level === player.level ? part : null;
+      let part = null;
+      for (const hit of raycaster.intersectObjects(pickables, false)) {
+        const item = hit.object.userData.item;
+        if (item) {
+          if (item.part.open && item.part.t > 0.85 && item.part.level === player.level) return item;
+        } else if (!part && hit.object.userData.part.level === player.level) {
+          part = hit.object.userData.part;
+        }
+      }
+      return part;
     },
-    toggle(part) {
-      part.open = !part.open;
-      api.onUse?.(part.kind, part.open);
+    use(target) {
+      if (target.kind === 'item') {
+        target.mesh.removeFromParent();
+        pickables.splice(pickables.indexOf(target.mesh), 1);
+        target.part.hasItem = false;
+        api.onPickup?.(target.type);
+        return;
+      }
+      target.open = !target.open;
+      api.onUse?.(target.kind, target.open);
     },
     update(dt, player) {
       for (const part of parts) {

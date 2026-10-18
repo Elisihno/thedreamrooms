@@ -136,16 +136,52 @@ addEventListener('resize', () => {
 // Looking at a drawer, door or lid shows the Use button; E or a click does the same.
 const useBtn = document.getElementById('use');
 let target = null;
+const NAMES = { key: 'key', pliers: 'cutting pliers' };
+const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.open ? 'Close' : 'Open');
 function useTarget() {
-  if (target) house.toggle(target);
+  if (target) house.use(target);
 }
 function updateTarget() {
   const t = house.pick(camera, player);
-  if (t === target && t) { useBtn.textContent = t.open ? 'Close' : 'Open'; return; }
   target = t;
   useBtn.hidden = !t;
-  if (t) useBtn.textContent = t.open ? 'Close' : 'Open';
+  if (t) useBtn.textContent = label(t);
 }
+
+// ---- inventory --------------------------------------------------------------
+const inv = { key: 0, pliers: 0 };
+const invEl = document.getElementById('inv');
+const toastEl = document.getElementById('toast');
+let toastTimer = 0;
+const iconSrc = type => globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`;
+function renderInventory() {
+  invEl.replaceChildren();
+  for (const type of Object.keys(inv)) {
+    if (!inv[type]) continue;
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    const img = document.createElement('img');
+    img.src = iconSrc(type);
+    img.alt = NAMES[type];
+    slot.append(img);
+    if (inv[type] > 1) {
+      const n = document.createElement('span');
+      n.textContent = inv[type];
+      slot.append(n);
+    }
+    invEl.append(slot);
+  }
+}
+house.onPickup = type => {
+  inv[type]++;
+  renderInventory();
+  toastEl.textContent = `Picked up ${NAMES[type]}`;
+  toastEl.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, 1800);
+  chime();
+};
+
 useBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useTarget(); }, { passive: false });
 useBtn.addEventListener('click', useTarget);
 
@@ -183,6 +219,21 @@ house.onThud = () => {
     noise.start(now); thump.start(now); thump.stop(now + len);
   } catch { /* audio is optional */ }
 };
+
+function chime() {
+  if (!audio) return;
+  try {
+    const now = audio.currentTime;
+    const osc = audio.createOscillator(), gain = audio.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(660, now);
+    osc.frequency.exponentialRampToValueAtTime(990, now + 0.12);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(now); osc.stop(now + 0.35);
+  } catch { /* audio is optional */ }
+}
 
 house.onUse = (kind, open) => {
   if (!audio) return;

@@ -8,7 +8,8 @@ import * as THREE from '../vendor/three.module.min.js';
 //   b.cyl(r, h, x, y0, zc, material)    static cylinder
 //   mv.drawer(boxes, dist)              part that slides out along +z when used
 //   mv.door(boxes, hx, hz, side)        part hinged on a vertical axis at (hx, hz); side +1: hinge on the left
-//   mv.flap(boxes, hy, hz, angle)       part hinged on a horizontal axis at (y=hy, z=hz)
+//   mv.flap(boxes, hy, hz, angle, loot) part hinged on a horizontal axis at (y=hy, z=hz); loot: item-local
+//                                       spot where something can lie under the lid
 //
 // `boxes` is a list of [w, h, d, x, y0, zc, material]. p is the palette:
 // body, dark2, light, cloth, paper (textured) and dark (plain).
@@ -137,17 +138,41 @@ export const ITEMS = {
   chest: { w: .9, d: .55, tall: false, build(b, p, mv) {
     b(.9, .45, .5, 0, 0, .3, p.body);
     b(.1, .1, .02, 0, .36, .56, p.dark);
-    mv.flap([[.92, .1, .52, 0, .45, .3, p.dark2]], .45, .05, -1.9);
+    mv.flap([[.92, .1, .52, 0, .45, .3, p.dark2]], .45, .05, -1.9, [0, .462, .3]);
   } },
   covered: { w: 1.2, d: .9, tall: false, build(b, p) {
     b(1.2, .6, .8, 0, 0, .45, p.light);
     b(.9, .5, .7, 0, .6, .45, p.light);
   } },
+  armchair: { w: .9, d: .85, tall: false, build(b, p) {
+    b(.9, .4, .85, 0, 0, .425, p.cloth);
+    b(.9, .5, .2, 0, .4, .1, p.cloth);
+    for (const dx of [-.375, .375]) b(.15, .3, .6, dx, .4, .55, p.cloth);
+    b(.6, .12, .55, 0, .4, .55, p.light);
+  } },
+  tvunit: { w: 1.3, d: .45, tall: true, build(b, p) {
+    b(1.3, .5, .45, 0, 0, .225, p.body);
+    b(1.26, .02, .02, 0, .26, .46, p.dark);
+    b(1.0, .6, .06, 0, .55, .22, p.dark);
+    b(.92, .52, .01, 0, .59, .255, p.dark2);
+    b(.3, .05, .2, 0, .5, .22, p.dark);
+  } },
+  fireplace: { w: 1.4, d: .5, tall: true, build(b, p) {
+    b(1.4, 1.2, .5, 0, 0, .25, p.dark2);
+    b(.7, .7, .02, 0, .05, .51, p.dark);
+    b(1.6, .08, .6, 0, 1.2, .3, p.body);
+  } },
+  // rug and coffee table, free-standing
+  livingset: { w: 1.7, d: 1.3, tall: false, center: true, build(b, p) {
+    b(1.7, .015, 1.3, 0, .005, 0, p.cloth);
+    b(.9, .05, .5, 0, .38, 0, p.body);
+    for (const dx of [-.4, .4]) for (const dz of [-.2, .2]) b(.05, .38, .05, dx, 0, dz, p.dark2);
+  }, colliders: [[.9, .5, 0, 0]] },
   chair: { w: .5, d: .55, tall: false, build(b, p) { chairAt(b, p, 0, .33, 0, 1); } },
 };
 
 export const ROLE_ITEMS = {
-  living: ['sofa', 'bookshelf', 'drawers', 'chair'],
+  living: ['sofa', 'tvunit', 'bookshelf', 'armchair', 'drawers', 'fireplace', 'armchair'],
   dining: ['tablechairs', 'drawers', 'chair'],
   kitchen: ['fridge', 'stove', 'counter', 'counter', 'counter', 'tablechairs'],
   study: ['desk', 'bookshelf', 'bookshelf', 'drawers'],
