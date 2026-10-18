@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
+import { ITEMS, ROLE_ITEMS, buildMannequin } from './furniture.js';
 
 // ---- layout -------------------------------------------------------------
 // One map per storey, bottom to top. Each letter is a room; every character is one
@@ -8,6 +9,7 @@ import * as THREE from '../vendor/three.module.min.js';
 const LEVELS = [
   {
     name: 'Basement', windows: 0,
+    roles: { A: 'storage', B: 'storage', C: 'storage', D: 'storage', E: 'storage' },
     walls: [0, 1, 4, 6], floors: [1, 5, 6],
     map: [
       'AAAABBBBB',
@@ -20,6 +22,7 @@ const LEVELS = [
   },
   {
     name: 'Base Floor', windows: 0.7,
+    roles: { P: 'living', Q: 'dining', R: 'kitchen', T: 'study', U: 'hall', V: 'pantry', W: 'bedroom' },
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
       'PPPQQQRRR',
@@ -32,6 +35,7 @@ const LEVELS = [
   },
   {
     name: 'Upper Floor', windows: 0.7,
+    roles: { P: 'bedroom', Q: 'bedroom', R: 'study', T: 'bedroom', U: 'hall', V: 'bedroom' },
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
       'PPPQQQRRR',
@@ -44,6 +48,8 @@ const LEVELS = [
   },
   {
     name: 'Attic', windows: 0.45,
+    roles: { A: 'attic', B: 'attic', C: 'attic', D: 'attic' },
+    mannequins: [[2, 1], [1, 4], [6, 4]], // [col, row] of each mannequin's cell
     walls: [2, 5, 7, 9], floors: [0, 2, 3, 4, 7, 9],
     map: [
       'AAAAABBBB',
@@ -73,7 +79,7 @@ const TILE_W = 2.5, TILE_H = 4.2;             // world size one texture tile cov
 const SPAN = 2;                                // stair length in cells
 
 export const levelY = i => (i - GROUND) * WALL_H;
-const COUNT = { wall: 10, floor: 10, window: 10 };
+const COUNT = { wall: 10, floor: 10, window: 10, furniture: 1 };
 
 export const stairs = STAIR_CELLS.map((s, k) => ({
   from: k,
@@ -124,7 +130,7 @@ function mat(tex, tint = 0xffffff, side = THREE.FrontSide) {
 // Collects world-space geometry per material and builds one mesh per material.
 // worldUV: texture coordinates come from world position, so a texture runs on
 // unbroken across wall pieces, corners and rooms.
-function makeBatch() {
+function makeBatch(tw = TILE_W, th = TILE_H) {
   const parts = new Map();
   const add = (geo, material, worldUV = true) => {
     const g = geo.index ? geo.toNonIndexed() : geo;
@@ -138,9 +144,9 @@ function makeBatch() {
         const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
         const ax = Math.abs(nor[i * 3]), ay = Math.abs(nor[i * 3 + 1]), az = Math.abs(nor[i * 3 + 2]);
         let u, v;
-        if (ay >= ax && ay >= az) { u = x / TILE_W; v = z / TILE_H; }
-        else if (ax >= az) { u = z / TILE_W; v = y / TILE_H; }
-        else { u = x / TILE_W; v = y / TILE_H; }
+        if (ay >= ax && ay >= az) { u = x / tw; v = z / th; }
+        else if (ax >= az) { u = z / tw; v = y / th; }
+        else { u = x / tw; v = y / th; }
         uv[i * 2] = u; uv[i * 2 + 1] = v;
       }
     }
@@ -196,6 +202,17 @@ export function buildHouse(renderer, seed = 1) {
   const rooms = [];     // {pos, base}: one per room, feeds the light pool
   const outside = mat(tex.wall[4], 0x555555);
   const pick = arr => arr[Math.floor(rand() * arr.length)];
+  const mannequins = [];
+  const fm = tint => mat(tex.furniture[0], tint);
+  const plainCache = new Map();
+  const plain = color => {
+    if (!plainCache.has(color)) plainCache.set(color, new THREE.MeshLambertMaterial({ color }));
+    return plainCache.get(color);
+  };
+  const pal = {
+    body: fm(0xc8b8a4), dark2: fm(0x8a7e70), light: fm(0xf0e8dc),
+    cloth: fm(0xa89288), paper: fm(0xb09a78), dark: plain(0x161312),
+  };
 
   LEVELS.forEach((cfg, level) => buildFloor(cfg, level));
   stairs.forEach(buildStairs);
@@ -240,6 +257,7 @@ export function buildHouse(renderer, seed = 1) {
     const parent = Object.fromEntries(ids.map(i => [i, i]));
     const find = x => (parent[x] === x ? x : (parent[x] = find(parent[x])));
     const doors = new Set();
+    const winEdges = new Set();
     for (const p of pairs) {
       const [a, b] = p.split('|');
       const list = edgesByPair.get(p);
@@ -306,6 +324,7 @@ export function buildHouse(renderer, seed = 1) {
         opening(DOOR_W);
         piece(axis, mid - DOOR_W / 2, mid + DOOR_W / 2, f, DOOR_H, WALL_H, posMat, negMat, false);
       } else if ((!pos || !neg) && rand() < cfg.windows) {
+        winEdges.add(k);
         opening(WIN_W);
         piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, 0, WIN_Y, posMat, negMat, false);
         piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, WIN_Y + WIN_H, WALL_H, posMat, negMat, false);
@@ -340,6 +359,70 @@ export function buildHouse(renderer, seed = 1) {
       add(down.x0 + w / 2, down.z0 + t / 2, w, t);
     }
 
+
+    // Furniture sits against walls, one item per cell, never in the stair cells or in
+    // front of a doorway. Cells with a door only take shallow items, so paths stay clear.
+    function furnish() {
+      const fb = makeBatch(1.4, 1.4);
+      const used = new Set([...ceilHole, ...floorHole]);
+      if (down) used.add(`${down.col},${down.row + SPAN}`);
+      if (up) used.add(`${up.col},${up.row - 1}`);
+      for (const [c, r] of cfg.mannequins ?? []) used.add(`${c},${r}`);
+      const cellsByRoom = {};
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) (cellsByRoom[at(c, r)] ??= []).push([c, r]);
+
+      for (const [id, role] of Object.entries(cfg.roles ?? {})) {
+        const cells = cellsByRoom[id];
+        for (const name of ROLE_ITEMS[role] ?? []) {
+          const item = ITEMS[name], slots = [];
+          for (const [c, r] of cells ?? []) {
+            if (used.has(`${c},${r}`)) continue;
+            const edges = [['N', 'h', c, r], ['S', 'h', c, r + 1], ['W', 'v', c, r], ['E', 'v', c + 1, r]];
+            if (edges.some(([, d, ec, er]) => doors.has(key(d, ec, er))) && item.d > 0.75) continue;
+            for (const [side, d, ec, er] of edges) {
+              const k = key(d, ec, er);
+              if (has(d, ec, er) && !doors.has(k) && !(winEdges.has(k) && item.tall)) slots.push([c, r, side]);
+            }
+          }
+          if (!slots.length) continue;
+          const [c, r, side] = pick(slots);
+          used.add(`${c},${r}`);
+          placeItem(fb, item, c, r, side);
+        }
+      }
+
+      for (const [c, r] of cfg.mannequins ?? []) {
+        const x = (c + 0.5) * CELL, z = (r + 0.5) * CELL;
+        const pivot = new THREE.Group();
+        pivot.position.set(x, Y, z);
+        const body = buildMannequin(fm(0xd0c8bc));
+        body.rotation.y = rand() * Math.PI * 2;
+        pivot.add(body);
+        group.add(pivot);
+        const col = { minX: x - 0.25, maxX: x + 0.25, minZ: z - 0.25, maxZ: z + 0.25, level };
+        colliders.push(col);
+        mannequins.push({ pivot, x, z, y: Y, level, col, fell: false, landed: false, t: 0, axis: new THREE.Vector3() });
+      }
+      fb.flush(group);
+    }
+
+    function placeItem(fb, item, c, r, side) {
+      const cx = (c + 0.5) * CELL, cz = (r + 0.5) * CELL, gap = HT + 0.03;
+      const base = side === 'N' ? [cx, r * CELL + gap] : side === 'S' ? [cx, (r + 1) * CELL - gap]
+        : side === 'W' ? [c * CELL + gap, cz] : [(c + 1) * CELL - gap, cz];
+      // local (x across, z out from the wall) -> world, for each wall the item backs onto
+      const xf = (lx, lz) => (side === 'N' ? [base[0] + lx, base[1] + lz] : side === 'S' ? [base[0] - lx, base[1] - lz]
+        : side === 'W' ? [base[0] + lz, base[1] - lx] : [base[0] - lz, base[1] + lx]);
+      const swap = side === 'W' || side === 'E';
+      item.build((w, h, d, x, y0, zc, material) => {
+        const [wx, wz] = xf(x, zc);
+        fb.box(swap ? d : w, h, swap ? w : d, wx, Y + y0 + h / 2, wz, Array(6).fill(material));
+      }, pal);
+      const [ax, az] = xf(-item.w / 2, 0), [bx, bz] = xf(item.w / 2, item.d);
+      colliders.push({ minX: Math.min(ax, bx), maxX: Math.max(ax, bx), minZ: Math.min(az, bz), maxZ: Math.max(az, bz), level });
+    }
+
+    furnish();
     batch.flush(group);
     for (const id of ids) {
       const lk = look[id];
@@ -361,9 +444,35 @@ export function buildHouse(renderer, seed = 1) {
 
   const first = LEVELS[0].map;
   const size = { w: first[0].length * CELL, d: first.length * CELL };
-  return {
-    group, colliders, rooms, size, stairs,
+  // A mannequin topples away from the player once they walk up to it.
+  const FALL = 0.8, BOUNCE = 0.3;
+  const api = {
+    group, colliders, rooms, size, stairs, mannequins,
     levels: LEVELS.map(l => l.name),
     spawn: new THREE.Vector3(4.5 * CELL, levelY(GROUND), 1.5 * CELL),
+    onThud: null,
+    update(dt, player) {
+      for (const m of mannequins) {
+        if (!m.fell) {
+          const dx = m.x - player.pos.x, dz = m.z - player.pos.z, d = Math.hypot(dx, dz);
+          if (player.level !== m.level || d > 0.8) continue;
+          m.fell = true;
+          m.axis.set(dz / (d || 1), 0, -dx / (d || 1)); // tips the head away from the player
+          const i = colliders.indexOf(m.col);
+          if (i >= 0) colliders.splice(i, 1);
+        }
+        if (m.t >= FALL + BOUNCE) continue;
+        m.t += dt;
+        let a;
+        if (m.t < FALL) a = (Math.PI / 2) * (m.t / FALL) ** 2;
+        else {
+          a = Math.PI / 2 - 0.1 * Math.sin(Math.min(1, (m.t - FALL) / BOUNCE) * Math.PI);
+          if (!m.landed) { m.landed = true; api.onThud?.(); }
+        }
+        m.pivot.quaternion.setFromAxisAngle(m.axis, a);
+        m.pivot.position.y = m.y + 0.17 * Math.min(1, a / (Math.PI / 2));
+      }
+    },
   };
+  return api;
 }

@@ -127,6 +127,41 @@ addEventListener('resize', () => {
   camera.updateProjectionMatrix();
 });
 
+// ---- sound ----------------------------------------------------------------
+// Browsers only allow audio after a touch or key press, so the context is made then.
+let audio = null;
+function initAudio() {
+  if (audio) return;
+  try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch { audio = null; }
+}
+addEventListener('touchstart', initAudio, { passive: true });
+addEventListener('keydown', initAudio);
+addEventListener('click', initAudio);
+
+house.onThud = () => {
+  if (!audio) return;
+  try {
+    const now = audio.currentTime, len = 0.5;
+    const buf = audio.createBuffer(1, audio.sampleRate * len, audio.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audio.sampleRate * 0.08));
+    const noise = audio.createBufferSource();
+    noise.buffer = buf;
+    const lp = audio.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 400;
+    const thump = audio.createOscillator();
+    thump.frequency.setValueAtTime(90, now);
+    thump.frequency.exponentialRampToValueAtTime(35, now + 0.3);
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(0.9, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + len);
+    noise.connect(lp).connect(gain);
+    thump.connect(gain);
+    gain.connect(audio.destination);
+    noise.start(now); thump.start(now); thump.stop(now + len);
+  } catch { /* audio is optional */ }
+};
+
 // ---- room lights ----------------------------------------------------------
 // A fixed pool of point lights follows the nearest rooms, so the shader cost stays
 // constant however many rooms the house has.
@@ -206,6 +241,7 @@ function frame() {
   camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
 
   updateLights(t, dt);
+  house.update(dt, player);
 
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
