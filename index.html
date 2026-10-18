@@ -10,12 +10,17 @@
   #stick { position: fixed; display: none; width: 140px; height: 140px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); pointer-events: none; }
   #knob { position: absolute; left: 45px; top: 45px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.35); }
   #floor { position: fixed; left: 16px; bottom: 16px; color: rgba(255,255,255,.55); font: 600 13px system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; pointer-events: none; }
+  #dot { position: fixed; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: rgba(255,255,255,.45); pointer-events: none; }
+  #use { position: fixed; right: 16px; bottom: 16px; padding: 16px 26px; border-radius: 12px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.16); color: #fff; font: 600 16px system-ui, sans-serif; z-index: 2; }
+  #use[hidden] { display: none; }
   #hint { position: fixed; left: 0; right: 0; top: 12px; text-align: center; color: rgba(255,255,255,.5); font: 13px system-ui, sans-serif; pointer-events: none; }
 </style>
 </head>
 <body>
 <div id="hint">Left side: move &middot; Right side: look &middot; (Desktop: WASD, click to look)</div>
+<div id="dot"></div>
 <div id="floor"></div>
+<button id="use" hidden>Open</button>
 <div id="stick"><div id="knob"></div></div>
 <script type="module" src="js/main.js"></script>
 </body>

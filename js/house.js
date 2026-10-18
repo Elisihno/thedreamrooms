@@ -36,6 +36,9 @@ const LEVELS = [
   {
     name: 'Upper Floor', windows: 0.7,
     roles: { P: 'bedroom', Q: 'bedroom', R: 'study', T: 'bedroom', U: 'hall', V: 'bedroom' },
+    // the player starts in room P: [col, row] of the spawn cell, plus pieces fixed to a cell
+    spawn: [1, 1],
+    fixed: [{ item: 'roundtable', cell: [1, 0] }, { item: 'tablechairs', cell: [0, 1], turn: 1 }],
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
       'PPPQQQRRR',
@@ -173,6 +176,12 @@ function makeBatch(tw = TILE_W, th = TILE_H) {
         add(part, mats[f]);
       }
     },
+    // upright cylinder centred at (cx, cy, cz)
+    cyl(r, h, cx, cy, cz, material) {
+      const geo = new THREE.CylinderGeometry(r, r, h, 20).toNonIndexed();
+      geo.translate(cx, cy, cz);
+      add(geo, material);
+    },
     flush(parent) {
       for (const [material, e] of parts) {
         const g = new THREE.BufferGeometry();
@@ -193,6 +202,34 @@ function placed(geo, x, y, z, rx = 0, ry = 0) {
   return geo;
 }
 
+// Merged geometry for one movable part, built around its pivot. Colours come from the
+// boxes' materials as vertex colours, so a part is a single mesh with one shared material.
+function partGeometry(boxes, pivot) {
+  const P = [], N = [], U = [], C = [];
+  for (const [w, h, d, x, y0, zc, material] of boxes) {
+    const g = new THREE.BoxGeometry(w, h, d);
+    const uv = g.attributes.uv;
+    const dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+    for (let f = 0; f < 6; f++) for (let v = 0; v < 4; v++) {
+      const i = f * 4 + v;
+      uv.setXY(i, uv.getX(i) * dims[f][0] / 1.4, uv.getY(i) * dims[f][1] / 1.4);
+    }
+    g.translate(x - pivot[0], y0 + h / 2 - pivot[1], zc - pivot[2]);
+    const ng = g.toNonIndexed(), n = ng.attributes.position.count;
+    P.push(ng.attributes.position.array); N.push(ng.attributes.normal.array); U.push(ng.attributes.uv.array);
+    const col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { col[i * 3] = material.color.r; col[i * 3 + 1] = material.color.g; col[i * 3 + 2] = material.color.b; }
+    C.push(col);
+  }
+  const cat = a => { const o = new Float32Array(a.reduce((t, x) => t + x.length, 0)); let k = 0; for (const x of a) { o.set(x, k); k += x.length; } return o; };
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(cat(P), 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(cat(N), 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(cat(U), 2));
+  geo.setAttribute('color', new THREE.BufferAttribute(cat(C), 3));
+  return geo;
+}
+
 // ---- generator ----------------------------------------------------------
 export function buildHouse(renderer, seed = 1) {
   const rand = rng(seed);
@@ -203,6 +240,9 @@ export function buildHouse(renderer, seed = 1) {
   const outside = mat(tex.wall[4], 0x555555);
   const pick = arr => arr[Math.floor(rand() * arr.length)];
   const mannequins = [];
+  const parts = [];      // movable furniture parts (drawers, doors, lids)
+  const partMeshes = [];
+  const partMat = new THREE.MeshLambertMaterial({ map: tex.furniture[0], vertexColors: true });
   const fm = tint => mat(tex.furniture[0], tint);
   const plainCache = new Map();
   const plain = color => {
@@ -362,23 +402,45 @@ export function buildHouse(renderer, seed = 1) {
 
     // Furniture sits against walls, one item per cell, never in the stair cells or in
     // front of a doorway. Cells with a door only take shallow items, so paths stay clear.
+    // Tables with chairs stand free in the middle of a roomy cell without a door.
     function furnish() {
       const fb = makeBatch(1.4, 1.4);
       const used = new Set([...ceilHole, ...floorHole]);
       if (down) used.add(`${down.col},${down.row + SPAN}`);
       if (up) used.add(`${up.col},${up.row - 1}`);
       for (const [c, r] of cfg.mannequins ?? []) used.add(`${c},${r}`);
+      if (cfg.spawn) used.add(cfg.spawn.join(','));
       const cellsByRoom = {};
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) (cellsByRoom[at(c, r)] ??= []).push([c, r]);
+      const centred = new Set(); // rooms that already hold a free-standing set
+      const hasDoor = (c, r) => [['h', c, r], ['h', c, r + 1], ['v', c, r], ['v', c + 1, r]].some(([d, ec, er]) => doors.has(key(d, ec, er)));
+
+      for (const f of cfg.fixed ?? []) {
+        const [c, r] = f.cell;
+        used.add(`${c},${r}`);
+        centred.add(at(c, r));
+        placeItem(fb, ITEMS[f.item], c, r, null, f.turn ?? 0);
+      }
 
       for (const [id, role] of Object.entries(cfg.roles ?? {})) {
-        const cells = cellsByRoom[id];
+        const cells = cellsByRoom[id] ?? [];
         for (const name of ROLE_ITEMS[role] ?? []) {
-          const item = ITEMS[name], slots = [];
-          for (const [c, r] of cells ?? []) {
+          const item = ITEMS[name];
+          if (item.center) {
+            if (centred.has(id) || cells.length < 6) continue;
+            const free = cells.filter(([c, r]) => !used.has(`${c},${r}`) && !hasDoor(c, r));
+            if (!free.length) continue;
+            const [c, r] = pick(free);
+            used.add(`${c},${r}`);
+            centred.add(id);
+            placeItem(fb, item, c, r, null, rand() < 0.5 ? 0 : 1);
+            continue;
+          }
+          const slots = [];
+          for (const [c, r] of cells) {
             if (used.has(`${c},${r}`)) continue;
             const edges = [['N', 'h', c, r], ['S', 'h', c, r + 1], ['W', 'v', c, r], ['E', 'v', c + 1, r]];
-            if (edges.some(([, d, ec, er]) => doors.has(key(d, ec, er))) && item.d > 0.75) continue;
+            if (hasDoor(c, r) && item.d > 0.75) continue;
             for (const [side, d, ec, er] of edges) {
               const k = key(d, ec, er);
               if (has(d, ec, er) && !doors.has(k) && !(winEdges.has(k) && item.tall)) slots.push([c, r, side]);
@@ -406,20 +468,55 @@ export function buildHouse(renderer, seed = 1) {
       fb.flush(group);
     }
 
-    function placeItem(fb, item, c, r, side) {
+    // side: the wall the item backs onto ('N','S','W','E'), or null for a free-standing item
+    // in the middle of the cell, turned by `turn` quarter turns.
+    function placeItem(fb, item, c, r, side, turn = 0) {
       const cx = (c + 0.5) * CELL, cz = (r + 0.5) * CELL, gap = HT + 0.03;
       const base = side === 'N' ? [cx, r * CELL + gap] : side === 'S' ? [cx, (r + 1) * CELL - gap]
-        : side === 'W' ? [c * CELL + gap, cz] : [(c + 1) * CELL - gap, cz];
-      // local (x across, z out from the wall) -> world, for each wall the item backs onto
-      const xf = (lx, lz) => (side === 'N' ? [base[0] + lx, base[1] + lz] : side === 'S' ? [base[0] - lx, base[1] - lz]
-        : side === 'W' ? [base[0] + lz, base[1] - lx] : [base[0] - lz, base[1] + lx]);
-      const swap = side === 'W' || side === 'E';
-      item.build((w, h, d, x, y0, zc, material) => {
+        : side === 'W' ? [c * CELL + gap, cz] : side === 'E' ? [(c + 1) * CELL - gap, cz] : [cx, cz];
+      const ang = side ? { N: 0, S: Math.PI, W: Math.PI / 2, E: -Math.PI / 2 }[side] : turn * Math.PI / 2;
+      const cs = Math.round(Math.cos(ang)), sn = Math.round(Math.sin(ang));
+      // item-local (x across, z out) -> world; the rotation is a multiple of 90 degrees
+      const xf = (lx, lz) => [base[0] + lx * cs + lz * sn, base[1] - lx * sn + lz * cs];
+      const swap = sn !== 0;
+      const b = (w, h, d, x, y0, zc, material) => {
         const [wx, wz] = xf(x, zc);
         fb.box(swap ? d : w, h, swap ? w : d, wx, Y + y0 + h / 2, wz, Array(6).fill(material));
-      }, pal);
-      const [ax, az] = xf(-item.w / 2, 0), [bx, bz] = xf(item.w / 2, item.d);
-      colliders.push({ minX: Math.min(ax, bx), maxX: Math.max(ax, bx), minZ: Math.min(az, bz), maxZ: Math.max(az, bz), level });
+      };
+      b.cyl = (rad, h, x, y0, zc, material) => {
+        const [wx, wz] = xf(x, zc);
+        fb.cyl(rad, h, wx, Y + y0 + h / 2, wz, material);
+      };
+
+      let itemGroup = null;
+      const makePart = (boxes, pivot, extra) => {
+        if (!itemGroup) {
+          itemGroup = new THREE.Group();
+          itemGroup.position.set(base[0], Y, base[1]);
+          itemGroup.rotation.y = ang;
+          group.add(itemGroup);
+        }
+        const pg = new THREE.Group();
+        pg.position.set(...pivot);
+        const mesh = new THREE.Mesh(partGeometry(boxes, pivot), partMat);
+        pg.add(mesh);
+        itemGroup.add(pg);
+        const part = { pg, pivot, level, open: false, t: 0, ...extra };
+        mesh.userData.part = part;
+        parts.push(part);
+        partMeshes.push(mesh);
+      };
+      const mv = {
+        drawer: (boxes, dist) => makePart(boxes, [0, 0, 0], { kind: 'drawer', dist }),
+        door: (boxes, hx, hz, hinge) => makePart(boxes, [hx, 0, hz], { kind: 'door', angle: hinge > 0 ? -1.9 : 1.9 }),
+        flap: (boxes, hy, hz, angle) => makePart(boxes, [0, hy, hz], { kind: 'flap', angle }),
+      };
+      item.build(b, pal, mv);
+
+      for (const [w, d, lx, lz] of item.colliders ?? [[item.w, item.d, 0, item.d / 2]]) {
+        const [ax, az] = xf(lx - w / 2, lz - d / 2), [bx, bz] = xf(lx + w / 2, lz + d / 2);
+        colliders.push({ minX: Math.min(ax, bx), maxX: Math.max(ax, bx), minZ: Math.min(az, bz), maxZ: Math.max(az, bz), level });
+      }
     }
 
     furnish();
@@ -442,6 +539,11 @@ export function buildHouse(renderer, seed = 1) {
     batch.flush(group);
   }
 
+  const raycaster = new THREE.Raycaster();
+  raycaster.far = 2.3;
+  const centre = new THREE.Vector2(0, 0);
+  const spawnLevel = Math.max(0, LEVELS.findIndex(l => l.spawn));
+  const spawnCell = LEVELS[spawnLevel].spawn ?? [4, 1];
   const first = LEVELS[0].map;
   const size = { w: first[0].length * CELL, d: first.length * CELL };
   // A mannequin topples away from the player once they walk up to it.
@@ -449,9 +551,32 @@ export function buildHouse(renderer, seed = 1) {
   const api = {
     group, colliders, rooms, size, stairs, mannequins,
     levels: LEVELS.map(l => l.name),
-    spawn: new THREE.Vector3(4.5 * CELL, levelY(GROUND), 1.5 * CELL),
+    spawn: new THREE.Vector3((spawnCell[0] + 0.5) * CELL, levelY(spawnLevel), (spawnCell[1] + 0.5) * CELL),
+    spawnLevel,
+    parts,
     onThud: null,
+    onUse: null,
+    // the movable part the camera is looking at, if close enough to use
+    pick(camera, player) {
+      raycaster.setFromCamera(centre, camera);
+      const hit = raycaster.intersectObjects(partMeshes, false)[0];
+      const part = hit?.object.userData.part;
+      return part && part.level === player.level ? part : null;
+    },
+    toggle(part) {
+      part.open = !part.open;
+      api.onUse?.(part.kind, part.open);
+    },
     update(dt, player) {
+      for (const part of parts) {
+        const goal = part.open ? 1 : 0;
+        if (part.t === goal) continue;
+        part.t += Math.sign(goal - part.t) * Math.min(Math.abs(goal - part.t), dt * 3.5);
+        const e = part.t * part.t * (3 - 2 * part.t);
+        if (part.kind === 'drawer') part.pg.position.z = part.pivot[2] + part.dist * e;
+        else if (part.kind === 'door') part.pg.rotation.y = part.angle * e;
+        else part.pg.rotation.x = part.angle * e;
+      }
       for (const m of mannequins) {
         if (!m.fell) {
           const dx = m.x - player.pos.x, dz = m.z - player.pos.z, d = Math.hypot(dx, dz);

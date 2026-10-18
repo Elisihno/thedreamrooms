@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
-import { buildHouse, levelY, GROUND } from './house.js';
+import { buildHouse, levelY } from './house.js';
 
 const seed = Number(new URLSearchParams(location.search).get('seed')) || 1;
 
@@ -26,7 +26,7 @@ const house = buildHouse(renderer, seed);
 scene.add(house.group);
 
 // ---- player -------------------------------------------------------------
-const player = { pos: house.spawn.clone(), y: house.spawn.y, level: GROUND, yaw: 0, pitch: 0, radius: 0.3 };
+const player = { pos: house.spawn.clone(), y: house.spawn.y, level: house.spawnLevel, yaw: 0, pitch: 0, radius: 0.3 };
 const EYE = 1.6, WALK = 2.2;
 
 function collide(x, z) {
@@ -55,12 +55,17 @@ let shownLevel = -1;
 
 // ---- input --------------------------------------------------------------
 const keys = new Set();
-addEventListener('keydown', e => keys.add(e.code));
+addEventListener('keydown', e => {
+  keys.add(e.code);
+  if (e.code === 'KeyE') useTarget();
+});
 addEventListener('keyup', e => keys.delete(e.code));
 
 const canvas = renderer.domElement;
 canvas.addEventListener('click', () => {
-  if (!matchMedia('(pointer: coarse)').matches) canvas.requestPointerLock?.();
+  if (matchMedia('(pointer: coarse)').matches) return;
+  if (document.pointerLockElement === canvas) useTarget();
+  else canvas.requestPointerLock?.();
 });
 addEventListener('mousemove', e => {
   if (document.pointerLockElement !== canvas) return;
@@ -127,6 +132,23 @@ addEventListener('resize', () => {
   camera.updateProjectionMatrix();
 });
 
+// ---- using things -----------------------------------------------------------
+// Looking at a drawer, door or lid shows the Use button; E or a click does the same.
+const useBtn = document.getElementById('use');
+let target = null;
+function useTarget() {
+  if (target) house.toggle(target);
+}
+function updateTarget() {
+  const t = house.pick(camera, player);
+  if (t === target && t) { useBtn.textContent = t.open ? 'Close' : 'Open'; return; }
+  target = t;
+  useBtn.hidden = !t;
+  if (t) useBtn.textContent = t.open ? 'Close' : 'Open';
+}
+useBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useTarget(); }, { passive: false });
+useBtn.addEventListener('click', useTarget);
+
 // ---- sound ----------------------------------------------------------------
 // Browsers only allow audio after a touch or key press, so the context is made then.
 let audio = null;
@@ -159,6 +181,30 @@ house.onThud = () => {
     thump.connect(gain);
     gain.connect(audio.destination);
     noise.start(now); thump.start(now); thump.stop(now + len);
+  } catch { /* audio is optional */ }
+};
+
+house.onUse = (kind, open) => {
+  if (!audio) return;
+  try {
+    const now = audio.currentTime, len = kind === 'drawer' ? 0.28 : 0.4;
+    const buf = audio.createBuffer(1, audio.sampleRate * len, audio.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const t = i / audio.sampleRate;
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-t * (open ? 9 : 14)) * (kind === 'drawer' ? 1 : 0.8);
+    }
+    const src = audio.createBufferSource();
+    src.buffer = buf;
+    const bp = audio.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(kind === 'drawer' ? 700 : 420, now);
+    bp.frequency.linearRampToValueAtTime(open ? 260 : 600, now + len);
+    bp.Q.value = 1.4;
+    const gain = audio.createGain();
+    gain.gain.value = 0.5;
+    src.connect(bp).connect(gain).connect(audio.destination);
+    src.start(now);
   } catch { /* audio is optional */ }
 };
 
@@ -242,10 +288,11 @@ function frame() {
 
   updateLights(t, dt);
   house.update(dt, player);
+  updateTarget();
 
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 frame();
 
-window.__game = { player, house, camera }; // for debugging
+window.__game = { player, house, camera, THREE }; // for debugging
