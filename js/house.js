@@ -38,7 +38,9 @@ function loadTextures(renderer) {
   for (const [kind, n] of Object.entries(COUNT)) {
     out[kind] = [];
     for (let i = 0; i < n; i++) {
-      const t = loader.load(`assets/textures/${kind}_${String(i).padStart(2, '0')}.jpg`);
+      const name = `${kind}_${String(i).padStart(2, '0')}`;
+      // single-file builds can embed textures as data URIs on globalThis.__DR_TEX
+      const t = loader.load(globalThis.__DR_TEX?.[name] ?? `assets/textures/${name}.jpg`);
       t.colorSpace = THREE.SRGBColorSpace;
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.anisotropy = aniso;
