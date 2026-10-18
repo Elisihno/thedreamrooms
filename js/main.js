@@ -149,7 +149,7 @@ function updateTarget() {
 }
 
 // ---- inventory --------------------------------------------------------------
-const inv = { key: 0, pliers: 0 };
+const inv = { key: 1, pliers: 1 }; // the player starts with one of each
 const invEl = document.getElementById('inv');
 const toastEl = document.getElementById('toast');
 let toastTimer = 0;
@@ -181,6 +181,7 @@ house.onPickup = type => {
   toastTimer = setTimeout(() => { toastEl.hidden = true; }, 1800);
   chime();
 };
+renderInventory();
 
 useBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useTarget(); }, { passive: false });
 useBtn.addEventListener('click', useTarget);
