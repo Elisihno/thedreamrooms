@@ -19,6 +19,49 @@ function polygon(points) {
   return s;
 }
 
+// The yellow handle of the key: rough, matte wood with a visible grain and a bumpy surface.
+let keyWood = null;
+function keyWoodMaterial() {
+  if (keyWood) return keyWood;
+  let seed = 3;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const S = 256, mk = () => { const c = document.createElement('canvas'); c.width = c.height = S; return c; };
+  const cc = mk(), c = cc.getContext('2d');
+  const base = c.createLinearGradient(0, 0, 0, S);
+  base.addColorStop(0, '#d9a85f'); base.addColorStop(0.5, '#c9964f'); base.addColorStop(1, '#b8843f');
+  c.fillStyle = base; c.fillRect(0, 0, S, S);
+  for (let i = 0; i < 260; i++) { // grain
+    const y = rnd() * S, x0 = rnd() * S, len = 60 + rnd() * 180, amp = 1 + rnd() * 3, ph = rnd() * 6;
+    c.strokeStyle = rnd() < 0.6 ? `rgba(110,64,20,${0.12 + rnd() * 0.25})` : `rgba(240,200,130,${0.1 + rnd() * 0.18})`;
+    c.lineWidth = 0.6 + rnd() * 1.8;
+    c.beginPath();
+    for (let x = 0; x <= len; x += 8) { const yy = y + Math.sin(x * 0.06 + ph) * amp; x === 0 ? c.moveTo(x0, yy) : c.lineTo(x0 + x, yy); }
+    c.stroke();
+  }
+  for (let i = 0; i < 3; i++) { // knots
+    const x = rnd() * S, y = rnd() * S, r = 5 + rnd() * 8, kg = c.createRadialGradient(x, y, 1, x, y, r);
+    kg.addColorStop(0, 'rgba(70,35,10,.85)'); kg.addColorStop(1, 'rgba(70,35,10,0)');
+    c.fillStyle = kg; c.beginPath(); c.ellipse(x, y, r * 1.8, r, 0, 0, 7); c.fill();
+  }
+  for (let i = 0; i < 80; i++) { // dents and scratches
+    const x = rnd() * S, y = rnd() * S, len = 4 + rnd() * 22, a = (rnd() - 0.5) * 1.5;
+    c.strokeStyle = `rgba(80,45,15,${0.2 + rnd() * 0.3})`; c.lineWidth = 0.8;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); c.stroke();
+  }
+  const bc = mk(), b = bc.getContext('2d');
+  b.fillStyle = '#8c8c8c'; b.fillRect(0, 0, S, S);
+  for (let i = 0; i < 300; i++) {
+    const y = rnd() * S, x0 = rnd() * S, len = 30 + rnd() * 140;
+    b.strokeStyle = `rgba(${rnd() < 0.5 ? '20,20,20' : '210,210,210'},${0.25 + rnd() * 0.4})`; b.lineWidth = 0.8 + rnd() * 1.8;
+    b.beginPath(); b.moveTo(x0, y); b.lineTo(x0 + len, y + (rnd() - 0.5) * 5); b.stroke();
+  }
+  for (let i = 0; i < 1500; i++) { const v = 100 + rnd() * 80; b.fillStyle = `rgb(${v},${v},${v})`; b.fillRect(rnd() * S, rnd() * S, 1.5, 1.5); }
+  const tex = cv => { const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(9, 9); return t; };
+  const map = tex(cc); map.colorSpace = THREE.SRGBColorSpace;
+  keyWood = new THREE.MeshPhongMaterial({ map, bumpMap: tex(bc), bumpScale: 3, specular: 0x000000, shininess: 1 });
+  return keyWood;
+}
+
 // Key: built along +x (tip toward +x), then turned to point forward (-z) by createHeld.
 export function buildKey() {
   const g = new THREE.Group();
@@ -32,7 +75,7 @@ export function buildKey() {
   const hole = new THREE.Path();
   hole.moveTo(-.056, .017); hole.lineTo(-.02, .017); hole.lineTo(-.02, -.017); hole.lineTo(-.056, -.017); hole.closePath();
   bow.holes.push(hole);
-  g.add(extrude(bow, .012, new THREE.MeshPhongMaterial({ color: 0xc9965a, specular: 0x332211, shininess: 14 })));
+  g.add(extrude(bow, .012, keyWoodMaterial()));
   g.rotation.x = 1.05; // roll so the flat face shows
   return g;
 }
