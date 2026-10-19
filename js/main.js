@@ -75,6 +75,7 @@ const fastStart = location.hash === '#fast' || location.hash === '#test' || new 
 const wake = { active: false, t: 0, dur: 8.4, skippable: false };
 const lidT = document.getElementById('lidT'), lidB = document.getElementById('lidB');
 const startEl = document.getElementById('start'), fadeEl = document.getElementById('fade');
+const glowEl = document.getElementById('glow'), fxEl = document.getElementById('fx'), winEl = document.getElementById('win');
 let playStart = performance.now();
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -414,26 +415,115 @@ house.onKeypad = openKeypad;
 
 // ---- escaping -------------------------------------------------------------------
 let escaped = false;
-function showWin(title, verb) {
+function showWin(title, verb, kind = 'front') {
   escaped = true;
+  winEl.className = kind;
   const s = Math.round((performance.now() - playStart) / 1000);
   document.getElementById('winTitle').textContent = title;
   document.getElementById('winTime').textContent = `You ${verb} in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}.`;
-  document.getElementById('win').hidden = false;
+  winEl.hidden = false;
   fadeEl.style.opacity = '0';
+  glowEl.style.opacity = '0';
+  fxEl.hidden = true;
   heldView.show(null);
   chime();
 }
-house.onEscape = () => showWin('You escaped', 'got out');
-
-// The car starts: you slide into the driver's seat, the garage door rises and you drive out.
-let driving = null;
-house.onDrive = () => {
-  driving = { t: 0, from: { x: player.pos.x, z: player.pos.z }, level: player.level };
+// ---- the three endings ------------------------------------------------------------------------
+// Each escape has its own short film: the front door walks out into warm daylight, the hatch climbs
+// out into a cold starry night, and the car speeds off toward the dawn.
+let driving = null;   // the ending that is playing, if any
+const GLOW = {
+  front: 'radial-gradient(ellipse at 50% 45%, rgba(255,246,220,1) 0%, rgba(255,226,170,.85) 38%, rgba(255,200,120,0) 78%)',
+  hatch: 'radial-gradient(ellipse at 50% 15%, rgba(170,195,255,.95) 0%, rgba(70,100,180,.55) 42%, rgba(10,20,60,0) 82%)',
+  car: 'linear-gradient(to top, rgba(255,140,70,.95), rgba(255,205,140,.65) 55%, rgba(255,240,200,0))',
+};
+const FADE = { front: '#fff7e6', hatch: '#04070e', car: '#ffcf9a' };
+function startFinale(kind, exit) {
+  if (driving || escaped) return;
   setHand(null);
   heldView.show(null);
   closeUi();
-};
+  driving = { kind, exit, t: 0, from: { x: player.pos.x, z: player.pos.z } };
+  glowEl.style.background = GLOW[kind];
+  glowEl.style.opacity = '0';
+  fadeEl.style.background = FADE[kind];
+  fxEl.hidden = false;
+  resizeFx();
+  finaleSounds(kind);
+}
+house.onEscape = exit => startFinale(exit.id === 'hatch' ? 'hatch' : 'front', exit);
+house.onDrive = () => startFinale('car');   // the engine sound is started by the house
+
+// the overlay canvas: light rays at the front door, stars at the hatch, speed streaks in the car
+function resizeFx() { fxEl.width = innerWidth; fxEl.height = innerHeight; }
+addEventListener('resize', resizeFx);
+const fxRand = (() => { let s = 7; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; })();
+const stars = Array.from({ length: 140 }, () => ({ x: fxRand(), y: fxRand() * 0.7, r: 0.5 + fxRand() * 1.4, ph: fxRand() * 6 }));
+const streaks = Array.from({ length: 70 }, () => ({ a: fxRand() * Math.PI * 2, r0: 0.25 + fxRand() * 0.5, len: 0.15 + fxRand() * 0.4, w: 0.6 + fxRand() * 1.8, ph: fxRand() }));
+function drawFx(f) {
+  const g = fxEl.getContext('2d'), W = fxEl.width, H = fxEl.height, k = f.t;
+  g.clearRect(0, 0, W, H);
+  if (f.kind === 'front') {          // soft light rays fanning out from the doorway
+    const a = smooth(0.4, 2.4, k) * (1 - smooth(3.8, 4.6, k));
+    g.save(); g.translate(W / 2, H * 0.42); g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 9; i++) {
+      const ang = -Math.PI / 2 + (i - 4) * 0.2 + Math.sin(k * 0.6 + i) * 0.03;
+      g.fillStyle = `rgba(255,236,190,${0.1 * a})`;
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(ang - 0.05) * W, Math.sin(ang - 0.05) * W); g.lineTo(Math.cos(ang + 0.05) * W, Math.sin(ang + 0.05) * W); g.fill();
+    }
+    g.restore();
+  } else if (f.kind === 'hatch') {   // a moon and twinkling stars
+    const a = smooth(1.6, 3.4, k);
+    for (const s of stars) {
+      g.fillStyle = `rgba(235,242,255,${a * (0.5 + 0.5 * Math.sin(k * 2 + s.ph))})`;
+      g.beginPath(); g.arc(s.x * W, s.y * H, s.r, 0, 7); g.fill();
+    }
+    g.fillStyle = `rgba(245,248,255,${0.9 * a})`; g.beginPath(); g.arc(W * 0.7, H * 0.2, Math.min(W, H) * 0.06, 0, 7); g.fill();
+  } else {                           // speed streaks, flying outward from the middle
+    const a = smooth(0.9, 1.8, k) * (1 - smooth(3.3, 4.0, k));
+    g.save(); g.translate(W / 2, H / 2); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineCap = 'round';
+    const R = Math.hypot(W, H) / 2;
+    for (const s of streaks) {
+      const p = (s.ph + k * (1.2 + a * 2)) % 1, r1 = R * (s.r0 + p * 0.9), r0 = r1 - R * s.len * a * p;
+      g.globalAlpha = a * (0.15 + 0.5 * p); g.lineWidth = s.w * 1.4;
+      g.beginPath(); g.moveTo(Math.cos(s.a) * r0, Math.sin(s.a) * r0); g.lineTo(Math.cos(s.a) * r1, Math.sin(s.a) * r1); g.stroke();
+    }
+    g.restore();
+  }
+}
+
+// sounds for the three endings
+function finaleSounds(kind) {
+  if (!audio) return;
+  try {
+    const now = audio.currentTime;
+    const noise = (len) => {
+      const buf = audio.createBuffer(1, audio.sampleRate * len, audio.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = audio.createBufferSource(); src.buffer = buf; return src;
+    };
+    const tone = (type, f, t0, dur, vol, f2) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, now + t0);
+      if (f2) o.frequency.exponentialRampToValueAtTime(f2, now + t0 + dur);
+      g.gain.setValueAtTime(0.0001, now + t0); g.gain.linearRampToValueAtTime(vol, now + t0 + Math.min(0.2, dur / 3));
+      g.gain.setValueAtTime(vol, now + t0 + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, now + t0 + dur);
+      o.connect(g).connect(audio.destination); o.start(now + t0); o.stop(now + t0 + dur + 0.05);
+    };
+    if (kind === 'front') {         // a warm chord swelling in, and birds
+      [220, 277.2, 329.6, 440].forEach((f, i) => tone('sine', f, 0.2 + i * 0.25, 4.2, 0.07));
+      for (let i = 0; i < 9; i++) { const t0 = 1.0 + i * 0.32 + Math.random() * 0.2, f = 3000 + Math.random() * 1600; tone('sine', f, t0, 0.09, 0.05, f * (1.3 + Math.random() * 0.4)); tone('sine', f * 1.2, t0 + 0.11, 0.08, 0.04, f * 0.9); }
+    } else if (kind === 'hatch') {  // wind, and crickets
+      const w = noise(5), bp = audio.createBiquadFilter(), g = audio.createGain();
+      bp.type = 'bandpass'; bp.Q.value = 0.7; bp.frequency.setValueAtTime(300, now); bp.frequency.linearRampToValueAtTime(900, now + 3);
+      g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(0.35, now + 2.5); g.gain.linearRampToValueAtTime(0.0001, now + 5);
+      w.connect(bp).connect(g).connect(audio.destination); w.start(now);
+      for (let i = 0; i < 28; i++) tone('sine', 4300, 1.6 + i * 0.12, 0.05, 0.022);
+    } else {                        // the horn, a moment after the engine catches
+      tone('square', 392, 2.5, 0.45, 0.12); tone('square', 494, 2.5, 0.45, 0.12);
+    }
+  } catch { /* audio is optional */ }
+}
 document.getElementById('again').addEventListener('click', () => { location.hash = '#fast'; location.reload(); });
 renderInventory();
 
@@ -745,22 +835,47 @@ function frame() {
     if (wake.t >= wake.dur) endWake();
   }
 
-  // driving away: slide into the seat, then the car pulls out through the garage door
+  // the endings
+  let fov = 72;
   if (driving) {
-    driving.t += dt;
-    const k = driving.t, seat = { x: 16.1, z: 13.4 };
-    const settle = smooth(0, 0.9, k);
-    const go = Math.max(0, k - 0.9);
-    player.pos.x = driving.from.x + (seat.x - driving.from.x) * settle;
-    player.pos.z = driving.from.z + (seat.z - driving.from.z) * settle + 0.5 * 1.9 * go * go;
-    player.yaw += angleDiff(Math.PI, player.yaw) * Math.min(1, dt * 4);
-    player.pitch += (0 - player.pitch) * Math.min(1, dt * 4);
-    eye = EYE + (1.15 - EYE) * settle;
-    pitchAdd = Math.sin(t * 38) * 0.004 * settle + Math.sin(t * 17) * 0.003 * settle;  // the engine shakes the view
-    rollAdd = Math.sin(t * 9) * 0.004 * settle;
-    fadeEl.style.opacity = String(smooth(2.3, 3.5, k));
-    if (k > 3.7) { driving = null; showWin('You drove away', 'got out'); }
+    const f = driving;
+    f.t += dt;
+    const k = f.t;
+    if (f.kind === 'car') {
+      // slide into the driver's seat, then the car pulls out through the garage door
+      const seat = { x: 16.1, z: 13.4 };
+      const settle = smooth(0, 0.9, k), go = Math.max(0, k - 0.9);
+      player.pos.x = f.from.x + (seat.x - f.from.x) * settle;
+      player.pos.z = f.from.z + (seat.z - f.from.z) * settle + 0.5 * 2.6 * go * go;
+      player.yaw += angleDiff(Math.PI, player.yaw) * Math.min(1, dt * 4);
+      player.pitch += (0 - player.pitch) * Math.min(1, dt * 4);
+      eye = EYE + (1.15 - EYE) * settle;
+      const shake = settle * (1 + smooth(0.9, 2.8, k));
+      pitchAdd = (Math.sin(t * 38) * 0.004 + Math.sin(t * 17) * 0.003) * shake;
+      rollAdd = Math.sin(t * 9) * 0.004 * shake;
+      fov = 72 + 28 * smooth(1.0, 3.2, k);
+      glowEl.style.opacity = String(0.9 * smooth(2.2, 3.6, k));
+      fadeEl.style.opacity = String(smooth(3.1, 4.0, k));
+      if (k > 4.4) { driving = null; showWin('You drove away', 'got out', 'car'); }
+    } else {
+      // walk out of the door: forward, toward the light (front) or up out of the hatch into the night (hatch)
+      const out = f.exit.out, hatch = f.kind === 'hatch';
+      const heading = Math.atan2(-out[0], -out[1]);
+      player.yaw += angleDiff(heading, player.yaw) * Math.min(1, dt * 3);
+      player.pitch += ((hatch ? 0.9 * smooth(1.4, 3.8, k) : 0.04) - player.pitch) * Math.min(1, dt * 2.5);
+      const speed = hatch ? 1.0 * (1 - smooth(1.0, 1.9, k)) : 0.6 + 1.0 * smooth(0, 2.6, k);
+      player.pos.x += out[0] * speed * dt; player.pos.z += out[1] * speed * dt;
+      if (hatch) eye = EYE + 1.5 * smooth(1.2, 4.2, k);                  // climbing up out of the hatch
+      pitchAdd = Math.sin(k * 5.5) * 0.006 * (hatch ? 0.5 : 1);        // steps
+      rollAdd = Math.sin(k * 2.75) * 0.01 * (hatch ? 0.3 : 1);
+      fov = 72 + (hatch ? 6 : 14) * smooth(0.3, 3.4, k);
+      glowEl.style.opacity = String((hatch ? 0.8 : 1) * smooth(hatch ? 1.2 : 0.4, hatch ? 3.8 : 3.4, k));
+      fadeEl.style.opacity = String(smooth(hatch ? 3.9 : 3.6, hatch ? 4.8 : 4.5, k));
+      if (k > (hatch ? 5.2 : 5.0)) { driving = null; showWin(hatch ? 'You escaped' : 'You escaped', 'got out', f.kind); }
+    }
+    if (driving) drawFx(driving);
   }
+  if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
   vignette.style.opacity = wake.active ? vignette.style.opacity : (hideE * 0.95).toFixed(3);
   camera.position.set(player.pos.x, player.y + eye + bob, player.pos.z);
   camera.rotation.set(player.pitch + pitchAdd, player.yaw, rollAdd, 'YXZ');
@@ -788,4 +903,5 @@ window.__game = { player, house, camera, THREE }; // for debugging
 window.__held = heldView;
 Object.defineProperty(window, '__inv', { get: () => ({ hand: selected, ammo }) });
 window.__ammo = () => ammo;
+Object.defineProperty(window, '__finale', { get: () => driving });
 window.__wake = wake;

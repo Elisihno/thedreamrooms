@@ -51,6 +51,14 @@
   #lidB { bottom: 0; box-shadow: 0 -6px 40px 18px #000; }
   #fade { position: fixed; inset: 0; z-index: 8; background: #000; opacity: 0; pointer-events: none; }
   body.waking #floor, body.waking #dot, body.waking #inv, body.waking #drop, body.waking #fire { opacity: 0; }
+  #glow { position: fixed; inset: 0; z-index: 7; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
+  #fx { position: fixed; inset: 0; z-index: 7; pointer-events: none; }
+  #fx[hidden] { display: none; }
+  #win.front { background: rgba(255,247,230,.97); color: #2a2418; }
+  #win.front button { background: rgba(42,36,24,.08); border-color: rgba(42,36,24,.35); color: #2a2418; }
+  #win.hatch { background: radial-gradient(ellipse at 50% 20%, #1c2c5a, #04070e 75%); color: #dfe8ff; }
+  #win.car { background: linear-gradient(to top, #ff8a4c, #ffd39a 60%, #fff0cf); color: #3a2010; }
+  #win.car button { background: rgba(58,32,16,.1); border-color: rgba(58,32,16,.4); color: #3a2010; }
   #inv { position: fixed; top: 40px; right: 12px; display: flex; gap: 8px; pointer-events: none; }
   .slot { padding: 0; pointer-events: none; position: relative; width: 52px; height: 52px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
   .slot.sel { border-color: #fff; background: rgba(255,255,255,.22); box-shadow: 0 0 0 2px rgba(255,255,255,.5); }
@@ -75,6 +83,8 @@
 <div id="start"><h1>The Dream Rooms</h1><p>Tap to begin</p></div>
 <div id="lidT" hidden></div>
 <div id="lidB" hidden></div>
+<div id="glow"></div>
+<canvas id="fx" hidden></canvas>
 <div id="fade"></div>
 <div id="stick"><div id="knob"></div></div>
 <script type="module" src="js/main.js"></script>
