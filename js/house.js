@@ -271,7 +271,8 @@ export function buildHouse(renderer, seed = 1) {
   const parts = [];      // movable furniture parts (drawers, doors, lids)
   const partMeshes = [];
   const pickables = []; // everything the crosshair can land on
-  const code = String(Math.floor(rng(seed * 7919 + 13)() * 10000)).padStart(4, '0'); // the front door keypad code
+  // the front door keypad code: new on every load, separate from the seeded house layout
+  const code = String((globalThis.crypto?.getRandomValues?.(new Uint32Array(1))[0] ?? Math.floor(Math.random() * 4294967296)) % 10000).padStart(4, '0');
   const noteCanvas = drawNote(code);
   const hideSpots = [];
   const exits = [];  // doors out of the house
