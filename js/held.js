@@ -76,8 +76,7 @@ export function buildKey() {
   hole.moveTo(-.056, .017); hole.lineTo(-.02, .017); hole.lineTo(-.02, -.017); hole.lineTo(-.056, -.017); hole.closePath();
   bow.holes.push(hole);
   g.add(extrude(bow, .012, keyWoodMaterial()));
-  g.rotation.x = 1.3; // roll so the flat face shows; the tip stays straight ahead
-  g.userData.yaw = Math.PI / 2; // turned a quarter turn: tip to the left
+  g.rotation.x = 1.3 + Math.PI / 2; // a quarter turn around its length from before: blade on its edge, flat face to the side
   g.userData.offset = [-0.1, 0.02, 0];
   g.userData.scale = 1.7;
   return g;
@@ -115,7 +114,8 @@ export function buildPliers() {
   g.add(new THREE.Mesh(geo, [faces, edges]));
   // held like a card tilted toward you: jaws point forward and up, handles curve back toward you
   // jaws pointing straight ahead: the drawing leans 25 degrees, so turn it back in its own plane
-  g.userData.pose = [-Math.PI / 2 + 0.08, Math.PI / 2, 0.44]; // y = 90 degrees: tip to the left // x, y, z of an 'YXZ' euler
+  g.userData.pose = [-Math.PI / 2 + 0.08, 0, 0.44];
+  g.userData.roll = Math.PI / 2; // a quarter turn around its length: on its side // x, y, z of an 'YXZ' euler
   g.userData.offset = [-0.1, 0.02, 0];
   g.userData.scale = 1.1;
   return g;
@@ -328,6 +328,7 @@ export function createHeld() {
       holder.rotation.y = Math.PI / 2 + (m.userData.yaw ?? 0); // tip toward -z
     }
     if (m.userData.offset) holder.position.set(...m.userData.offset);
+    if (m.userData.roll) holder.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, -1), m.userData.roll)); // roll about the pointing direction
     holder.scale.setScalar(m.userData.scale ?? 1.25);
     holder.add(m);
     holder.visible = false;
