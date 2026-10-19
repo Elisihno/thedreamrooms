@@ -66,7 +66,25 @@ function shells(g) {
   shell(36, 64); shell(64, 62); shell(92, 66);
 }
 
+function battery(g) {
+  g.fillStyle = '#2a3035'; g.fillRect(22, 48, 84, 52);
+  g.fillStyle = '#3a5aa0'; g.fillRect(20, 40, 88, 14);
+  g.fillStyle = '#b89a32'; g.fillRect(34, 28, 16, 14); g.fillRect(78, 28, 16, 14);
+  g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(22, 58, 84, 4);
+  g.fillStyle = '#ddd'; g.font = 'bold 22px system-ui'; g.fillText('+', 30, 24); g.fillText('−', 82, 24);
+}
+
+function fuel(g) {
+  g.fillStyle = '#c8321f'; g.fillRect(32, 40, 62, 66);
+  g.fillStyle = '#8a1c10'; g.fillRect(32, 70, 62, 8);
+  g.fillStyle = '#c8321f'; g.fillRect(50, 28, 30, 12);
+  g.fillStyle = '#2a3035'; g.beginPath(); g.moveTo(40, 40); g.lineTo(34, 24); g.lineTo(46, 22); g.lineTo(50, 40); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(36, 44, 6, 56);
+}
+
 export const icons = {
+  battery: make(battery),
+  fuel: make(fuel),
   apple: make(apple),
   knife: make(knife),
   shotgun: make(shotgun),

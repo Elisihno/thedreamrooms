@@ -290,6 +290,37 @@ export function buildShotgun() {
   return g;
 }
 
+// Car battery: a dark case with a blue top and two brass terminals, along +x.
+export function buildBattery() {
+  const g = new THREE.Group();
+  const add = (w, hh, d, x, y, z, color, shin = 30) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), new THREE.MeshPhongMaterial({ color, shininess: shin, specular: 0x444444 })); m.position.set(x, y, z); g.add(m); };
+  add(.16, .09, .1, 0, 0, 0, 0x2a3035);
+  add(.164, .016, .104, 0, .04, 0, 0x3a5aa0);
+  add(.026, .022, .026, -.04, .06, 0, 0xb89a32, 70);
+  add(.026, .022, .026, .04, .06, 0, 0xb89a32, 70);
+  add(.05, .02, .102, .0, -.01, 0, 0x1c2024);
+  g.userData.yaw = 0.3;
+  g.userData.offset = [0.02, 0.02, 0.02];
+  g.userData.scale = 1.5;
+  return g;
+}
+
+// Fuel can: a red jerry can with a spout and a handle.
+export function buildFuel() {
+  const g = new THREE.Group();
+  const red = new THREE.MeshPhongMaterial({ color: 0xc8321f, shininess: 40, specular: 0x886666 });
+  const dark = new THREE.MeshPhongMaterial({ color: 0x2a3035, shininess: 30 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(.2, .22, .08), red); g.add(body);
+  const ridge = new THREE.Mesh(new THREE.BoxGeometry(.202, .02, .082), new THREE.MeshPhongMaterial({ color: 0x8a1c10 })); ridge.position.y = .02; g.add(ridge);
+  const spout = new THREE.Mesh(new THREE.CylinderGeometry(.012, .014, .06, 10), dark); spout.position.set(-.07, .14, 0); spout.rotation.z = .5; g.add(spout);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(.016, .016, .015, 10), dark); cap.position.set(-.1, .165, 0); cap.rotation.z = .5; g.add(cap);
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(.1, .018, .02), red); handle.position.set(.03, .125, 0); g.add(handle);
+  g.userData.yaw = 0.3;
+  g.userData.offset = [0.02, 0.02, 0.02];
+  g.userData.scale = 1.4;
+  return g;
+}
+
 // Three shotgun shells held together: red hulls with brass bases, along +x.
 export function buildShells() {
   const g = new THREE.Group();
@@ -317,7 +348,7 @@ export function createHeld() {
 
   const rig = new THREE.Group(); // the hand: this is what moves
   scene.add(rig);
-  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple(), knife: buildKnife(), shotgun: buildShotgun(), shells: buildShells() };
+  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple(), knife: buildKnife(), shotgun: buildShotgun(), shells: buildShells(), battery: buildBattery(), fuel: buildFuel() };
   for (const m of Object.values(models)) {
     const holder = new THREE.Group();
     holder.rotation.order = 'YXZ';

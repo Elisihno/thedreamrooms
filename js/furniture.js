@@ -218,6 +218,26 @@ export const ITEMS = {
     b(.9, .05, .5, 0, .38, 0, p.body);
     for (const dx of [-.4, .4]) for (const dz of [-.2, .2]) b(.05, .38, .05, dx, 0, dz, p.dark2);
   }, colliders: [[.9, .5, 0, 0]] },
+  // an old car, nose toward +z (the garage door). Look at the hood, the fuel tank or the door.
+  car: { w: 1.9, d: 4.2, tall: false, center: true, colliders: [[1.9, 4.2, 0, 0]], build(b, p, mv) {
+    const body = p.light, glass = p.dark, trim = p.dark2;
+    b(1.8, .5, 4.2, 0, .3, 0, body);                 // lower body
+    b(1.7, .1, 1.1, 0, .8, 1.5, body);               // hood
+    b(1.55, .5, 1.8, 0, .8, -.2, body);              // cabin
+    b(1.6, .08, 1.9, 0, 1.3, -.2, trim);             // roof
+    for (const s of [-1, 1]) b(.03, .42, 1.7, s * .79, .84, -.2, glass); // side windows
+    b(1.5, .42, .03, 0, .84, .72, glass);            // windscreen
+    b(1.5, .42, .03, 0, .84, -1.12, glass);          // rear window
+    for (const sx of [-1, 1]) for (const sz of [-1.3, 1.3]) b(.28, .62, .62, sx * .88, 0, sz, p.dark);   // wheels
+    b(1.8, .16, .1, 0, .22, 2.12, trim);             // front bumper
+    b(1.8, .16, .1, 0, .22, -2.12, trim);            // rear bumper
+    for (const s of [-1, 1]) b(.3, .14, .04, s * .55, .62, 2.12, p.light);   // headlights (they light up later)
+    for (const s of [-1, 1]) b(.24, .12, .04, s * .62, .62, -2.11, p.cloth);  // tail lights
+    b(1.0, .04, .4, 0, .7, .05, p.cloth);           // seats show through the glass
+    mv.target('carhood', 1.5, .4, 1.1, 0, .72, 1.55);
+    mv.target('carfuel', .5, .5, .6, .9, .6, -1.25);
+    mv.target('cardoor', .3, .9, 1.0, .9, .4, .25);
+  } },
   // a rusty metal box with a padlock on its lid; the lid only opens once the lock is cut
   lockbox: { w: 1.2, d: .5, tall: false, build(b, p, mv) {
     b(1.2, .04, .5, 0, 0, .25, p.steel);

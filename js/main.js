@@ -67,6 +67,50 @@ function collide(x, z) {
   return [x, z];
 }
 
+// ---- title screen and waking up ----------------------------------------------------------
+// The game starts on a "tap to begin" screen (browsers need a tap before they allow sound). Then
+// the player wakes up on the floor: eyes open in slow blinks through blurry, tilted vision with a
+// heartbeat, then sits up and stands. Open the page with #fast (or #test) to skip all that.
+const fastStart = location.hash === '#fast' || location.hash === '#test' || new URLSearchParams(location.search).has('fast');
+const wake = { active: false, t: 0, dur: 8.4, skippable: false };
+const lidT = document.getElementById('lidT'), lidB = document.getElementById('lidB');
+const startEl = document.getElementById('start'), fadeEl = document.getElementById('fade');
+let playStart = performance.now();
+const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+// how open the eyes are over time: a first heavy blink, a longer look, a last blink, then wide open
+function eyeOpen(t) {
+  const keys = [[0, 0], [1.0, 0], [1.7, 0.3], [2.1, 0.3], [2.4, 0], [3.0, 0], [3.8, 0.7], [4.4, 0.7], [4.7, 0.1], [5.3, 0.1], [6.2, 1], [8.4, 1]];
+  for (let i = 1; i < keys.length; i++) {
+    if (t <= keys[i][0]) { const [t0, v0] = keys[i - 1], [t1, v1] = keys[i]; return v0 + (v1 - v0) * smooth(t0, t1, t); }
+  }
+  return 1;
+}
+
+function startWake() {
+  initAudio();
+  startEl.hidden = true;
+  playStart = performance.now();
+  wake.active = true; wake.t = 0; wake.skippable = false;
+  document.body.classList.add('waking');
+  wakeSounds();
+}
+function skipWake() {
+  if (wake.active && wake.skippable && wake.t < wake.dur - 1) wake.t = wake.dur - 1; // jump to the standing-up part
+}
+function endWake() {
+  wake.active = false;
+  lidT.hidden = lidB.hidden = true;
+  renderer.domElement.style.filter = '';
+  document.body.classList.remove('waking');
+  showToast('Where am I?', 2600);
+}
+if (fastStart) { startEl.hidden = true; lidT.hidden = lidB.hidden = true; } else { lidT.hidden = lidB.hidden = false; }
+startEl.addEventListener('pointerdown', startWake);
+addEventListener('keydown', e => { if (!startEl.hidden && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); startWake(); } else skipWake(); });
+renderer.domElement.addEventListener('touchstart', skipWake, { passive: true });
+renderer.domElement.addEventListener('click', skipWake);
+
 const floorLabel = document.getElementById('floor');
 const vignette = document.getElementById('hide');
 let shownLevel = -1;
@@ -94,6 +138,7 @@ addEventListener('mousemove', e => {
 });
 
 function look(dx, dy) {
+  if (wake.active || driving) return;
   player.yaw -= dx;
   player.pitch = Math.max(-1.3, Math.min(1.3, player.pitch - dy));
   if (hide.spot && hide.amt > 0.95) { // only peek around from underneath
@@ -164,9 +209,10 @@ const useBtn = document.getElementById('use');
 const dotEl = document.getElementById('dot');
 useBtn.querySelector('img').src = globalThis.__DR_TEX?.ui_hand ?? 'assets/textures/ui_hand.png';
 let target = null;
-const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple', knife: 'kitchen knife', shotgun: 'shotgun', shells: 'shotgun shells' };
-const label = t => (t.kind === 'item' ? (t.type === 'shells' && selected === 'shotgun' ? 'Load shells' : t.type === 'note' ? 'Read note' : `Take ${NAMES[t.type]}`) : t.kind === 'wire' ? 'Cut' : t.kind === 'board' ? 'Cutting board' : t.locked ? 'Locked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
+const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple', knife: 'kitchen knife', shotgun: 'shotgun', shells: 'shotgun shells', battery: 'car battery', fuel: 'fuel can' };
+const label = t => (t.kind === 'item' ? (t.type === 'shells' && selected === 'shotgun' ? 'Load shells' : t.type === 'note' ? 'Read note' : `Take ${NAMES[t.type]}`) : t.kind === 'wire' ? 'Cut' : t.kind === 'carhood' ? 'Car hood' : t.kind === 'carfuel' ? 'Fuel tank' : t.kind === 'cardoor' ? 'Car door' : t.kind === 'board' ? 'Cutting board' : t.locked ? 'Locked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
 function useTarget() {
+  if (wake.active || driving) return;
   if (hide.spot) { leaveHide(); return; }
   if (target) house.use(target, selected);
 }
@@ -185,7 +231,7 @@ function updateTarget() {
   useBtn.hidden = !t;
   dotEl.hidden = !!t;
   placeHand(t);
-  useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : t?.kind === 'board' ? 'Cutting board' : t?.locked ? 'Locked' : '';
+  useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : t?.kind === 'board' ? 'Cutting board' : t?.kind?.startsWith('car') ? label(t) : t?.locked ? 'Locked' : '';
   if (t) useBtn.setAttribute('aria-label', t.kind === 'hide' ? 'Hide' : label(t));
 }
 house.onHide = enterHide;
@@ -234,7 +280,7 @@ function setHand(type) {
 
 const fireBtn = document.getElementById('fire'), dropBtn = document.getElementById('drop');
 function fire() {
-  if (selected !== 'shotgun' || uiOpen || escaped || hide.spot) return;
+  if (selected !== 'shotgun' || uiOpen || escaped || hide.spot || wake.active || driving) return;
   if (ammo <= 0) { house.onSound('dry'); showToast('Click. The shotgun is empty.', 1400); return; }
   ammo--;
   house.onSound('shot');
@@ -244,7 +290,7 @@ function fire() {
 
 // Put the item down in front of you, clear of walls and furniture.
 function drop() {
-  if (!selected || uiOpen || escaped || hide.spot) return;
+  if (!selected || uiOpen || escaped || hide.spot || wake.active || driving) return;
   const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
   const [x, z] = collide(player.pos.x + fx * 0.75, player.pos.z + fz * 0.75);
   const type = selected;
@@ -368,15 +414,27 @@ house.onKeypad = openKeypad;
 
 // ---- escaping -------------------------------------------------------------------
 let escaped = false;
-house.onEscape = () => {
+function showWin(title, verb) {
   escaped = true;
-  const s = Math.round(performance.now() / 1000);
-  document.getElementById('winTime').textContent = `You got out in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}.`;
+  const s = Math.round((performance.now() - playStart) / 1000);
+  document.getElementById('winTitle').textContent = title;
+  document.getElementById('winTime').textContent = `You ${verb} in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}.`;
   document.getElementById('win').hidden = false;
+  fadeEl.style.opacity = '0';
   heldView.show(null);
   chime();
+}
+house.onEscape = () => showWin('You escaped', 'got out');
+
+// The car starts: you slide into the driver's seat, the garage door rises and you drive out.
+let driving = null;
+house.onDrive = () => {
+  driving = { t: 0, from: { x: player.pos.x, z: player.pos.z }, level: player.level };
+  setHand(null);
+  heldView.show(null);
+  closeUi();
 };
-document.getElementById('again').addEventListener('click', () => location.reload());
+document.getElementById('again').addEventListener('click', () => { location.hash = '#fast'; location.reload(); });
 renderInventory();
 
 useBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useTarget(); }, { passive: false });
@@ -451,6 +509,22 @@ house.onSound = name => {
       hp.type = 'highpass'; hp.frequency.value = 2500;
       out.gain.value = 0.7;
       src.connect(hp).connect(out); src.start(now);
+    } else if (name === 'pour') {     // liquid glugging
+      for (let i = 0; i < 4; i++) {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.frequency.setValueAtTime(300 + i * 40, now + i * 0.18); o.frequency.exponentialRampToValueAtTime(140, now + i * 0.18 + 0.14);
+        g.gain.setValueAtTime(0.0001, now + i * 0.18); g.gain.linearRampToValueAtTime(0.18, now + i * 0.18 + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 0.15);
+        o.connect(g).connect(audio.destination); o.start(now + i * 0.18); o.stop(now + i * 0.18 + 0.16);
+      }
+    } else if (name === 'engine') {   // a starter grinds, then the engine catches and settles
+      const o = audio.createOscillator(), g = audio.createGain(), lp = audio.createBiquadFilter();
+      o.type = 'sawtooth'; lp.type = 'lowpass'; lp.frequency.value = 420;
+      o.frequency.setValueAtTime(34, now); o.frequency.linearRampToValueAtTime(40, now + 0.9);
+      o.frequency.linearRampToValueAtTime(95, now + 1.3); o.frequency.exponentialRampToValueAtTime(55, now + 2.4);
+      g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(0.18, now + 0.2);
+      g.gain.setValueAtTime(0.18, now + 0.9); g.gain.linearRampToValueAtTime(0.32, now + 1.3); g.gain.linearRampToValueAtTime(0.2, now + 3.0);
+      g.gain.linearRampToValueAtTime(0.0001, now + 4);
+      o.connect(lp).connect(g).connect(audio.destination); o.start(now); o.stop(now + 4);
     } else if (name === 'drop') {     // a soft thump
       const th = audio.createOscillator(), tg = audio.createGain();
       th.frequency.setValueAtTime(120, now); th.frequency.exponentialRampToValueAtTime(50, now + 0.12);
@@ -512,6 +586,28 @@ house.onSound = name => {
     }
   } catch { /* audio is optional */ }
 };
+
+// A heartbeat and a high ringing in the ears while waking up.
+function wakeSounds() {
+  if (!audio) return;
+  try {
+    const now = audio.currentTime;
+    const ring = audio.createOscillator(), rg = audio.createGain();
+    ring.frequency.value = 2900;
+    rg.gain.setValueAtTime(0.0001, now); rg.gain.linearRampToValueAtTime(0.03, now + 0.6); rg.gain.exponentialRampToValueAtTime(0.0001, now + 6.5);
+    ring.connect(rg).connect(audio.destination); ring.start(now); ring.stop(now + 6.6);
+    let at = 0.5, gap = 1.0;
+    while (at < 8.0) {
+      for (const [d, amp] of [[0, 0.5], [0.22, 0.34]]) {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.frequency.setValueAtTime(70, now + at + d); o.frequency.exponentialRampToValueAtTime(38, now + at + d + 0.16);
+        g.gain.setValueAtTime(0.0001, now + at + d); g.gain.linearRampToValueAtTime(amp, now + at + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, now + at + d + 0.2);
+        o.connect(g).connect(audio.destination); o.start(now + at + d); o.stop(now + at + d + 0.22);
+      }
+      at += gap; gap = Math.max(0.62, gap - 0.04);
+    }
+  } catch { /* audio is optional */ }
+}
 
 house.onUse = (kind, open) => {
   if (!audio) return;
@@ -585,7 +681,7 @@ function frame() {
   if (keys.has('KeyS') || keys.has('ArrowDown')) fx += 1;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) fz -= 1;
   if (keys.has('KeyD') || keys.has('ArrowRight')) fz += 1;
-  if (uiOpen) { fx = 0; fz = 0; }
+  if (uiOpen || wake.active || driving) { fx = 0; fz = 0; }
   const mag = Math.min(1, Math.hypot(fx, fz));
 
   let hideE = 0;
@@ -631,10 +727,43 @@ function frame() {
   }
 
   const bob = mag > 0.01 && !hide.spot ? Math.sin(t * 8) * 0.03 * mag : 0;
-  const eye = hide.spot ? EYE + (hide.spot.eye - EYE) * hideE : EYE;
-  vignette.style.opacity = (hideE * 0.95).toFixed(3);
+  let eye = hide.spot ? EYE + (hide.spot.eye - EYE) * hideE : EYE;
+  let pitchAdd = 0, rollAdd = 0;
+
+  // waking up: lying on the floor looking at the ceiling, then sitting up and standing
+  if (wake.active) {
+    wake.t += dt;
+    if (wake.t > 1.6) wake.skippable = true;
+    const rise = smooth(5.2, 7.9, wake.t);
+    eye = 0.2 + (EYE - 0.2) * rise;
+    pitchAdd = (1 - rise) * 1.0 + Math.sin(wake.t * 1.1) * 0.05 * (1 - rise);
+    rollAdd = (1 - rise) * 0.3 + Math.sin(wake.t * 1.7) * 0.04 * (1 - rise);
+    const o = eyeOpen(wake.t);
+    lidT.style.height = lidB.style.height = (50 * (1 - o)) + '%';
+    renderer.domElement.style.filter = `blur(${(12 * (1 - smooth(1.0, 6.6, wake.t)) + (1 - o) * 4).toFixed(1)}px)`;
+    vignette.style.opacity = (0.8 * (1 - smooth(4.0, 8.0, wake.t))).toFixed(3);
+    if (wake.t >= wake.dur) endWake();
+  }
+
+  // driving away: slide into the seat, then the car pulls out through the garage door
+  if (driving) {
+    driving.t += dt;
+    const k = driving.t, seat = { x: 16.1, z: 13.4 };
+    const settle = smooth(0, 0.9, k);
+    const go = Math.max(0, k - 0.9);
+    player.pos.x = driving.from.x + (seat.x - driving.from.x) * settle;
+    player.pos.z = driving.from.z + (seat.z - driving.from.z) * settle + 0.5 * 1.9 * go * go;
+    player.yaw += angleDiff(Math.PI, player.yaw) * Math.min(1, dt * 4);
+    player.pitch += (0 - player.pitch) * Math.min(1, dt * 4);
+    eye = EYE + (1.15 - EYE) * settle;
+    pitchAdd = Math.sin(t * 38) * 0.004 * settle + Math.sin(t * 17) * 0.003 * settle;  // the engine shakes the view
+    rollAdd = Math.sin(t * 9) * 0.004 * settle;
+    fadeEl.style.opacity = String(smooth(2.3, 3.5, k));
+    if (k > 3.7) { driving = null; showWin('You drove away', 'got out'); }
+  }
+  vignette.style.opacity = wake.active ? vignette.style.opacity : (hideE * 0.95).toFixed(3);
   camera.position.set(player.pos.x, player.y + eye + bob, player.pos.z);
-  camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+  camera.rotation.set(player.pitch + pitchAdd, player.yaw, rollAdd, 'YXZ');
 
   updateLights(t, dt);
   house.update(dt, player);
@@ -642,10 +771,10 @@ function frame() {
 
   const yawRate = (player.yaw - lastYaw) / Math.max(dt, 1e-3), pitchRate = (player.pitch - lastPitch) / Math.max(dt, 1e-3);
   lastYaw = player.yaw; lastPitch = player.pitch;
-  heldView.update(t, dt, { walk: hide.spot ? 0 : mag, bobAccel: -64 * bob, yawRate, pitchRate });
+  heldView.update(t, dt, { walk: hide.spot || wake.active ? 0 : mag, bobAccel: -64 * bob, yawRate, pitchRate });
 
   renderer.render(scene, camera);
-  if (heldView.visible) {
+  if (heldView.visible && !wake.active) {
     renderer.autoClear = false;
     renderer.clearDepth();
     renderer.render(heldView.scene, heldView.camera);
@@ -659,3 +788,4 @@ window.__game = { player, house, camera, THREE }; // for debugging
 window.__held = heldView;
 Object.defineProperty(window, '__inv', { get: () => ({ hand: selected, ammo }) });
 window.__ammo = () => ammo;
+window.__wake = wake;

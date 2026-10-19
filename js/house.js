@@ -12,8 +12,12 @@ const LEVELS = [
     name: 'Basement', windows: 0,
     roles: { A: 'storage', B: 'storage', C: 'storage', D: 'storage', E: 'storage' },
     // the power box on the south wall; the hatch in the east wall is the second way out
-    fixed: [{ item: 'circuitbox', cell: [5, 5], side: 'S' }],
-    exits: [{ id: 'hatch', edge: ['v', 9, 4], style: 'metal', locks: [['electric', 1.4], ['padlock', 1.05], ['padlock', 0.7]] }],
+    fixed: [{ item: 'circuitbox', cell: [4, 5], side: 'S' }, { item: 'car', cell: [5, 4] }],
+    exits: [
+      { id: 'hatch', edge: ['v', 9, 4], style: 'metal', locks: [['electric', 1.4], ['padlock', 1.05], ['padlock', 0.7]] },
+      // the garage door in line with the car; it only opens once the car is started
+      { id: 'garage', edge: ['h', 5, 6], style: 'metal', width: 2.4, carOnly: true, locks: [] },
+    ],
     walls: [0, 1, 4, 6], floors: [1, 5, 6],
     map: [
       'AAAABBBBB',
@@ -328,7 +332,7 @@ export function buildHouse(renderer, seed = 1) {
     return texCache[type];
   };
   // How far above the surface the mesh's origin sits when it lies there.
-  const LIFT = { apple: 0.045, shotgun: 0.05, shells: 0.015, knife: 0.01 };
+  const LIFT = { apple: 0.045, shotgun: 0.05, shells: 0.015, knife: 0.01, battery: 0.005, fuel: 0.005 };
 
   // `spin` is the yaw to lie at (random when not given).
   function makeItemMesh(type, spin) {
@@ -345,6 +349,14 @@ export function buildHouse(renderer, seed = 1) {
         [.15, .04, .044, .12, -.012, 0, wood], [.34, .06, .034, -.37, -.012, 0, wood], [.05, .1, .036, -.55, -.034, 0, wood],
       ]);
       mesh.rotation.y = spin ?? 0;
+    } else if (type === 'battery') {
+      mesh = boxesMesh([[.26, .18, .16, 0, 0, 0, darkSteel], [.264, .03, .164, 0, .12, 0, col(0x3a5aa0)],
+        [.045, .035, .045, -.07, .18, 0, brass], [.045, .035, .045, .07, .18, 0, brass]]);
+      mesh.rotation.y = spin ?? rand() * Math.PI * 2;
+    } else if (type === 'fuel') {
+      mesh = boxesMesh([[.3, .36, .13, 0, 0, 0, red], [.14, .04, .1, .06, .36, 0, red], [.05, .06, .05, -.09, .36, 0, steel],
+        [.1, .02, .136, 0, .22, 0, col(0x8a1c10)], [.02, .12, .1, .17, .24, 0, darkSteel]]);
+      mesh.rotation.y = spin ?? rand() * Math.PI * 2;
     } else if (type === 'shells') {
       mesh = boxesMesh([-1, 0, 1].flatMap(k => [[.07, .022, .022, 0, 0, k * .026, red], [.022, .024, .024, -.044, 0, k * .026, brass]]));
       mesh.rotation.y = spin ?? rand() * Math.PI * 2;
@@ -398,6 +410,9 @@ export function buildHouse(renderer, seed = 1) {
     if (fridgeDoor) place('apple', fridgeDoor);
     const gunBox = holders.find(p => p.tag === 'gunbox');
     if (gunBox) place('shotgun', gunBox);
+    // car parts lie on the floor in open rooms: the fuel can in the basement, the battery in the attic
+    dropItem('fuel', 4.5, levelY(0), 13.5, 0.4, 0);
+    dropItem('battery', 10.5, levelY(3), 4.5, 1.1, 3);
     // a kitchen knife in one of the kitchen drawers
     const knifeDrawers = holders.filter(p => p.kind === 'drawer' && p.role === 'kitchen' && !p.hasItem);
     if (knifeDrawers.length) place('knife', pick(knifeDrawers));
@@ -471,7 +486,8 @@ export function buildHouse(renderer, seed = 1) {
       }
     }
 
-    for (const ex of cfg.exits ?? []) doors.add(key(...ex.edge)); // an exit is a doorway in an outer wall
+    const doorWidth = new Map();
+    for (const ex of cfg.exits ?? []) { doors.add(key(...ex.edge)); doorWidth.set(key(...ex.edge), ex.width ?? DOOR_W); } // an exit is a doorway in an outer wall
     doorLog.push({ level, doors: [...doors], windows: () => [...winEdges] });
 
     // floors & ceilings (the stair openings have neither on the storeys they join)
@@ -526,8 +542,9 @@ export function buildHouse(renderer, seed = 1) {
         piece(axis, mid + w / 2, a1, f, 0, WALL_H, posMat, negMat);
       };
       if (doors.has(k)) {
-        opening(DOOR_W);
-        piece(axis, mid - DOOR_W / 2, mid + DOOR_W / 2, f, DOOR_H, WALL_H, posMat, negMat, false);
+        const dw = doorWidth.get(k) ?? DOOR_W;
+        opening(dw);
+        piece(axis, mid - dw / 2, mid + dw / 2, f, DOOR_H, WALL_H, posMat, negMat, false);
       } else if ((!pos || !neg) && rand() < cfg.windows) {
         winEdges.add(k);
         opening(WIN_W);
@@ -568,6 +585,7 @@ export function buildHouse(renderer, seed = 1) {
     // A door in an outer wall, hinged on one side, with its locks on the inside face. The
     // opening is blocked until it is open.
     function buildExit(ex) {
+      const DW = ex.width ?? DOOR_W;
       const [dir, ec, er] = ex.edge;
       const axis = dir === 'h' ? 'x' : 'z';
       const f = (dir === 'h' ? er : ec) * CELL;                 // wall centre line
@@ -577,19 +595,19 @@ export function buildHouse(renderer, seed = 1) {
       const metal = ex.style === 'metal';
       const doorMat = new THREE.MeshLambertMaterial({ map: tex.floor[metal ? 5 : 2], color: metal ? 0x80858a : 0xa07f58 });
       const hinge = new THREE.Group();
-      hinge.position.set(axis === 'x' ? mid - DOOR_W / 2 : f, Y, axis === 'x' ? f : mid - DOOR_W / 2);
+      hinge.position.set(axis === 'x' ? mid - DW / 2 : f, Y, axis === 'x' ? f : mid - DW / 2);
       group.add(hinge);
       // local frame of the hinge group: u along the door, v out of the inner face
       const at3 = (u, y, v) => (axis === 'x' ? [u, y, inn[1] * v] : [inn[0] * v, y, u]);
       const dims = (w, h, d) => (axis === 'x' ? [w, h, d] : [d, h, w]);
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(...dims(DOOR_W, DOOR_H, 0.07)), doorMat);
-      slab.position.set(...at3(DOOR_W / 2, DOOR_H / 2, 0));
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(...dims(DW, DOOR_H, 0.07)), doorMat);
+      slab.position.set(...at3(DW / 2, DOOR_H / 2, 0));
       hinge.add(slab);
 
       const locks = [];
       for (const [type, y] of ex.locks) {
         const lockGroup = new THREE.Group();
-        lockGroup.position.set(...at3(DOOR_W * 0.8, y, 0.06));
+        lockGroup.position.set(...at3(DW * 0.8, y, 0.06));
         if (type === 'padlock') {
           const body = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.1, 0.12, 0.05)), new THREE.MeshPhongMaterial({ color: 0xb89a32, shininess: 60 }));
           const shackle = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.06, 0.07, 0.03)), new THREE.MeshPhongMaterial({ color: 0x8a8f94, shininess: 80 }));
@@ -618,14 +636,21 @@ export function buildHouse(renderer, seed = 1) {
         hinge.add(lockGroup);
       }
 
-      const hw = DOOR_W / 2, t = 0.1;
+      const hw = DW / 2, t = 0.1;
       const col = axis === 'x'
         ? { minX: mid - hw, maxX: mid + hw, minZ: f - t, maxZ: f + t, level }
         : { minX: f - t, maxX: f + t, minZ: mid - hw, maxZ: mid + hw, level };
       colliders.push(col);
 
       const angle = axis === 'x' ? (out[1] > 0 ? -1.9 : 1.9) : (out[0] > 0 ? 1.9 : -1.9); // swings outward
-      const exit = { id: ex.id, level, axis, f, mid, out, hinge, angle, locks, open: false, t: 0, col, escaped: false };
+      const exit = { id: ex.id, level, axis, f, mid, out, hinge, angle, locks, open: false, t: 0, col, escaped: false, width: DW, carOnly: !!ex.carOnly };
+      if (ex.carOnly) {   // a big shutter: ribs across it
+        for (let i = 1; i < 5; i++) {
+          const rib = new THREE.Mesh(new THREE.BoxGeometry(...dims(DW - 0.1, 0.05, 0.02)), new THREE.MeshLambertMaterial({ color: 0x50565c }));
+          rib.position.set(...at3(DW / 2, i * DOOR_H / 5, 0.045));
+          hinge.add(rib);
+        }
+      }
       exit.target = { kind: 'exit', exit };
       for (const l of locks) {
         if (l.type !== 'code') continue;
@@ -864,6 +889,7 @@ export function buildHouse(renderer, seed = 1) {
   // Padlocks take a key from the hand; the keypad takes the code; an electric lock only
   // gives way once the power is cut.
   function useExit(exit, held) {
+    if (exit.carOnly && !exit.open) { say('The garage door is sealed shut. Maybe the car could break through it.'); return; }
     const pending = remaining(exit);
     if (!pending.length) { openExit(exit); return; }
     const padlock = pending.find(l => l.type === 'padlock');
@@ -924,6 +950,47 @@ export function buildHouse(renderer, seed = 1) {
     }
   }
 
+  // ---- the car: a battery under the hood, fuel in the tank, a key in the ignition ---------
+  const car = { battery: false, fuel: false, started: false };
+  function useCar(target, held) {
+    if (car.started) return;
+    const glow = (wp) => {                       // the headlights come on
+      const m = new THREE.MeshBasicMaterial({ color: 0xfff2b0 });
+      for (const s of [-1, 1]) {
+        const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.09, 0.03), m);
+        lamp.position.set(wp.x + s * 0.55, wp.y - 0.23, wp.z + 0.59);
+        group.add(lamp);
+      }
+    };
+    if (target.kind === 'carhood') {
+      if (car.battery) { say('The battery is already in.'); return; }
+      if (held !== 'battery') { say('The engine bay is empty. It needs a car battery.'); return; }
+      car.battery = true;
+      api.onConsume?.('battery');
+      glow(target.proxy.getWorldPosition(new THREE.Vector3()));
+      api.onSound?.('unlock');
+      say(car.fuel ? 'The battery clicks in. The headlights flicker on.' : 'The battery clicks in. The headlights flicker on. The tank is still empty.');
+    } else if (target.kind === 'carfuel') {
+      if (car.fuel) { say('The tank is full.'); return; }
+      if (held !== 'fuel') { say('The fuel tank is empty. It needs fuel.'); return; }
+      car.fuel = true;
+      api.onConsume?.('fuel');
+      api.onSound?.('pour');
+      say(car.battery ? 'Glug glug. The tank is full.' : 'Glug glug. The tank is full. The engine is dead, though.');
+    } else {
+      if (!car.battery) { say('The dashboard is dead. The engine needs a battery.'); return; }
+      if (!car.fuel) { say('The tank is empty. It needs fuel.'); return; }
+      if (held !== 'key') { say('The ignition needs a key. Hold a key.'); return; }
+      car.started = true;
+      api.onConsume?.('key');
+      const garage = exits.find(e => e.carOnly);
+      api.onSound?.('engine');
+      say('The engine roars to life!');
+      if (garage) { openExit(garage); garage.escaped = true; }
+      api.onDrive?.(garage);
+    }
+  }
+
   function cutWire(wire, held) {
     if (held !== 'pliers') { say('You need something to cut this wire.'); return; }
     wire.cut = true;
@@ -960,6 +1027,7 @@ export function buildHouse(renderer, seed = 1) {
     onSound: null,     // ('unlock' | 'cut' | 'creak')
     onConsume: null,   // (type) an item was used up
     onEscape: null,    // (exit) the player walked out
+    onDrive: null,     // () the car started: drive out through the garage door
     onKeypad: null,    // (target) the player wants to type a code
     canTake: null,     // () is the player's hand free?
     onRead: null,      // the sticky note was read
@@ -973,6 +1041,7 @@ export function buildHouse(renderer, seed = 1) {
     doorLog,
     exits,
     wires,
+    car,
     // what the camera is looking at within reach: an item lying in an opened drawer or
     // chest (preferred), otherwise a movable part, a hiding spot, an exit door or a wire
     pick(camera, player) {
@@ -1004,6 +1073,7 @@ export function buildHouse(renderer, seed = 1) {
       if (target.kind === 'exit') { useExit(target.exit, held); return; }
       if (target.kind === 'keypad') { api.onKeypad?.(target); return; }
       if (target.kind === 'board') { useBoard(target, held); return; }
+      if (target.kind === 'carhood' || target.kind === 'carfuel' || target.kind === 'cardoor') { useCar(target, held); return; }
       if (target.locked) { cutLock(target, held); return; }
       if (target.kind === 'wire') { cutWire(target.wire, held); return; }
       if (target.kind === 'item') {
@@ -1037,7 +1107,7 @@ export function buildHouse(renderer, seed = 1) {
           const p = player.pos, o = exit.out;
           const past = exit.axis === 'x' ? (p.z - exit.f) * o[1] : (p.x - exit.f) * o[0];
           const across = Math.abs((exit.axis === 'x' ? p.x : p.z) - exit.mid);
-          if (past > 0.35 && across < DOOR_W) { exit.escaped = true; api.onEscape?.(exit); }
+          if (past > 0.35 && across < exit.width) { exit.escaped = true; api.onEscape?.(exit); }
         }
       }
       for (let i = sparks.length - 1; i >= 0; i--) {
