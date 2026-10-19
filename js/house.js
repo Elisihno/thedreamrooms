@@ -309,44 +309,82 @@ export function buildHouse(renderer, seed = 1) {
 
   LEVELS.forEach((cfg, level) => buildFloor(cfg, level));
   stairs.forEach(buildStairs);
-  placeLoot();
+
+  // ---- things you can pick up ---------------------------------------------------------
+  const loader = new THREE.TextureLoader();
+  const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 }, note: { w: 0.14, h: 0.14 } };
+  const col = hex => ({ color: new THREE.Color(hex) });
+  const solid = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const boxesMesh = boxes => new THREE.Mesh(partGeometry(boxes, [0, 0, 0]), solid);
+  const steel = col(0xb9bec3), darkSteel = col(0x2a3035), wood = col(0x5a3a22), brass = col(0xb89a32), red = col(0xc8321f);
+  const texCache = {};
+  const itemTexture = type => {
+    if (!texCache[type]) {
+      const t = type === 'note' ? new THREE.CanvasTexture(noteCanvas)
+        : loader.load(globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
+      t.colorSpace = THREE.SRGBColorSpace;
+      texCache[type] = t;
+    }
+    return texCache[type];
+  };
+  // How far above the surface the mesh's origin sits when it lies there.
+  const LIFT = { apple: 0.045, shotgun: 0.05, shells: 0.015, knife: 0.01 };
+
+  // `spin` is the yaw to lie at (random when not given).
+  function makeItemMesh(type, spin) {
+    let mesh;
+    if (type === 'apple') {
+      mesh = makeApple(0.05);
+      mesh.rotation.y = spin ?? 0.6;
+    } else if (type === 'knife') {
+      mesh = boxesMesh([[.09, .016, .024, -.07, 0, 0, wood], [.012, .02, .026, -.015, 0, 0, steel], [.15, .004, .03, .06, .004, 0, steel]]);
+      mesh.rotation.y = spin ?? rand() * Math.PI * 2;
+    } else if (type === 'shotgun') {
+      mesh = boxesMesh([
+        [.55, .026, .026, .22, .03, 0, darkSteel], [.44, .02, .02, .15, .005, 0, steel], [.18, .05, .04, -.1, 0, 0, darkSteel],
+        [.15, .04, .044, .12, -.012, 0, wood], [.34, .06, .034, -.37, -.012, 0, wood], [.05, .1, .036, -.55, -.034, 0, wood],
+      ]);
+      mesh.rotation.y = spin ?? 0;
+    } else if (type === 'shells') {
+      mesh = boxesMesh([-1, 0, 1].flatMap(k => [[.07, .022, .022, 0, 0, k * .026, red], [.022, .024, .024, -.044, 0, k * .026, brass]]));
+      mesh.rotation.y = spin ?? rand() * Math.PI * 2;
+    } else {
+      mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(spec[type].w, spec[type].h),
+        new THREE.MeshBasicMaterial({ map: itemTexture(type), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, color: 0xd8d8d8 }));
+      mesh.rotation.order = 'YXZ';
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.rotation.y = spin ?? (rand() - 0.5) * 1.4;
+    }
+    return mesh;
+  }
+
+  // Put a carried item down: it lies on the surface at (x, y, z) and can be picked up again.
+  function dropItem(type, x, y, z, yaw, level, board = null) {
+    const mesh = makeItemMesh(type, yaw);
+    mesh.position.set(x, y + (LIFT[type] ?? 0.02), z);
+    group.add(mesh);
+    const item = { kind: 'item', type, part: null, mesh, floor: true, level, board };
+    mesh.userData.item = item;
+    items.push(item);
+    pickables.push(mesh);
+    return item;
+  }
+
+  function removeItem(item) {
+    item.mesh.removeFromParent();
+    const a = pickables.indexOf(item.mesh); if (a >= 0) pickables.splice(a, 1);
+    const b = items.indexOf(item); if (b >= 0) items.splice(b, 1);
+    if (item.part) item.part.hasItem = false;
+    if (item.board) item.board.apple = null;
+  }
 
   // One pair of cutting pliers in a single drawer, one key per storey (preferably in a chest), and a spare key.
   function placeLoot() {
-    const loader = new THREE.TextureLoader();
-    const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 }, note: { w: 0.14, h: 0.14 } };
-    const col = hex => ({ color: new THREE.Color(hex) });
-    const solid = new THREE.MeshLambertMaterial({ vertexColors: true });
-    const boxesMesh = boxes => new THREE.Mesh(partGeometry(boxes, [0, 0, 0]), solid);
-    const steel = col(0xb9bec3), darkSteel = col(0x2a3035), wood = col(0x5a3a22), brass = col(0xb89a32);
     const place = (type, part) => {
-      let mesh;
-      if (type === 'apple') {
-        mesh = makeApple(0.05);
-        mesh.rotation.y = 0.6;
-      } else if (type === 'knife') {
-        mesh = boxesMesh([[.09, .016, .024, -.07, 0, 0, wood], [.012, .02, .026, -.015, 0, 0, steel], [.15, .004, .03, .06, .004, 0, steel]]);
-        mesh.rotation.y = rand() * Math.PI * 2;
-      } else if (type === 'shotgun') {
-        mesh = boxesMesh([
-          [.55, .026, .026, .22, .03, 0, darkSteel], [.44, .02, .02, .15, .005, 0, steel], [.18, .05, .04, -.1, 0, 0, darkSteel],
-          [.15, .04, .044, .12, -.012, 0, wood], [.34, .06, .034, -.37, -.012, 0, wood], [.05, .1, .036, -.55, -.034, 0, wood],
-        ]);
-        mesh.position.y = 0.04;
-      } else {
-        let t;
-        if (type === 'note') t = new THREE.CanvasTexture(noteCanvas);
-        else t = loader.load(globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
-        t.colorSpace = THREE.SRGBColorSpace;
-        mesh = new THREE.Mesh(
-          new THREE.PlaneGeometry(spec[type].w, spec[type].h),
-          new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, color: 0xd8d8d8 }));
-        mesh.rotation.order = 'YXZ';
-        mesh.rotation.x = -Math.PI / 2;
-        mesh.rotation.y = (rand() - 0.5) * 1.4;
-      }
+      const mesh = makeItemMesh(type);
       mesh.position.set(...part.loot.pos);
-      if (type === 'shotgun') mesh.position.y += 0.04;
+      mesh.position.y += type === 'shotgun' ? 0.08 : 0;
       part.loot.parent.add(mesh);
       const item = { kind: 'item', type, part, mesh };
       mesh.userData.item = item;
@@ -379,6 +417,7 @@ export function buildHouse(renderer, seed = 1) {
     if (spare.length) place('key', pick(spare));
     pickables.push(...partMeshes, ...itemMeshes);
   }
+  placeLoot();
 
   function buildFloor(cfg, level) {
     const MAP = cfg.map, Y = levelY(level);
@@ -740,7 +779,7 @@ export function buildHouse(renderer, seed = 1) {
           const proxy = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ visible: false }));
           proxy.position.set(x, y0 + h / 2, zc);
           ensureGroup().add(proxy);
-          const t = { kind, level };
+          const t = { kind, level, apple: null, proxy };
           proxy.userData.useTarget = t;
           pickables.push(proxy);
         },
@@ -864,15 +903,25 @@ export function buildHouse(renderer, seed = 1) {
     say('Snip. The lock drops away.');
   }
 
-  // Cut the old apple open with the knife: shotgun shells fall out.
-  function cutApple(held) {
-    const hasApple = api.hasItem?.('apple');
-    if (held !== 'knife') { say(hasApple ? 'Hold the knife to cut the apple on the board.' : 'A cutting board, stained dark.'); return; }
-    if (!hasApple) { say('Nothing to cut. The board is stained dark.'); return; }
-    api.onConsume?.('apple');
-    api.onSound?.('chop');
-    api.onPickup?.('shells');
-    say('The apple splits open. Shotgun shells were hidden inside.');
+  // The cutting board is a table: put the apple on it, then cut it with the knife and shotgun
+  // shells spill out onto the board.
+  function useBoard(board, held) {
+    const wp = board.proxy.getWorldPosition(new THREE.Vector3());
+    if (held === 'apple') {
+      if (board.apple) { say('There is already an apple on the board.'); return; }
+      api.onConsume?.('apple');
+      board.apple = dropItem('apple', wp.x + 0.05, wp.y, wp.z, 0.4, board.level, board);
+      api.onSound?.('drop');
+      say('The apple lies on the board. Cut it with a knife.');
+    } else if (held === 'knife') {
+      if (!board.apple) { say('Nothing on the board to cut.'); return; }
+      removeItem(board.apple);
+      api.onSound?.('chop');
+      dropItem('shells', wp.x + 0.04, wp.y, wp.z, 0.5, board.level);
+      say('The apple splits open. Shotgun shells were hidden inside.');
+    } else {
+      say(board.apple ? 'Cut the apple with a knife.' : 'A cutting board, stained dark. Put something on it.');
+    }
   }
 
   function cutWire(wire, held) {
@@ -912,7 +961,10 @@ export function buildHouse(renderer, seed = 1) {
     onConsume: null,   // (type) an item was used up
     onEscape: null,    // (exit) the player walked out
     onKeypad: null,    // (target) the player wants to type a code
-    hasItem: null,     // (type) does the player carry this?
+    canTake: null,     // () is the player's hand free?
+    onRead: null,      // the sticky note was read
+    onLoad: null,      // shells were loaded into the shotgun
+    dropItem,
     tryCode,
     code,
     noteIcon: noteCanvas.toDataURL('image/png'),
@@ -929,7 +981,9 @@ export function buildHouse(renderer, seed = 1) {
       for (const hit of raycaster.intersectObjects(pickables, false)) {
         const u = hit.object.userData;
         if (u.item) {
-          if (u.item.part.open && u.item.part.t > 0.85 && u.item.part.level === player.level) return u.item;
+          const it = u.item;
+          if (it.floor) { if (it.level === player.level) return it; }
+          else if (it.part.open && it.part.t > 0.85 && it.part.level === player.level) return it;
           continue;
         }
         if (found) continue;
@@ -949,14 +1003,15 @@ export function buildHouse(renderer, seed = 1) {
       if (target.kind === 'hide') { api.onHide?.(target.spot); return; }
       if (target.kind === 'exit') { useExit(target.exit, held); return; }
       if (target.kind === 'keypad') { api.onKeypad?.(target); return; }
-      if (target.kind === 'board') { cutApple(held); return; }
+      if (target.kind === 'board') { useBoard(target, held); return; }
       if (target.locked) { cutLock(target, held); return; }
       if (target.kind === 'wire') { cutWire(target.wire, held); return; }
       if (target.kind === 'item') {
-        target.mesh.removeFromParent();
-        pickables.splice(pickables.indexOf(target.mesh), 1);
-        items.splice(items.indexOf(target), 1);
-        target.part.hasItem = false;
+        if (target.type === 'note') { api.onRead?.(); return; }            // read where it lies
+        if (target.board && held === 'knife') { useBoard(target.board, held); return; }
+        if (target.type === 'shells' && held === 'shotgun') { removeItem(target); api.onLoad?.(); return; }
+        if (api.canTake && !api.canTake()) { say('Your hand is full. Drop what you are holding first.'); return; }
+        removeItem(target);
         api.onPickup?.(target.type);
         return;
       }

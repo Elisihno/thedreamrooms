@@ -78,6 +78,7 @@ addEventListener('keydown', e => {
   keys.add(e.code);
   if (e.code === 'KeyE') useTarget();
   if (e.code === 'Space') { e.preventDefault(); fire(); }
+  if (e.code === 'KeyQ') drop();
 });
 addEventListener('keyup', e => keys.delete(e.code));
 
@@ -164,7 +165,7 @@ const dotEl = document.getElementById('dot');
 useBtn.querySelector('img').src = globalThis.__DR_TEX?.ui_hand ?? 'assets/textures/ui_hand.png';
 let target = null;
 const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple', knife: 'kitchen knife', shotgun: 'shotgun', shells: 'shotgun shells' };
-const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.kind === 'wire' ? 'Cut' : t.kind === 'board' ? 'Cutting board' : t.locked ? 'Locked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
+const label = t => (t.kind === 'item' ? (t.type === 'shells' && selected === 'shotgun' ? 'Load shells' : t.type === 'note' ? 'Read note' : `Take ${NAMES[t.type]}`) : t.kind === 'wire' ? 'Cut' : t.kind === 'board' ? 'Cutting board' : t.locked ? 'Locked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
 function useTarget() {
   if (hide.spot) { leaveHide(); return; }
   if (target) house.use(target, selected);
@@ -188,75 +189,67 @@ function updateTarget() {
 }
 house.onHide = enterHide;
 
-// ---- inventory --------------------------------------------------------------
-const inv = { key: 0, pliers: 0, note: 0, apple: 0, knife: 0, shotgun: 0, shells: 0 }; // everything has to be found
+// ---- the hand ---------------------------------------------------------------------
+// One item in hand at most. Picking something up needs a free hand; DROP puts it down.
 let ammo = 0;  // shells loaded in the shotgun (it starts empty)
 const invEl = document.getElementById('inv');
 const toastEl = document.getElementById('toast');
 let toastTimer = 0;
-const iconSrc = type => (type === 'note' ? house.noteIcon : icons[type] ?? globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
-// the item in hand: shown at the lower right of the view, highlighted in the strip
-let selected = null;
+const iconSrc = type => icons[type] ?? globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`;
+let selected = null; // the item in hand
 const heldView = createHeld();
 heldView.resize(innerWidth / innerHeight);
-function select(type) {
-  if (type === 'note') { openNote(); return; } // the note is read, not held
-  if (type === 'shells') { loadShells(); return; } // shells are loaded, not held
-  selected = selected === type ? null : type;
-  heldView.show(selected);
+function setHand(type) {
+  selected = type;
+  heldView.show(type);
   renderInventory();
 }
 
-// Shells go into the shotgun: each pack gives 3 shots.
-function loadShells() {
-  if (!inv.shotgun) { showToast('You need a shotgun to load these.'); return; }
-  inv.shells = Math.max(0, inv.shells - 1);
-  ammo += 3;
-  house.onSound('load');
-  showToast(`Loaded 3 shells. ${ammo} in the shotgun.`);
-  renderInventory();
-}
-
-const fireBtn = document.getElementById('fire');
+const fireBtn = document.getElementById('fire'), dropBtn = document.getElementById('drop');
 function fire() {
-  if (selected !== 'shotgun' || uiOpen || escaped) return;
+  if (selected !== 'shotgun' || uiOpen || escaped || hide.spot) return;
   if (ammo <= 0) { house.onSound('dry'); showToast('Click. The shotgun is empty.', 1400); return; }
   ammo--;
   house.onSound('shot');
   heldView.kick();
   renderInventory();
 }
-fireBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fire(); }, { passive: false });
-fireBtn.addEventListener('click', fire);
-addEventListener('keydown', e => {
-  if (uiOpen) return;
-  const n = Number(e.key);
-  const owned = Object.keys(inv).filter(t => inv[t]);
-  if (n >= 1 && n <= owned.length) select(owned[n - 1]);
-});
 
+// Put the item down in front of you, clear of walls and furniture.
+function drop() {
+  if (!selected || uiOpen || escaped || hide.spot) return;
+  const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+  const [x, z] = collide(player.pos.x + fx * 0.75, player.pos.z + fz * 0.75);
+  const type = selected;
+  house.dropItem(type, x, player.y, z, player.yaw, player.level);
+  setHand(null);
+  house.onSound('drop');
+  showToast(`Dropped the ${NAMES[type]}`, 1200);
+}
+for (const [el, fn] of [[fireBtn, fire], [dropBtn, drop]]) {
+  el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fn(); }, { passive: false });
+  el.addEventListener('click', fn);
+}
+
+// the strip shows what is in hand (the shotgun also shows its shells)
 function renderInventory() {
   invEl.replaceChildren();
-  for (const type of Object.keys(inv)) {
-    if (!inv[type]) continue;
-    const slot = document.createElement('button');
-    slot.type = 'button';
-    slot.className = 'slot' + (selected === type ? ' sel' : '');
-    slot.setAttribute('aria-pressed', selected === type);
+  if (selected) {
+    const slot = document.createElement('div');
+    slot.className = 'slot sel';
     const img = document.createElement('img');
-    img.src = iconSrc(type);
-    img.alt = NAMES[type];
+    img.src = iconSrc(selected);
+    img.alt = NAMES[selected];
     slot.append(img);
-    if (type === 'shotgun' || inv[type] > 1) {
+    if (selected === 'shotgun') {
       const n = document.createElement('span');
-      n.textContent = type === 'shotgun' ? ammo : inv[type]; // the shotgun shows its shells
+      n.textContent = ammo;
       slot.append(n);
     }
-    slot.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); select(type); }, { passive: false });
-    slot.addEventListener('click', () => select(type));
     invEl.append(slot);
   }
   fireBtn.hidden = selected !== 'shotgun';
+  dropBtn.hidden = !selected;
 }
 function showToast(text, ms = 2600) {
   toastEl.textContent = text;
@@ -264,21 +257,24 @@ function showToast(text, ms = 2600) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { toastEl.hidden = true; }, ms);
 }
+house.canTake = () => !selected;
 house.onPickup = type => {
-  inv[type]++;
-  renderInventory();
-  showToast(`Picked up ${NAMES[type]}`, 1800);
+  setHand(type);
+  showToast(`Picked up the ${NAMES[type]}`, 1800);
   chime();
-  if (type === 'note') openNote();
 };
 house.onMessage = showToast;
-// a key is used up when it opens a lock
-house.hasItem = type => inv[type] > 0;
-house.onConsume = type => {
-  inv[type] = Math.max(0, inv[type] - 1);
-  if (!inv[type] && selected === type) select(type); // nothing left to hold
+house.onRead = () => openNote();
+// shells loaded into the shotgun in hand: each pack gives 3 shots
+house.onLoad = () => {
+  ammo += 3;
+  house.onSound('load');
+  showToast(`Loaded 3 shells. ${ammo} in the shotgun.`);
   renderInventory();
 };
+// a key is used up when it opens a lock; an apple when it is put on the board
+house.onConsume = type => { if (selected === type) setHand(null); };
+setHand('shotgun'); // test start: begin with the (empty) shotgun in hand
 
 // ---- keypad and note screens ------------------------------------------------------
 let uiOpen = false;
@@ -428,6 +424,11 @@ house.onSound = name => {
       hp.type = 'highpass'; hp.frequency.value = 2500;
       out.gain.value = 0.7;
       src.connect(hp).connect(out); src.start(now);
+    } else if (name === 'drop') {     // a soft thump
+      const th = audio.createOscillator(), tg = audio.createGain();
+      th.frequency.setValueAtTime(120, now); th.frequency.exponentialRampToValueAtTime(50, now + 0.12);
+      tg.gain.setValueAtTime(0.45, now); tg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      th.connect(tg).connect(audio.destination); th.start(now); th.stop(now + 0.17);
     } else if (name === 'chop') {     // a blade through something dry
       const a = noise(0.18, 0.03), lp = audio.createBiquadFilter();
       lp.type = 'lowpass'; lp.frequency.value = 1800;
@@ -629,5 +630,5 @@ frame();
 
 window.__game = { player, house, camera, THREE }; // for debugging
 window.__held = heldView;
-window.__inv = inv;
+Object.defineProperty(window, '__inv', { get: () => ({ hand: selected, ammo }) });
 window.__ammo = () => ammo;

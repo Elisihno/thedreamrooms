@@ -144,6 +144,23 @@ export function buildShotgun() {
   return g;
 }
 
+// Three shotgun shells held together: red hulls with brass bases, along +x.
+export function buildShells() {
+  const g = new THREE.Group();
+  const red = new THREE.MeshPhongMaterial({ color: 0xc8321f, specular: 0xffaaaa, shininess: 50 });
+  const brass = new THREE.MeshPhongMaterial({ color: 0xb89a32, specular: 0xffeeaa, shininess: 70 });
+  for (const z of [-0.024, 0, 0.024]) {
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.07, 14), red);
+    hull.rotation.z = Math.PI / 2; hull.position.set(0.035, 0, z);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.0115, 0.0115, 0.02, 14), brass);
+    base.rotation.z = Math.PI / 2; base.position.set(-0.01, 0, z);
+    g.add(hull, base);
+  }
+  g.userData.yaw = 0.3;
+  g.userData.scale = 1.6;
+  return g;
+}
+
 export function createHeld() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 5);
@@ -154,7 +171,7 @@ export function createHeld() {
 
   const rig = new THREE.Group(); // the hand: this is what moves
   scene.add(rig);
-  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple(), knife: buildKnife(), shotgun: buildShotgun() };
+  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple(), knife: buildKnife(), shotgun: buildShotgun(), shells: buildShells() };
   for (const m of Object.values(models)) {
     const holder = new THREE.Group();
     holder.rotation.order = 'YXZ';
