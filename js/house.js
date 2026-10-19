@@ -33,7 +33,7 @@ const LEVELS = [
       { item: 'livingset', cell: [7, 2] },
     ],
     // the front door, in the south wall of the hall: three padlocks
-    exits: [{ id: 'front', edge: ['h', 4, 6], style: 'wood', locks: [['padlock', 1.5], ['padlock', 1.1], ['padlock', 0.7]] }],
+    exits: [{ id: 'front', edge: ['h', 4, 6], style: 'wood', locks: [['code', 1.85], ['padlock', 1.5], ['padlock', 1.1], ['padlock', 0.7]] }],
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
       'PPPQQQRRR',
@@ -241,6 +241,23 @@ function partGeometry(boxes, pivot) {
   return geo;
 }
 
+// The sticky note with the front door code, drawn as a picture.
+function drawNote(code) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 256;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#f0dd6a'; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(0, 0, 256, 18);
+  g.save();
+  g.translate(128, 140); g.rotate(-0.05);
+  g.fillStyle = '#3a2f1d'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = 'italic 26px "Segoe Print", "Bradley Hand", cursive, system-ui'; g.fillText('front door', 0, -62);
+  g.font = 'bold 64px "Segoe Print", "Bradley Hand", cursive, system-ui'; g.fillText(code.split('').join(' '), 0, 6);
+  g.strokeStyle = '#3a2f1d'; g.lineWidth = 3; g.beginPath(); g.moveTo(-84, 52); g.quadraticCurveTo(0, 60, 84, 50); g.stroke();
+  g.restore();
+  return cv;
+}
+
 // ---- generator ----------------------------------------------------------
 export function buildHouse(renderer, seed = 1) {
   const rand = rng(seed);
@@ -254,6 +271,8 @@ export function buildHouse(renderer, seed = 1) {
   const parts = [];      // movable furniture parts (drawers, doors, lids)
   const partMeshes = [];
   const pickables = []; // everything the crosshair can land on
+  const code = String(Math.floor(rng(seed * 7919 + 13)() * 10000)).padStart(4, '0'); // the front door keypad code
+  const noteCanvas = drawNote(code);
   const hideSpots = [];
   const exits = [];  // doors out of the house
   const wires = [];  // cuttable wires in the power box
@@ -279,9 +298,11 @@ export function buildHouse(renderer, seed = 1) {
   // One pair of cutting pliers in a single drawer, one key per storey (preferably in a chest), and a spare key.
   function placeLoot() {
     const loader = new THREE.TextureLoader();
-    const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 } };
+    const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 }, note: { w: 0.14, h: 0.14 } };
     const place = (type, part) => {
-      const t = loader.load(globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
+      let t;
+      if (type === 'note') t = new THREE.CanvasTexture(noteCanvas);
+      else t = loader.load(globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
       t.colorSpace = THREE.SRGBColorSpace;
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(spec[type].w, spec[type].h),
@@ -300,6 +321,9 @@ export function buildHouse(renderer, seed = 1) {
     const holders = parts.filter(p => p.loot);
     const pliersAt = pick(holders.filter(p => p.kind === 'drawer'));
     place('pliers', pliersAt);
+    // the sticky note with the front door code: always in a drawer in a living room
+    const noteDrawers = holders.filter(p => p.kind === 'drawer' && p.role === 'living' && !p.hasItem);
+    if (noteDrawers.length) place('note', pick(noteDrawers));
     for (let lv = 0; lv < LEVELS.length; lv++) {
       const here = holders.filter(p => p.level === lv && !p.hasItem);
       if (!here.length) continue;
@@ -488,6 +512,18 @@ export function buildHouse(renderer, seed = 1) {
           shackle.position.set(...at3(0, 0.09, 0));
           lockGroup.add(body, shackle);
           locks.push({ type, done: false, mesh: lockGroup });
+        } else if (type === 'code') {
+          const body = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.17, 0.24, 0.05)), new THREE.MeshPhongMaterial({ color: 0x1d2024, shininess: 40 }));
+          const led = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.12, 0.025, 0.012)), new THREE.MeshBasicMaterial({ color: 0xff2a2a }));
+          led.position.set(...at3(0, 0.095, 0.03));
+          lockGroup.add(body, led);
+          const keyMat = new THREE.MeshPhongMaterial({ color: 0x9aa0a6 });
+          for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) {
+            const k = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.032, 0.024, 0.014)), keyMat);
+            k.position.set(...at3((i - 1) * 0.045, 0.05 - j * 0.04, 0.03));
+            lockGroup.add(k);
+          }
+          locks.push({ type, done: false, mesh: lockGroup, led, keypad: body });
         } else {
           const box = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.14, 0.2, 0.06)), new THREE.MeshPhongMaterial({ color: 0x2a2e33, shininess: 30 }));
           const led = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.04, 0.04, 0.02)), new THREE.MeshBasicMaterial({ color: 0xff2a2a }));
@@ -507,6 +543,11 @@ export function buildHouse(renderer, seed = 1) {
       const angle = axis === 'x' ? (out[1] > 0 ? -1.9 : 1.9) : (out[0] > 0 ? 1.9 : -1.9); // swings outward
       const exit = { id: ex.id, level, axis, f, mid, out, hinge, angle, locks, open: false, t: 0, col, escaped: false };
       exit.target = { kind: 'exit', exit };
+      for (const l of locks) {
+        if (l.type !== 'code') continue;
+        l.keypad.userData.keypad = { kind: 'keypad', exit, lock: l };
+        pickables.push(l.keypad);
+      }
       slab.userData.exit = exit;
       pickables.push(slab);
       exits.push(exit);
@@ -618,7 +659,7 @@ export function buildHouse(renderer, seed = 1) {
         const mesh = new THREE.Mesh(partGeometry(boxes, pivot), partMat);
         pg.add(mesh);
         itemGroup.add(pg);
-        const part = { pg, pivot, level, open: false, t: 0, ...extra };
+        const part = { pg, pivot, level, open: false, t: 0, role: cfg.roles?.[at(c, r)], ...extra };
         if (extra.kind === 'drawer') {
           // on top of the drawer box, near its front, so it slides out into view
           const [, h, d, x, y0, zc] = boxes[0];
@@ -706,9 +747,17 @@ export function buildHouse(renderer, seed = 1) {
     api.onSound?.('creak');
   }
 
-  // Padlocks take a key from the hand; an electric lock only gives way once the power is cut.
+  const remaining = exit => exit.locks.filter(l => !l.done);
+  function afterUnlock(exit) {
+    const left = remaining(exit);
+    if (!left.length) { say('The last lock gives way. The door swings open.'); openExit(exit); }
+    else say(`Click. ${left.length} lock${left.length > 1 ? 's' : ''} left.`);
+  }
+
+  // Padlocks take a key from the hand; the keypad takes the code; an electric lock only
+  // gives way once the power is cut.
   function useExit(exit, held) {
-    const pending = exit.locks.filter(l => !l.done);
+    const pending = remaining(exit);
     if (!pending.length) { openExit(exit); return; }
     const padlock = pending.find(l => l.type === 'padlock');
     if (padlock && held === 'key') {
@@ -716,15 +765,23 @@ export function buildHouse(renderer, seed = 1) {
       padlock.mesh.visible = false;
       api.onConsume?.('key');
       api.onSound?.('unlock');
-      const left = pending.length - 1;
-      if (!left) { say('Unlocked. The door swings open.'); openExit(exit); }
-      else if (pending.some(l => l.type === 'electric' && !l.done)) say('Click. Only the electric lock is left: find the power box.');
-      else say(`Click. ${left} lock${left > 1 ? 's' : ''} left.`);
+      afterUnlock(exit);
     } else if (padlock) {
       say('Locked. Hold a key to unlock it.');
+    } else if (pending.some(l => l.type === 'code')) {
+      say('Only the keypad is left. It wants a 4-digit code.');
     } else {
       say('The electric lock is humming. Find the power box and cut the wires.');
     }
+  }
+
+  function tryCode(target, entered) {
+    if (entered !== code) { api.onSound?.('wrong'); return false; }
+    target.lock.done = true;
+    target.lock.led.material.color.set(0x2aff5a);
+    api.onSound?.('unlock');
+    afterUnlock(target.exit);
+    return true;
   }
 
   function cutWire(wire, held) {
@@ -763,6 +820,10 @@ export function buildHouse(renderer, seed = 1) {
     onSound: null,     // ('unlock' | 'cut' | 'creak')
     onConsume: null,   // (type) an item was used up
     onEscape: null,    // (exit) the player walked out
+    onKeypad: null,    // (target) the player wants to type a code
+    tryCode,
+    code,
+    noteIcon: noteCanvas.toDataURL('image/png'),
     items,
     hideSpots,
     exits,
@@ -781,6 +842,7 @@ export function buildHouse(renderer, seed = 1) {
         if (found) continue;
         if (u.hide) { if (u.hide.level === player.level) found = u.hide.target; }
         else if (u.exit) { if (u.exit.level === player.level && !u.exit.open) found = u.exit.target; }
+        else if (u.keypad) { if (u.keypad.exit.level === player.level && !u.keypad.lock.done) found = u.keypad; }
         else if (u.wire) {
           const w = u.wire;
           if (!w.cut && w.level === player.level && w.box.open && w.box.t > 0.85) found = w.target;
@@ -792,10 +854,12 @@ export function buildHouse(renderer, seed = 1) {
     use(target, held) {
       if (target.kind === 'hide') { api.onHide?.(target.spot); return; }
       if (target.kind === 'exit') { useExit(target.exit, held); return; }
+      if (target.kind === 'keypad') { api.onKeypad?.(target); return; }
       if (target.kind === 'wire') { cutWire(target.wire, held); return; }
       if (target.kind === 'item') {
         target.mesh.removeFromParent();
         pickables.splice(pickables.indexOf(target.mesh), 1);
+        items.splice(items.indexOf(target), 1);
         target.part.hasItem = false;
         api.onPickup?.(target.type);
         return;

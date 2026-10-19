@@ -73,6 +73,7 @@ let shownLevel = -1;
 // ---- input --------------------------------------------------------------
 const keys = new Set();
 addEventListener('keydown', e => {
+  if (uiOpen) { uiKey(e); return; }
   keys.add(e.code);
   if (e.code === 'KeyE') useTarget();
 });
@@ -160,8 +161,8 @@ const useBtn = document.getElementById('use');
 const dotEl = document.getElementById('dot');
 useBtn.querySelector('img').src = globalThis.__DR_TEX?.ui_hand ?? 'assets/textures/ui_hand.png';
 let target = null;
-const NAMES = { key: 'key', pliers: 'cutting pliers' };
-const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.kind === 'wire' ? 'Cut' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
+const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note' };
+const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.kind === 'wire' ? 'Cut' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
 function useTarget() {
   if (hide.spot) { leaveHide(); return; }
   if (target) house.use(target, selected);
@@ -186,21 +187,23 @@ function updateTarget() {
 house.onHide = enterHide;
 
 // ---- inventory --------------------------------------------------------------
-const inv = { key: 0, pliers: 0 }; // everything has to be found
+const inv = { key: 0, pliers: 0, note: 0 }; // everything has to be found
 const invEl = document.getElementById('inv');
 const toastEl = document.getElementById('toast');
 let toastTimer = 0;
-const iconSrc = type => globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`;
+const iconSrc = type => (type === 'note' ? house.noteIcon : globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
 // the item in hand: shown at the lower right of the view, highlighted in the strip
 let selected = null;
 const heldView = createHeld();
 heldView.resize(innerWidth / innerHeight);
 function select(type) {
+  if (type === 'note') { openNote(); return; } // the note is read, not held
   selected = selected === type ? null : type;
   heldView.show(selected);
   renderInventory();
 }
 addEventListener('keydown', e => {
+  if (uiOpen) return;
   const n = Number(e.key);
   const owned = Object.keys(inv).filter(t => inv[t]);
   if (n >= 1 && n <= owned.length) select(owned[n - 1]);
@@ -239,6 +242,7 @@ house.onPickup = type => {
   renderInventory();
   showToast(`Picked up ${NAMES[type]}`, 1800);
   chime();
+  if (type === 'note') openNote();
 };
 house.onMessage = showToast;
 // a key is used up when it opens a lock
@@ -247,6 +251,69 @@ house.onConsume = type => {
   if (!inv[type] && selected === type) select(type); // nothing left to hold
   renderInventory();
 };
+
+// ---- keypad and note screens ------------------------------------------------------
+let uiOpen = false;
+const keypadEl = document.getElementById('keypad'), noteEl = document.getElementById('note');
+const kpDisplay = document.getElementById('kpDisplay'), kpMsg = document.getElementById('kpMsg');
+let kpTarget = null, kpEntered = '', kpLocked = false;
+function renderKeypad() {
+  kpDisplay.textContent = (kpEntered + '____').slice(0, 4).split('').join(' ');
+}
+function openKeypad(target) {
+  kpTarget = target; kpEntered = ''; kpLocked = false;
+  kpMsg.textContent = 'Enter the 4-digit code';
+  kpDisplay.classList.remove('bad');
+  renderKeypad();
+  keypadEl.hidden = false;
+  uiOpen = true;
+  move.x = move.y = 0;
+  document.exitPointerLock?.();
+}
+function openNote() {
+  document.getElementById('noteImg').src = house.noteIcon;
+  noteEl.hidden = false;
+  uiOpen = true;
+  move.x = move.y = 0;
+  document.exitPointerLock?.();
+}
+function closeUi() {
+  keypadEl.hidden = true; noteEl.hidden = true;
+  uiOpen = false;
+}
+function keypadPress(d) {
+  if (kpLocked) return;
+  if (d === 'C') { kpEntered = kpEntered.slice(0, -1); renderKeypad(); return; }
+  if (kpEntered.length >= 4) return;
+  kpEntered += d;
+  renderKeypad();
+  if (kpEntered.length < 4) return;
+  kpLocked = true;
+  if (house.tryCode(kpTarget, kpEntered)) {
+    kpMsg.textContent = 'Click.';
+    setTimeout(closeUi, 400);
+  } else {
+    kpMsg.textContent = 'Wrong code';
+    kpDisplay.classList.add('bad');
+    setTimeout(() => { kpEntered = ''; kpLocked = false; kpDisplay.classList.remove('bad'); kpMsg.textContent = 'Enter the 4-digit code'; renderKeypad(); }, 700);
+  }
+}
+for (const d of ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'X']) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = d === 'X' ? '\u00d7' : d === 'C' ? '\u232b' : d;
+  b.setAttribute('aria-label', d === 'X' ? 'Close' : d === 'C' ? 'Delete' : d);
+  b.addEventListener('click', () => (d === 'X' ? closeUi() : keypadPress(d)));
+  document.getElementById('kpGrid').append(b);
+}
+noteEl.addEventListener('click', closeUi);
+function uiKey(e) {
+  if (e.code === 'Escape' || e.code === 'KeyE') { closeUi(); return; }
+  if (keypadEl.hidden) return;
+  if (/^[0-9]$/.test(e.key)) keypadPress(e.key);
+  else if (e.key === 'Backspace') keypadPress('C');
+}
+house.onKeypad = openKeypad;
 
 // ---- escaping -------------------------------------------------------------------
 let escaped = false;
@@ -333,6 +400,11 @@ house.onSound = name => {
       hp.type = 'highpass'; hp.frequency.value = 2500;
       out.gain.value = 0.7;
       src.connect(hp).connect(out); src.start(now);
+    } else if (name === 'wrong') {    // a low buzz
+      const osc = audio.createOscillator(), g = audio.createGain();
+      osc.type = 'square'; osc.frequency.value = 110;
+      g.gain.setValueAtTime(0.12, now); g.gain.linearRampToValueAtTime(0.0001, now + 0.35);
+      osc.connect(g).connect(audio.destination); osc.start(now); osc.stop(now + 0.35);
     } else if (name === 'cut') {      // snip, then a short zap
       const a = noise(0.12, 0.012), b = noise(0.4, 0.09), bp = audio.createBiquadFilter();
       bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.8;
@@ -427,6 +499,7 @@ function frame() {
   if (keys.has('KeyS') || keys.has('ArrowDown')) fx += 1;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) fz -= 1;
   if (keys.has('KeyD') || keys.has('ArrowRight')) fz += 1;
+  if (uiOpen) { fx = 0; fz = 0; }
   const mag = Math.min(1, Math.hypot(fx, fz));
 
   let hideE = 0;

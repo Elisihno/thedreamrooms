@@ -25,6 +25,18 @@
   #win h1 { margin: 0 0 8px; font-size: 40px; letter-spacing: .04em; }
   #win p { margin: 0 0 24px; opacity: .8; }
   #win button { padding: 14px 28px; border-radius: 12px; border: 1px solid rgba(255,255,255,.4); background: rgba(255,255,255,.14); color: #fff; font: 600 16px system-ui, sans-serif; cursor: pointer; }
+  #keypad, #note { position: fixed; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.75); font-family: system-ui, sans-serif; color: #fff; }
+  #keypad[hidden], #note[hidden] { display: none; }
+  .kp { width: min(300px, 86vw); max-height: 94vh; padding: 16px; border-radius: 14px; background: #1b1e22; border: 1px solid rgba(255,255,255,.2); text-align: center; }
+  #kpDisplay { font: 700 30px ui-monospace, monospace; letter-spacing: .1em; padding: 8px 0; border-radius: 8px; background: #0b0d0f; color: #ff6a5a; }
+  #kpDisplay.bad { animation: shake .3s; }
+  #kpMsg { margin: 8px 0 10px; font-size: 13px; opacity: .8; min-height: 16px; }
+  #kpGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  #kpGrid button { padding: 0; height: 46px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: #2a2e33; color: #fff; font: 600 20px system-ui, sans-serif; cursor: pointer; }
+  @keyframes shake { 20% { transform: translateX(-6px); } 60% { transform: translateX(6px); } }
+  .noteCard { text-align: center; }
+  .noteCard img { width: min(300px, 70vh); max-width: 80vw; transform: rotate(-2deg); box-shadow: 0 8px 30px rgba(0,0,0,.6); }
+  .noteCard p { margin: 14px 0 0; opacity: .7; font-size: 13px; }
   #inv { position: fixed; top: 40px; right: 12px; display: flex; gap: 8px; pointer-events: none; }
   .slot { padding: 0; cursor: pointer; pointer-events: auto; position: relative; width: 52px; height: 52px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
   .slot.sel { border-color: #fff; background: rgba(255,255,255,.22); box-shadow: 0 0 0 2px rgba(255,255,255,.5); }
@@ -44,6 +56,8 @@
 <div id="inv"></div>
 <div id="toast" hidden></div>
 <div id="win" hidden><div><h1>You escaped</h1><p id="winTime"></p><button id="again" type="button">Play again</button></div></div>
+<div id="keypad" hidden><div class="kp"><div id="kpDisplay">_ _ _ _</div><div id="kpMsg"></div><div id="kpGrid"></div></div></div>
+<div id="note" hidden><div class="noteCard"><img id="noteImg" alt="Sticky note"><p>Tap to put it away</p></div></div>
 <div id="stick"><div id="knob"></div></div>
 <script type="module" src="js/main.js"></script>
 </body>
