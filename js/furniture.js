@@ -218,6 +218,13 @@ export const ITEMS = {
     b(.9, .05, .5, 0, .38, 0, p.body);
     for (const dx of [-.4, .4]) for (const dz of [-.2, .2]) b(.05, .38, .05, dx, 0, dz, p.dark2);
   }, colliders: [[.9, .5, 0, 0]] },
+  // a metal bin; hold a piece of paper and use it to throw the paper away
+  trashcan: { w: .5, d: .5, tall: false, colliders: [[.5, .5, 0, .3]], build(b, p, mv) {
+    b.cyl(.22, .56, 0, 0, .3, p.steel);
+    b.cyl(.235, .04, 0, .54, .3, p.dark2);
+    b.cyl(.19, .02, 0, .58, .3, p.dark);          // the dark opening
+    mv.target('trash', .46, .6, .46, 0, 0, .3);
+  } },
   // an old car, nose toward +z (the garage door). Look at the hood, the fuel tank or the door.
   car: { w: 1.9, d: 4.2, tall: false, center: true, colliders: [[1.9, 4.2, 0, 0]], build(b, p, mv) {
     const body = p.light, glass = p.dark, trim = p.dark2;

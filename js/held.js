@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { makeApple } from './apple.js';
+import { paperCanvas } from './icons.js';
 
 // The item in the player's hand. It lives in its own small scene, drawn on top of the world
 // with a cleared depth buffer, so it never clips into walls.
@@ -321,6 +322,19 @@ export function buildFuel() {
   return g;
 }
 
+// The paper: a flat sheet held up in front of you, face to the camera.
+export function buildPaper() {
+  const g = new THREE.Group();
+  const tex = new THREE.CanvasTexture(paperCanvas(256));
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.276), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+  g.add(m);
+  g.userData.pose = [-0.2, 0, 0];
+  g.userData.offset = [0.04, 0.04, -0.12];
+  g.userData.scale = 1.0;
+  return g;
+}
+
 // Three shotgun shells held together: red hulls with brass bases, along +x.
 export function buildShells() {
   const g = new THREE.Group();
@@ -348,7 +362,7 @@ export function createHeld() {
 
   const rig = new THREE.Group(); // the hand: this is what moves
   scene.add(rig);
-  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple(), knife: buildKnife(), shotgun: buildShotgun(), shells: buildShells(), battery: buildBattery(), fuel: buildFuel() };
+  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple(), knife: buildKnife(), shotgun: buildShotgun(), shells: buildShells(), battery: buildBattery(), fuel: buildFuel(), paper: buildPaper() };
   for (const m of Object.values(models)) {
     const holder = new THREE.Group();
     holder.rotation.order = 'YXZ';

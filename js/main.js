@@ -3,7 +3,13 @@ import { buildHouse, levelY } from './house.js';
 import { createHeld } from './held.js';
 import { icons } from './icons.js';
 
-const seed = Number(new URLSearchParams(location.search).get('seed')) || 1;
+// Every run is different: the house layout, doors and hiding places come from a random seed.
+// Page flags (after the #, joined with . or &): fast = skip the title, test = fast plus a loaded
+// shotgun, s123 = use seed 123 (for testing).
+const hashFlags = new Set(location.hash.slice(1).split(/[&.,]/).filter(Boolean));
+const seedFlag = [...hashFlags].map(f => /^s(\d+)$/.exec(f)).find(Boolean);
+const seed = Number(new URLSearchParams(location.search).get('seed')) || (seedFlag ? Number(seedFlag[1]) : 0)
+  || 1 + (crypto.getRandomValues(new Uint32Array(1))[0] % 999999);
 
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -13,16 +19,17 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x030303);
 scene.fog = new THREE.FogExp2(0x030303, 0.09);
-scene.add(new THREE.AmbientLight(0x5a5a6e, 1.0));
+scene.add(new THREE.AmbientLight(0x5a5a6e, 1.15));
 
 const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 60);
 scene.add(camera);
 
 // flashlight
-const flash = new THREE.SpotLight(0xfff1d6, 3.5, 14, Math.PI / 6, 0.5, 1.2);
+const flash = new THREE.SpotLight(0xfff1d6, 7, 20, 0.52, 0.55, 1.1);
 flash.position.set(0.1, -0.1, 0);
 flash.target.position.set(0, 0, -5);
 camera.add(flash, flash.target);
+flash.visible = false; // the beam only exists once you own a flashlight and switch it on
 
 const house = buildHouse(renderer, seed);
 scene.add(house.group);
@@ -71,7 +78,7 @@ function collide(x, z) {
 // The game starts on a "tap to begin" screen (browsers need a tap before they allow sound). Then
 // the player wakes up on the floor: eyes open in slow blinks through blurry, tilted vision with a
 // heartbeat, then sits up and stands. Open the page with #fast (or #test) to skip all that.
-const fastStart = location.hash === '#fast' || location.hash === '#test' || new URLSearchParams(location.search).has('fast');
+const fastStart = hashFlags.has('fast') || hashFlags.has('test') || new URLSearchParams(location.search).has('fast');
 const wake = { active: false, t: 0, dur: 8.4, skippable: false };
 const lidT = document.getElementById('lidT'), lidB = document.getElementById('lidB');
 const startEl = document.getElementById('start'), fadeEl = document.getElementById('fade');
@@ -210,8 +217,8 @@ const useBtn = document.getElementById('use');
 const dotEl = document.getElementById('dot');
 useBtn.querySelector('img').src = globalThis.__DR_TEX?.ui_hand ?? 'assets/textures/ui_hand.png';
 let target = null;
-const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple', knife: 'kitchen knife', shotgun: 'shotgun', shells: 'shotgun shells', battery: 'car battery', fuel: 'fuel can' };
-const label = t => (t.kind === 'item' ? (t.type === 'shells' && selected === 'shotgun' ? 'Load shells' : t.type === 'note' ? 'Read note' : `Take ${NAMES[t.type]}`) : t.kind === 'wire' ? 'Cut' : t.kind === 'carhood' ? 'Car hood' : t.kind === 'carfuel' ? 'Fuel tank' : t.kind === 'cardoor' ? 'Car door' : t.kind === 'board' ? 'Cutting board' : t.locked ? 'Locked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
+const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple', knife: 'kitchen knife', shotgun: 'shotgun', shells: 'shotgun shells', battery: 'car battery', fuel: 'fuel can', paper: 'paper', flashlight: 'flashlight' };
+const label = t => (t.kind === 'item' ? (t.type === 'shells' && selected === 'shotgun' ? 'Load shells' : t.type === 'note' ? 'Read note' : `Take ${NAMES[t.type]}`) : t.kind === 'roomdoor' ? (t.door.open ? 'Close' : 'Open') : t.kind === 'trash' ? 'Trash can' : t.kind === 'wire' ? 'Cut' : t.kind === 'carhood' ? 'Car hood' : t.kind === 'carfuel' ? 'Fuel tank' : t.kind === 'cardoor' ? 'Car door' : t.kind === 'board' ? 'Cutting board' : t.locked ? 'Locked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
 function useTarget() {
   if (wake.active || driving) return;
   if (hide.spot) { leaveHide(); return; }
@@ -232,7 +239,7 @@ function updateTarget() {
   useBtn.hidden = !t;
   dotEl.hidden = !!t;
   placeHand(t);
-  useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : t?.kind === 'board' ? 'Cutting board' : t?.kind?.startsWith('car') ? label(t) : t?.locked ? 'Locked' : '';
+  useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : t?.kind === 'board' ? 'Cutting board' : t?.kind?.startsWith('car') || t?.kind === 'trash' ? label(t) : t?.locked ? 'Locked' : '';
   if (t) useBtn.setAttribute('aria-label', t.kind === 'hide' ? 'Hide' : label(t));
 }
 house.onHide = enterHide;
@@ -264,7 +271,7 @@ function placeHand(t) {
 // One item in hand at most. Picking something up needs a free hand; DROP puts it down.
 // Test mode (open the page with #test, or ?test) starts with the shotgun in hand, loaded with 3 shells.
 // Normally you start empty-handed.
-const testMode = location.hash === '#test' || new URLSearchParams(location.search).has('test');
+const testMode = hashFlags.has('test') || new URLSearchParams(location.search).has('test');
 let ammo = testMode ? 3 : 0;  // shells loaded in the shotgun
 const invEl = document.getElementById('inv');
 const toastEl = document.getElementById('toast');
@@ -286,6 +293,7 @@ function fire() {
   ammo--;
   house.onSound('shot');
   heldView.kick();
+  house.shoot(camera, player);
   renderInventory();
 }
 
@@ -332,12 +340,48 @@ function showToast(text, ms = 2600) {
   toastTimer = setTimeout(() => { toastEl.hidden = true; }, ms);
 }
 house.canTake = () => !selected;
+// ---- the flashlight: gear you own once you have found it, with a battery that drains -------------
+const gear = { flashlight: false, on: false, charge: 100 };
+const lightBtn = document.getElementById('light');
+function renderLight() {
+  lightBtn.hidden = !gear.flashlight || wake.active || !!driving;
+  lightBtn.textContent = `LIGHT ${gear.on ? 'ON' : 'OFF'}\n${Math.round(gear.charge)}%`;
+  lightBtn.classList.toggle('on', gear.on);
+  lightBtn.classList.toggle('low', gear.charge < 20);
+}
+function toggleLight() {
+  if (!gear.flashlight || wake.active || driving) return;
+  if (!gear.on && gear.charge <= 0) { showToast('The flashlight is dead.', 1600); return; }
+  gear.on = !gear.on;
+  house.onSound('click');
+  renderLight();
+}
+lightBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); toggleLight(); }, { passive: false });
+lightBtn.addEventListener('click', toggleLight);
+addEventListener('keydown', e => { if (e.code === 'KeyF' && !uiOpen) toggleLight(); });
+
 house.onPickup = type => {
+  if (type === 'flashlight') {       // worn, not held: your hand stays free
+    gear.flashlight = true; gear.on = true;
+    renderLight();
+    showToast('Picked up the flashlight. It is on. Tap LIGHT to switch it.', 2600);
+    chime();
+    return;
+  }
   setHand(type);
   showToast(`Picked up the ${NAMES[type]}`, 1800);
   chime();
 };
 house.onMessage = showToast;
+// Something loud happened (a window was shot out): the entity is meant to come and look. It is not
+// in the game yet, so for now the house just answers with a low rumble.
+let lastAlert = null;
+house.onAlert = a => {
+  lastAlert = { ...a, at: performance.now() };
+  setTimeout(() => { house.onSound('alert'); showToast('Something in the house heard that...', 3200); }, 1600);
+};
+window.__alert = () => lastAlert;
+Object.defineProperty(window, '__gear', { get: () => gear });
 house.onRead = () => openNote();
 // shells loaded into the shotgun in hand: each pack gives 3 shots
 house.onLoad = () => {
@@ -599,6 +643,52 @@ house.onSound = name => {
       hp.type = 'highpass'; hp.frequency.value = 2500;
       out.gain.value = 0.7;
       src.connect(hp).connect(out); src.start(now);
+    } else if (name === 'glass') {     // a crash, then tinkling
+      const a = noise(0.5, 0.09), hp = audio.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 2200;
+      out.gain.value = 0.9;
+      a.connect(hp).connect(out); a.start(now);
+      for (let i = 0; i < 12; i++) {
+        const o = audio.createOscillator(), g = audio.createGain(), t0 = 0.08 + i * 0.07 + Math.random() * 0.05;
+        o.type = 'sine'; o.frequency.value = 2500 + Math.random() * 3000;
+        g.gain.setValueAtTime(0.0001, now + t0); g.gain.linearRampToValueAtTime(0.06, now + t0 + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, now + t0 + 0.08);
+        o.connect(g).connect(audio.destination); o.start(now + t0); o.stop(now + t0 + 0.1);
+      }
+    } else if (name === 'pop') {        // a metallic rattle and a hollow pop
+      for (let i = 0; i < 5; i++) {
+        const o = audio.createOscillator(), g = audio.createGain(), t0 = i * 0.07;
+        o.type = 'triangle'; o.frequency.value = 520 + Math.random() * 400;
+        g.gain.setValueAtTime(0.0001, now + t0); g.gain.linearRampToValueAtTime(0.16, now + t0 + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, now + t0 + 0.07);
+        o.connect(g).connect(audio.destination); o.start(now + t0); o.stop(now + t0 + 0.08);
+      }
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.setValueAtTime(260, now + 0.35); o.frequency.exponentialRampToValueAtTime(90, now + 0.5);
+      g.gain.setValueAtTime(0.3, now + 0.35); g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+      o.connect(g).connect(audio.destination); o.start(now + 0.35); o.stop(now + 0.56);
+    } else if (name === 'click') {      // a switch
+      const a = noise(0.04, 0.006), hp = audio.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 1500;
+      out.gain.value = 0.6;
+      a.connect(hp).connect(out); a.start(now);
+    } else if (name === 'alert') {      // something far away, low and long
+      const o = audio.createOscillator(), g = audio.createGain(), lp = audio.createBiquadFilter(), lfo = audio.createOscillator(), lg = audio.createGain();
+      o.type = 'sawtooth'; lp.type = 'lowpass'; lp.frequency.value = 160;
+      o.frequency.setValueAtTime(52, now); o.frequency.linearRampToValueAtTime(34, now + 3);
+      lfo.frequency.value = 5.5; lg.gain.value = 0.05; lfo.connect(lg).connect(g.gain);
+      g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(0.26, now + 0.8); g.gain.linearRampToValueAtTime(0.0001, now + 3.2);
+      o.connect(lp).connect(g).connect(audio.destination); o.start(now); lfo.start(now); o.stop(now + 3.3); lfo.stop(now + 3.3);
+    } else if (name === 'doorOpen') {  // a short wooden creak
+      const o = audio.createOscillator(), g = audio.createGain(), lp = audio.createBiquadFilter();
+      o.type = 'sawtooth'; lp.type = 'lowpass'; lp.frequency.value = 600;
+      o.frequency.setValueAtTime(110, now); o.frequency.linearRampToValueAtTime(190, now + 0.45);
+      g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(0.1, now + 0.12); g.gain.linearRampToValueAtTime(0.0001, now + 0.5);
+      o.connect(lp).connect(g).connect(audio.destination); o.start(now); o.stop(now + 0.52);
+    } else if (name === 'doorClose') { // a dull wooden thud
+      const th = audio.createOscillator(), tg = audio.createGain();
+      th.frequency.setValueAtTime(95, now); th.frequency.exponentialRampToValueAtTime(42, now + 0.14);
+      tg.gain.setValueAtTime(0.5, now); tg.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      th.connect(tg).connect(audio.destination); th.start(now + 0.35); th.stop(now + 0.56);
+      tg.gain.cancelScheduledValues(now); tg.gain.setValueAtTime(0.0001, now); tg.gain.setValueAtTime(0.5, now + 0.35); tg.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
     } else if (name === 'pour') {     // liquid glugging
       for (let i = 0; i < 4; i++) {
         const o = audio.createOscillator(), g = audio.createGain();
@@ -756,7 +846,7 @@ function updateLights(t, dt) {
 
 // ---- loop ---------------------------------------------------------------
 const clock = new THREE.Clock();
-let lastYaw = player.yaw, lastPitch = player.pitch;
+let lastYaw = player.yaw, lastPitch = player.pitch, lastShown = -1;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
@@ -880,6 +970,13 @@ function frame() {
   camera.position.set(player.pos.x, player.y + eye + bob, player.pos.z);
   camera.rotation.set(player.pitch + pitchAdd, player.yaw, rollAdd, 'YXZ');
 
+  if (gear.on) {
+    gear.charge = Math.max(0, gear.charge - dt * (100 / 600));    // about ten minutes of light
+    if (gear.charge <= 0) { gear.on = false; showToast('The flashlight battery died.', 2600); house.onSound('click'); renderLight(); }
+    if (Math.floor(gear.charge * 4) !== lastShown) { lastShown = Math.floor(gear.charge * 4); renderLight(); }
+  }
+  flash.visible = gear.on;
+  if (gear.on) flash.intensity = 7 * (gear.charge < 15 ? (Math.sin(t * 37) > -0.55 ? 0.35 + 0.65 * (gear.charge / 15) : 0.05) : 1);
   updateLights(t, dt);
   house.update(dt, player);
   updateTarget();
@@ -903,5 +1000,6 @@ window.__game = { player, house, camera, THREE }; // for debugging
 window.__held = heldView;
 Object.defineProperty(window, '__inv', { get: () => ({ hand: selected, ammo }) });
 window.__ammo = () => ammo;
+window.__seed = seed;
 Object.defineProperty(window, '__finale', { get: () => driving });
 window.__wake = wake;

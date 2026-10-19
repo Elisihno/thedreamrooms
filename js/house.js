@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { ITEMS, ROLE_ITEMS, buildMannequin } from './furniture.js';
 import { makeApple } from './apple.js';
+import { paperCanvas } from './icons.js';
 
 // ---- layout -------------------------------------------------------------
 // One map per storey, bottom to top. Each letter is a room; every character is one
@@ -10,6 +11,8 @@ import { makeApple } from './apple.js';
 const LEVELS = [
   {
     name: 'Basement', windows: 0,
+    // the one basement window: you can shoot it
+    windowEdges: [['v', 0, 4]],
     roles: { A: 'storage', B: 'storage', C: 'storage', D: 'storage', E: 'storage' },
     // the power box on the south wall; the hatch in the east wall is the second way out
     fixed: [{ item: 'circuitbox', cell: [4, 5], side: 'S' }, { item: 'car', cell: [5, 4] }],
@@ -67,6 +70,8 @@ const LEVELS = [
     // the player starts in room P: [col, row] of the spawn cell, plus pieces fixed to a cell
     spawn: [1, 1],
     fixed: [{ item: 'roundtable', cell: [1, 0] }, { item: 'tablechairs', cell: [0, 1], turn: 1 }],
+    // the trash can stands against a wall of the start bedroom, in the first of these cells with a free wall
+    guarantee: [{ item: 'trashcan', cells: [[2, 2], [0, 2], [2, 0], [0, 0]] }],
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
       'PPPQQQRRR',
@@ -111,7 +116,7 @@ const TILE_W = 2.5, TILE_H = 4.2;             // world size one texture tile cov
 const SPAN = 2;                                // stair length in cells
 
 export const levelY = i => (i - GROUND) * WALL_H;
-const COUNT = { wall: 10, floor: 10, window: 10, furniture: 1 };
+const COUNT = { wall: 10, floor: 10, window: 10, furniture: 1, door: 1 };
 
 export const stairs = STAIR_CELLS.map((s, k) => ({
   from: k,
@@ -293,6 +298,11 @@ export function buildHouse(renderer, seed = 1) {
   const code = String((globalThis.crypto?.getRandomValues?.(new Uint32Array(1))[0] ?? Math.floor(Math.random() * 4294967296)) % 10000).padStart(4, '0');
   const noteCanvas = drawNote(code);
   const hideSpots = [];
+  const roomDoors = [];
+  const shootables = []; // panes that can be shot out
+  const shards = [];     // flying glass
+  const timers = [];     // things that happen a moment later
+  const pops = [];       // items flying out of the trash can
   const doorLog = []; // door and window edges per storey, for debugging
   const exits = [];  // doors out of the house
   const wires = [];  // cuttable wires in the power box
@@ -316,7 +326,7 @@ export function buildHouse(renderer, seed = 1) {
 
   // ---- things you can pick up ---------------------------------------------------------
   const loader = new THREE.TextureLoader();
-  const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 }, note: { w: 0.14, h: 0.14 } };
+  const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 }, note: { w: 0.14, h: 0.14 }, paper: { w: 0.2, h: 0.276 } };
   const col = hex => ({ color: new THREE.Color(hex) });
   const solid = new THREE.MeshLambertMaterial({ vertexColors: true });
   const boxesMesh = boxes => new THREE.Mesh(partGeometry(boxes, [0, 0, 0]), solid);
@@ -325,6 +335,7 @@ export function buildHouse(renderer, seed = 1) {
   const itemTexture = type => {
     if (!texCache[type]) {
       const t = type === 'note' ? new THREE.CanvasTexture(noteCanvas)
+        : type === 'paper' ? new THREE.CanvasTexture(paperCanvas(256))
         : loader.load(globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
       t.colorSpace = THREE.SRGBColorSpace;
       texCache[type] = t;
@@ -332,7 +343,7 @@ export function buildHouse(renderer, seed = 1) {
     return texCache[type];
   };
   // How far above the surface the mesh's origin sits when it lies there.
-  const LIFT = { apple: 0.045, shotgun: 0.05, shells: 0.015, knife: 0.01, battery: 0.005, fuel: 0.005 };
+  const LIFT = { apple: 0.045, shotgun: 0.05, shells: 0.015, knife: 0.01, battery: 0.005, fuel: 0.005, flashlight: 0.02, paper: 0.004 };
 
   // `spin` is the yaw to lie at (random when not given).
   function makeItemMesh(type, spin) {
@@ -349,6 +360,10 @@ export function buildHouse(renderer, seed = 1) {
         [.15, .04, .044, .12, -.012, 0, wood], [.34, .06, .034, -.37, -.012, 0, wood], [.05, .1, .036, -.55, -.034, 0, wood],
       ]);
       mesh.rotation.y = spin ?? 0;
+    } else if (type === 'flashlight') {
+      mesh = boxesMesh([[.16, .04, .04, -.02, 0, 0, col(0x3a3f45)], [.05, .065, .065, .085, -.012, 0, steel], [.01, .055, .055, .115, -.008, 0, col(0xfff0b0)],
+        [.02, .012, .02, -.03, .04, 0, red], [.012, .042, .042, -.07, 0, 0, col(0x23272b)], [.012, .042, .042, -.04, 0, 0, col(0x23272b)]]);
+      mesh.rotation.y = spin ?? rand() * Math.PI * 2;
     } else if (type === 'battery') {
       mesh = boxesMesh([[.26, .18, .16, 0, 0, 0, darkSteel], [.264, .03, .164, 0, .12, 0, col(0x3a5aa0)],
         [.045, .035, .045, -.07, .18, 0, brass], [.045, .035, .045, .07, .18, 0, brass]]);
@@ -410,6 +425,8 @@ export function buildHouse(renderer, seed = 1) {
     if (fridgeDoor) place('apple', fridgeDoor);
     const gunBox = holders.find(p => p.tag === 'gunbox');
     if (gunBox) place('shotgun', gunBox);
+    // the smiley-face paper lies in the middle of the attic's east room, always
+    dropItem('paper', 19.5, levelY(3), 7.5, 0.5, 3);
     // car parts lie on the floor in open rooms: the fuel can in the basement, the battery in the attic
     dropItem('fuel', 4.5, levelY(0), 13.5, 0.4, 0);
     dropItem('battery', 10.5, levelY(3), 4.5, 1.1, 3);
@@ -459,6 +476,14 @@ export function buildHouse(renderer, seed = 1) {
     // doors: random spanning tree over room adjacency, plus a few loops
     const edgesByPair = new Map();
     const stairDoor = up ? key('h', up.col, up.row) : null;
+    // wall edges that hand-placed furniture stands against must never get a doorway
+    const reserved = new Set();
+    for (const f of cfg.fixed ?? []) {
+      if (!f.side) continue;
+      const [c, r] = f.cell;
+      reserved.add({ N: key('h', c, r), S: key('h', c, r + 1), W: key('v', c, r), E: key('v', c + 1, r) }[f.side]);
+    }
+    const lastResort = new Map();
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       for (const [dir, nc, nr] of [['h', c, r - 1], ['v', c - 1, r]]) {
         const a = at(c, r), b = at(nc, nr);
@@ -466,6 +491,7 @@ export function buildHouse(renderer, seed = 1) {
         // a stairwell opens only on its north end
         if ((a === 'S' || b === 'S') && key(dir, c, r) !== stairDoor) continue;
         const pair = [a, b].sort().join('|');
+        if (reserved.has(key(dir, c, r))) { (lastResort.get(pair) ?? lastResort.set(pair, []).get(pair)).push(key(dir, c, r)); continue; }
         if (!edgesByPair.has(pair)) edgesByPair.set(pair, []);
         edgesByPair.get(pair).push(key(dir, c, r));
       }
@@ -486,9 +512,15 @@ export function buildHouse(renderer, seed = 1) {
       }
     }
 
+    // safety: if the reserved edges left a room cut off, give it a doorway there after all
+    for (const [p, list] of lastResort) {
+      const [a, b] = p.split('|');
+      if (!edgesByPair.has(p) && find(a) !== find(b)) { parent[find(a)] = find(b); doors.add(list[0]); doorLog.warn = (doorLog.warn ?? 0) + 1; }
+    }
+    const forcedWin = new Set((cfg.windowEdges ?? []).map(e => key(...e)));
     const doorWidth = new Map();
     for (const ex of cfg.exits ?? []) { doors.add(key(...ex.edge)); doorWidth.set(key(...ex.edge), ex.width ?? DOOR_W); } // an exit is a doorway in an outer wall
-    doorLog.push({ level, doors: [...doors], windows: () => [...winEdges] });
+    doorLog.push({ level, map: MAP, doors: [...doors], windows: () => [...winEdges] });
 
     // floors & ceilings (the stair openings have neither on the storeys they join)
     const ceilTex = tex.floor[3];
@@ -545,7 +577,7 @@ export function buildHouse(renderer, seed = 1) {
         const dw = doorWidth.get(k) ?? DOOR_W;
         opening(dw);
         piece(axis, mid - dw / 2, mid + dw / 2, f, DOOR_H, WALL_H, posMat, negMat, false);
-      } else if ((!pos || !neg) && rand() < cfg.windows) {
+      } else if ((!pos || !neg) && (forcedWin.has(k) || rand() < cfg.windows)) {
         winEdges.add(k);
         opening(WIN_W);
         piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, 0, WIN_Y, posMat, negMat, false);
@@ -554,10 +586,20 @@ export function buildHouse(renderer, seed = 1) {
         colliders.push(axis === 'x'
           ? { minX: mid - hw, maxX: mid + hw, minZ: f - HT, maxZ: f + HT, level }
           : { minX: f - HT, maxX: f + HT, minZ: mid - hw, maxZ: mid + hw, level });
-        const glass = placed(new THREE.PlaneGeometry(WIN_W, WIN_H),
-          axis === 'x' ? mid : f, Y + WIN_Y + WIN_H / 2, axis === 'x' ? f : mid, 0, axis === 'z' ? Math.PI / 2 : 0);
         const gm = mat(tex.window[Math.floor(rand() * COUNT.window)], 0xffffff, THREE.DoubleSide);
-        batch.add(glass, gm, false);
+        if (forcedWin.has(k)) {   // a pane of its own, so it can be shot out
+          const pane = new THREE.Mesh(new THREE.PlaneGeometry(WIN_W, WIN_H), gm);
+          pane.position.set(axis === 'x' ? mid : f, Y + WIN_Y + WIN_H / 2, axis === 'x' ? f : mid);
+          if (axis === 'z') pane.rotation.y = Math.PI / 2;
+          group.add(pane);
+          const w = { mesh: pane, level, broken: false, mat: gm };
+          pane.userData.shootable = w;
+          shootables.push(w);
+        } else {
+          const glass = placed(new THREE.PlaneGeometry(WIN_W, WIN_H),
+            axis === 'x' ? mid : f, Y + WIN_Y + WIN_H / 2, axis === 'x' ? f : mid, 0, axis === 'z' ? Math.PI / 2 : 0);
+          batch.add(glass, gm, false);
+        }
       } else {
         piece(axis, a0, a1, f, 0, WALL_H, posMat, negMat);
       }
@@ -581,6 +623,50 @@ export function buildHouse(renderer, seed = 1) {
       add(down.x0 + w / 2, down.z0 + t / 2, w, t);
     }
 
+
+    // A hinged door in every doorway between rooms. It swings away from whoever opens it, blocks the
+    // way while closed, and opens or closes with the hand cursor.
+    function buildRoomDoors() {
+      const exitKeys = new Set((cfg.exits ?? []).map(e => key(...e.edge)));
+      const faceTex = tex.door[0];
+      faceTex.wrapS = faceTex.wrapT = THREE.ClampToEdgeWrapping;
+      const faceMat = new THREE.MeshLambertMaterial({ map: faceTex });
+      const edgeMat = new THREE.MeshLambertMaterial({ color: 0x2a1c12 });
+      const brass = new THREE.MeshPhongMaterial({ color: 0xb89a32, specular: 0xffeeaa, shininess: 60 });
+      const knobGeo = new THREE.SphereGeometry(0.04, 10, 8);
+      const T = 0.06;
+      for (const k of doors) {
+        if (exitKeys.has(k)) continue;
+        const dir = k[0], [c, r] = k.slice(1).split(',').map(Number);
+        const axis = dir === 'h' ? 'x' : 'z';
+        const f = (dir === 'h' ? r : c) * CELL, mid = (dir === 'h' ? c : r) * CELL + CELL / 2;
+        const dw = DOOR_W;
+        const hinge = new THREE.Group();
+        hinge.position.set(axis === 'x' ? mid - dw / 2 : f, Y, axis === 'x' ? f : mid - dw / 2);
+        group.add(hinge);
+        const dims = axis === 'x' ? [dw, DOOR_H, T] : [T, DOOR_H, dw];
+        const mats = axis === 'x' ? [edgeMat, edgeMat, edgeMat, edgeMat, faceMat, faceMat] : [faceMat, faceMat, edgeMat, edgeMat, edgeMat, edgeMat];
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(...dims), mats);
+        slab.position.set(axis === 'x' ? dw / 2 : 0, DOOR_H / 2, axis === 'x' ? 0 : dw / 2);
+        hinge.add(slab);
+        for (const s of [-1, 1]) {   // a knob on each side of the door
+          const knob = new THREE.Mesh(knobGeo, brass);
+          const u = dw - 0.1;
+          knob.position.set(axis === 'x' ? u : s * (T / 2 + 0.04), 1.0, axis === 'x' ? s * (T / 2 + 0.04) : u);
+          hinge.add(knob);
+        }
+        const hw = dw / 2, t = 0.07;
+        const col = axis === 'x'
+          ? { minX: mid - hw, maxX: mid + hw, minZ: f - t, maxZ: f + t, level }
+          : { minX: f - t, maxX: f + t, minZ: mid - hw, maxZ: mid + hw, level };
+        const door = { kind: 'roomdoor', level, axis, f, mid, dw, hinge, col, open: false, t: 0, sign: 1 };
+        if (rand() < 0.35) door.open = true, door.t = 1, hinge.rotation.y = 1.65; else colliders.push(col);
+        door.target = { kind: 'roomdoor', door };
+        slab.userData.roomDoor = door;
+        pickables.push(slab);
+        roomDoors.push(door);
+      }
+    }
 
     // A door in an outer wall, hinged on one side, with its locks on the inside face. The
     // opening is blocked until it is open.
@@ -683,6 +769,22 @@ export function buildHouse(renderer, seed = 1) {
         used.add(`${c},${r}`);
         centred.add(at(c, r));
         placeItem(fb, ITEMS[f.item], c, r, f.side ?? null, f.turn ?? 0, f.shift ?? 0);
+      }
+
+      // items that must exist: put each against a wall of the first listed cell that has a free one
+      for (const g of cfg.guarantee ?? []) {
+        let done = false;
+        for (const [c, r] of g.cells) {
+          if (used.has(`${c},${r}`)) continue;
+          const edges = [['N', 'h', c, r], ['S', 'h', c, r + 1], ['W', 'v', c, r], ['E', 'v', c + 1, r]];
+          const free = edges.filter(([, d, ec, er]) => has(d, ec, er) && !doors.has(key(d, ec, er)));
+          if (!free.length) continue;
+          used.add(`${c},${r}`);
+          placeItem(fb, ITEMS[g.item], c, r, pick(free)[0]);
+          done = true;
+          break;
+        }
+        if (!done) doorLog.missing = (doorLog.missing ?? []).concat(g.item);
       }
 
       for (const [id, role] of Object.entries(cfg.roles ?? {})) {
@@ -843,6 +945,7 @@ export function buildHouse(renderer, seed = 1) {
     }
 
     for (const ex of cfg.exits ?? []) buildExit(ex);
+    buildRoomDoors();
     furnish();
     batch.flush(group);
     for (const id of ids) {
@@ -991,6 +1094,66 @@ export function buildHouse(renderer, seed = 1) {
     }
   }
 
+  // The trash can in the start bedroom: throw the smiley paper in and a flashlight pops out.
+  const trash = { done: false };
+  function useTrash(target, held) {
+    if (trash.done) { say('The trash can is empty now.'); return; }
+    if (held !== 'paper') { say(held ? 'That does not belong in the trash.' : 'A dented metal trash can. It smells faintly of smoke.'); return; }
+    trash.done = true;
+    api.onConsume?.('paper');
+    api.onSound?.('drop');
+    say('You drop the paper in the trash can. Something rattles inside...');
+    const wp = target.proxy.getWorldPosition(new THREE.Vector3());
+    const a = target.proxy.parent.rotation.y, out = [Math.sin(a), Math.cos(a)];
+    timers.push({ t: 1.2, fn: () => {
+      const floorY = levelY(target.level);
+      const to = new THREE.Vector3(wp.x + out[0] * 0.85, floorY + LIFT.flashlight, wp.z + out[1] * 0.85);
+      const item = dropItem('flashlight', to.x, floorY, to.z, rand() * 6, target.level);
+      const from = new THREE.Vector3(wp.x, wp.y + 0.3, wp.z);
+      item.mesh.position.copy(from);
+      pops.push({ mesh: item.mesh, from, to, t: 0, dur: 0.8 });
+      api.onSound?.('pop');
+      say('A flashlight pops out of the trash can!');
+    } });
+  }
+
+  // Shoot at what the camera is looking at: a window pane breaks, and the noise carries.
+  function breakWindow(w, point) {
+    w.broken = true;
+    w.mesh.visible = false;
+    const base = w.mesh.getWorldPosition(new THREE.Vector3());
+    const n = new THREE.Vector3(0, 0, 1).applyQuaternion(w.mesh.quaternion);
+    for (let i = 0; i < 26; i++) {
+      const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.03 + Math.random() * 0.05), w.mat);
+      shard.position.set(base.x + (Math.random() - 0.5) * 1.0 * (1 - Math.abs(n.x)), base.y + (Math.random() - 0.5) * 1.6, base.z + (Math.random() - 0.5) * 1.0 * (1 - Math.abs(n.z)));
+      group.add(shard);
+      const side = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 2.5);
+      shards.push({ mesh: shard, vel: new THREE.Vector3(n.x * side + (Math.random() - 0.5), 1 + Math.random() * 1.5, n.z * side + (Math.random() - 0.5)), spin: Math.random() * 8, t: 0, floor: levelY(w.level) });
+    }
+    api.onSound?.('glass');
+    say('The window shatters! The sound carries through the house...');
+    api.onAlert?.({ x: point.x, z: point.z, level: w.level, kind: 'window' });
+  }
+
+  // Open or close a room door. It swings away from the player, and will not shut on someone standing in it.
+  function toggleDoor(door) {
+    const p = api.lastPlayer?.pos;
+    if (door.open) {
+      if (p) {
+        const along = door.axis === 'x' ? p.x : p.z, across = door.axis === 'x' ? p.z : p.x;
+        if (Math.abs(along - door.mid) < door.dw / 2 + 0.3 && Math.abs(across - door.f) < 0.75) { say('Something is in the way.'); return; }
+      }
+      door.open = false;
+      api.onSound?.('doorClose');
+    } else {
+      if (p) door.sign = door.axis === 'x' ? (p.z > door.f ? 1 : -1) : (p.x < door.f ? 1 : -1);
+      door.open = true;
+      const i = colliders.indexOf(door.col);
+      if (i >= 0) colliders.splice(i, 1);
+      api.onSound?.('doorOpen');
+    }
+  }
+
   function cutWire(wire, held) {
     if (held !== 'pliers') { say('You need something to cut this wire.'); return; }
     wire.cut = true;
@@ -1027,6 +1190,16 @@ export function buildHouse(renderer, seed = 1) {
     onSound: null,     // ('unlock' | 'cut' | 'creak')
     onConsume: null,   // (type) an item was used up
     onEscape: null,    // (exit) the player walked out
+    onAlert: null,     // ({x, z, level, kind}) something loud happened here: the entity should come
+    shoot(camera, player) {
+      raycaster.setFromCamera(centre, camera);
+      const far = raycaster.far;
+      raycaster.far = 16;
+      const hit = raycaster.intersectObjects(shootables.filter(w => !w.broken && w.level === player.level).map(w => w.mesh), false)[0];
+      raycaster.far = far;
+      if (hit) breakWindow(hit.object.userData.shootable, hit.point);
+      return !!hit;
+    },
     onDrive: null,     // () the car started: drive out through the garage door
     onKeypad: null,    // (target) the player wants to type a code
     canTake: null,     // () is the player's hand free?
@@ -1039,6 +1212,7 @@ export function buildHouse(renderer, seed = 1) {
     items,
     hideSpots,
     doorLog,
+    roomDoors,
     exits,
     wires,
     car,
@@ -1060,6 +1234,7 @@ export function buildHouse(renderer, seed = 1) {
         else if (u.exit) { if (u.exit.level === player.level && !u.exit.open) found = u.exit.target; }
         else if (u.keypad) { if (u.keypad.exit.level === player.level && !u.keypad.lock.done) found = u.keypad; }
         else if (u.useTarget) { if (u.useTarget.level === player.level) found = u.useTarget; }
+        else if (u.roomDoor) { if (u.roomDoor.level === player.level) found = u.roomDoor.target; }
         else if (u.wire) {
           const w = u.wire;
           if (!w.cut && w.level === player.level && w.box.open && w.box.t > 0.85) found = w.target;
@@ -1071,8 +1246,10 @@ export function buildHouse(renderer, seed = 1) {
     use(target, held) {
       if (target.kind === 'hide') { api.onHide?.(target.spot); return; }
       if (target.kind === 'exit') { useExit(target.exit, held); return; }
+      if (target.kind === 'roomdoor') { toggleDoor(target.door); return; }
       if (target.kind === 'keypad') { api.onKeypad?.(target); return; }
       if (target.kind === 'board') { useBoard(target, held); return; }
+      if (target.kind === 'trash') { useTrash(target, held); return; }
       if (target.kind === 'carhood' || target.kind === 'carfuel' || target.kind === 'cardoor') { useCar(target, held); return; }
       if (target.locked) { cutLock(target, held); return; }
       if (target.kind === 'wire') { cutWire(target.wire, held); return; }
@@ -1080,7 +1257,7 @@ export function buildHouse(renderer, seed = 1) {
         if (target.type === 'note') { api.onRead?.(); return; }            // read where it lies
         if (target.board && held === 'knife') { useBoard(target.board, held); return; }
         if (target.type === 'shells' && held === 'shotgun') { removeItem(target); api.onLoad?.(); return; }
-        if (api.canTake && !api.canTake()) { say('Your hand is full. Drop what you are holding first.'); return; }
+        if (target.type !== 'flashlight' && api.canTake && !api.canTake()) { say('Your hand is full. Drop what you are holding first.'); return; }
         removeItem(target);
         api.onPickup?.(target.type);
         return;
@@ -1089,6 +1266,33 @@ export function buildHouse(renderer, seed = 1) {
       api.onUse?.(target.kind, target.open);
     },
     update(dt, player) {
+      api.lastPlayer = player;
+      for (let i = timers.length - 1; i >= 0; i--) { timers[i].t -= dt; if (timers[i].t <= 0) { const fn = timers[i].fn; timers.splice(i, 1); fn(); } }
+      for (let i = pops.length - 1; i >= 0; i--) {   // the flashlight flies out of the can in an arc
+        const p = pops[i];
+        p.t += dt;
+        const k = Math.min(1, p.t / p.dur);
+        p.mesh.position.lerpVectors(p.from, p.to, k);
+        p.mesh.position.y += 0.9 * 4 * k * (1 - k);
+        p.mesh.rotation.z = (1 - k) * 12;
+        if (k >= 1) { p.mesh.rotation.z = 0; pops.splice(i, 1); }
+      }
+      for (let i = shards.length - 1; i >= 0; i--) {  // glass falls and fades
+        const s = shards[i];
+        s.t += dt;
+        s.vel.y -= 9.5 * dt;
+        s.mesh.position.addScaledVector(s.vel, dt);
+        s.mesh.rotation.x += s.spin * dt; s.mesh.rotation.z += s.spin * 0.7 * dt;
+        if (s.mesh.position.y < s.floor + 0.03) { s.mesh.position.y = s.floor + 0.03; s.vel.set(0, 0, 0); s.spin = 0; }
+        if (s.t > 6) { s.mesh.removeFromParent(); shards.splice(i, 1); }
+      }
+      for (const d of roomDoors) {
+        const goal = d.open ? 1 : 0;
+        if (d.t === goal) continue;
+        d.t += Math.sign(goal - d.t) * Math.min(Math.abs(goal - d.t), dt * 2.2);
+        d.hinge.rotation.y = d.sign * 1.65 * (d.t * d.t * (3 - 2 * d.t));
+        if (d.t === 0 && !colliders.includes(d.col)) colliders.push(d.col);
+      }
       for (const part of parts) {
         const goal = part.open ? 1 : 0;
         if (part.t === goal) continue;

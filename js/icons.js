@@ -82,7 +82,39 @@ function fuel(g) {
   g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(36, 44, 6, 56);
 }
 
+// The paper with a smiley face and an arrow, drawn on a canvas (also used as its texture).
+export function paperCanvas(size = 256) {
+  const cv = document.createElement('canvas');
+  cv.width = size; cv.height = Math.round(size * 1.38);
+  const g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  g.fillStyle = '#efeadc'; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(120,100,60,${0.02 + (i % 5) * 0.012})`; g.beginPath(); g.arc((i * 83) % W, (i * 137) % H, 8 + (i % 7) * 5, 0, 7); g.fill(); }
+  g.strokeStyle = 'rgba(90,70,40,.35)'; g.lineWidth = 3; g.strokeRect(2, 2, W - 4, H - 4);
+  const cx = W / 2, cy = H * 0.34, r = W * 0.26;
+  g.lineCap = 'round'; g.strokeStyle = '#1d1a14'; g.fillStyle = '#1d1a14';
+  g.lineWidth = W * 0.035;
+  g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();                       // face
+  g.beginPath(); g.arc(cx - r * 0.38, cy - r * 0.25, W * 0.025, 0, 7); g.fill();       // eyes
+  g.beginPath(); g.arc(cx + r * 0.38, cy - r * 0.25, W * 0.025, 0, 7); g.fill();
+  g.beginPath(); g.arc(cx, cy + r * 0.05, r * 0.6, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();   // smile
+  g.lineWidth = W * 0.05;                                                              // the arrow, pointing down
+  g.beginPath(); g.moveTo(cx, H * 0.58); g.lineTo(cx, H * 0.86); g.stroke();
+  g.beginPath(); g.moveTo(cx - W * 0.16, H * 0.76); g.lineTo(cx, H * 0.9); g.lineTo(cx + W * 0.16, H * 0.76); g.stroke();
+  return cv;
+}
+
+function flashlight(g) {
+  g.translate(64, 64); g.rotate(-0.6);
+  g.fillStyle = '#3a3f45'; g.fillRect(-48, -9, 64, 18);
+  g.fillStyle = '#23272b'; for (const x of [-38, -28, -18]) g.fillRect(x, -9, 3, 18);
+  g.fillStyle = '#8d949b'; g.beginPath(); g.moveTo(16, -9); g.lineTo(40, -17); g.lineTo(40, 17); g.lineTo(16, 9); g.closePath(); g.fill();
+  g.fillStyle = '#fff0b0'; g.fillRect(40, -15, 5, 30);
+  g.fillStyle = '#c8321f'; g.fillRect(-20, -13, 8, 4);
+}
+
 export const icons = {
+  paper: make(g => { g.drawImage(paperCanvas(256), 0, 0, 256, 353, 24, 4, 80, 110); }),
+  flashlight: make(flashlight),
   battery: make(battery),
   fuel: make(fuel),
   apple: make(apple),
