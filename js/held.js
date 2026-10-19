@@ -77,8 +77,8 @@ export function buildKey() {
   bow.holes.push(hole);
   g.add(extrude(bow, .012, keyWoodMaterial()));
   g.rotation.x = 1.3 + Math.PI / 2; // a quarter turn around its length from before: blade on its edge, flat face to the side
-  g.userData.offset = [-0.1, 0.02, 0];
-  g.userData.scale = 1.7;
+  g.userData.offset = [0.04, 0.03, -0.03];
+  g.userData.scale = 1.25;
   return g;
 }
 
@@ -116,7 +116,7 @@ export function buildPliers() {
   // jaws pointing straight ahead: the drawing leans 25 degrees, so turn it back in its own plane
   g.userData.pose = [-Math.PI / 2 + 0.08, 0, 0.44];
   g.userData.roll = Math.PI / 2; // a quarter turn around its length: on its side // x, y, z of an 'YXZ' euler
-  g.userData.offset = [-0.1, 0.02, 0];
+  g.userData.offset = [-0.03, 0.035, -0.02];
   g.userData.scale = 1.1;
   return g;
 }

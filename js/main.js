@@ -184,10 +184,34 @@ function updateTarget() {
   target = t;
   useBtn.hidden = !t;
   dotEl.hidden = !!t;
+  placeHand(t);
   useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : t?.kind === 'board' ? 'Cutting board' : t?.locked ? 'Locked' : '';
   if (t) useBtn.setAttribute('aria-label', t.kind === 'hide' ? 'Hide' : label(t));
 }
 house.onHide = enterHide;
+
+// The hand cursor is small, and when it points at something to pick up it shrinks further and
+// sits on that item instead of the middle of the screen.
+const handPos = { x: innerWidth / 2, y: innerHeight / 2, size: 64 };
+const _v = new THREE.Vector3();
+function placeHand(t) {
+  let x = innerWidth / 2, y = innerHeight / 2, size = 64;
+  if (t?.kind === 'item') {
+    camera.updateMatrixWorld();
+    t.mesh.getWorldPosition(_v).project(camera);
+    if (_v.z < 1) {
+      x = Math.max(40, Math.min(innerWidth - 40, (_v.x * 0.5 + 0.5) * innerWidth));
+      y = Math.max(40, Math.min(innerHeight - 40, (-_v.y * 0.5 + 0.5) * innerHeight));
+      size = 38;
+    }
+  }
+  const k = t ? 0.45 : 1; // glide onto the item
+  handPos.x += (x - handPos.x) * k; handPos.y += (y - handPos.y) * k; handPos.size += (size - handPos.size) * k;
+  useBtn.style.left = handPos.x + 'px';
+  useBtn.style.top = handPos.y + 'px';
+  useBtn.style.width = useBtn.style.height = handPos.size + 'px';
+  useBtn.style.margin = `${-handPos.size / 2}px 0 0 ${-handPos.size / 2}px`;
+}
 
 // ---- the hand ---------------------------------------------------------------------
 // One item in hand at most. Picking something up needs a free hand; DROP puts it down.
