@@ -102,30 +102,128 @@ export function buildKnife() {
   return g;
 }
 
-// Shotgun: along +x (muzzle toward +x). The flash sits at the muzzle and is shown for a moment
-// when it fires.
+// ---- shotgun surfaces ----------------------------------------------------------------
+// Rough, worn wood and smooth blued steel, painted on canvases so the gun reads as old and used.
+let gunSkins = null;
+function gunTextures() {
+  if (gunSkins) return gunSkins;
+  let seed = 5;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const S = 256;
+  const mk = () => { const c = document.createElement('canvas'); c.width = c.height = S; return c; };
+
+  // wood: grain runs along u (the length of the stock)
+  const wc = mk(), w = wc.getContext('2d');
+  const wg = w.createLinearGradient(0, 0, 0, S);
+  wg.addColorStop(0, '#5b3a22'); wg.addColorStop(0.5, '#6f4628'); wg.addColorStop(1, '#4e311c');
+  w.fillStyle = wg; w.fillRect(0, 0, S, S);
+  for (let i = 0; i < 200; i++) {
+    const y = rnd() * S, amp = 1 + rnd() * 4, ph = rnd() * 6, len = 80 + rnd() * 176, x0 = rnd() * S;
+    w.strokeStyle = rnd() < 0.55 ? `rgba(30,16,8,${0.12 + rnd() * 0.25})` : `rgba(150,100,60,${0.08 + rnd() * 0.16})`;
+    w.lineWidth = 0.6 + rnd() * 1.8;
+    w.beginPath();
+    for (let x = 0; x <= len; x += 8) { const yy = y + Math.sin(x * 0.05 + ph) * amp; x === 0 ? w.moveTo(x0, yy) : w.lineTo(x0 + x, yy); }
+    w.stroke();
+  }
+  for (let i = 0; i < 4; i++) { // knots
+    const x = rnd() * S, y = rnd() * S, r = 5 + rnd() * 9;
+    const kg = w.createRadialGradient(x, y, 1, x, y, r);
+    kg.addColorStop(0, 'rgba(25,12,6,.9)'); kg.addColorStop(1, 'rgba(25,12,6,0)');
+    w.fillStyle = kg; w.beginPath(); w.ellipse(x, y, r * 1.8, r, 0, 0, 7); w.fill();
+  }
+  for (let i = 0; i < 60; i++) { // scratches and dings
+    const x = rnd() * S, y = rnd() * S, len = 6 + rnd() * 30, a = (rnd() - 0.5) * 1.2;
+    w.strokeStyle = `rgba(210,170,120,${0.15 + rnd() * 0.3})`; w.lineWidth = 0.7;
+    w.beginPath(); w.moveTo(x, y); w.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); w.stroke();
+  }
+  for (let i = 0; i < 40; i++) { // worn, pale patches where hands have rubbed the varnish
+    const x = rnd() * S, y = rnd() * S, r = 6 + rnd() * 20;
+    w.fillStyle = 'rgba(190,140,90,.07)'; w.beginPath(); w.ellipse(x, y, r * 2, r, 0, 0, 7); w.fill();
+  }
+  const wb = mk(), b = wb.getContext('2d');
+  b.fillStyle = '#8a8a8a'; b.fillRect(0, 0, S, S);
+  seed = 17;
+  for (let i = 0; i < 260; i++) {
+    const y = rnd() * S, x0 = rnd() * S, len = 40 + rnd() * 160;
+    b.strokeStyle = `rgba(${rnd() < 0.5 ? '25,25,25' : '200,200,200'},${0.25 + rnd() * 0.4})`; b.lineWidth = 0.8 + rnd() * 1.6;
+    b.beginPath(); b.moveTo(x0, y); b.lineTo(x0 + len, y + (rnd() - 0.5) * 4); b.stroke();
+  }
+  // rough steel: fine speckle (a parkerized finish)
+  const mc = mk(), m = mc.getContext('2d');
+  m.fillStyle = '#808080'; m.fillRect(0, 0, S, S);
+  for (let i = 0; i < 5000; i++) { const v = 90 + rnd() * 90; m.fillStyle = `rgb(${v},${v},${v})`; m.fillRect(rnd() * S, rnd() * S, 1.5, 1.5); }
+
+  const tex = c => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
+  const color = tex(wc); color.colorSpace = THREE.SRGBColorSpace;
+  gunSkins = { woodColor: color, woodBump: tex(wb), steelBump: tex(mc) };
+  return gunSkins;
+}
+
+function roundedBox(w, h, d, bevel) {
+  const s = new THREE.Shape();
+  s.moveTo(-w / 2, -h / 2); s.lineTo(w / 2, -h / 2); s.lineTo(w / 2, h / 2); s.lineTo(-w / 2, h / 2); s.closePath();
+  const geo = new THREE.ExtrudeGeometry(s, { depth: d - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 6 });
+  geo.translate(0, 0, -(d - bevel * 2) / 2);
+  return geo;
+}
+
+// Shotgun: along +x (muzzle toward +x). Smooth blued barrel and tube, a rough parkerized
+// receiver, and a worn wooden stock and pump. The flash sits at the muzzle and is shown for a
+// moment when it fires.
 export function buildShotgun() {
   const g = new THREE.Group();
-  const dark = new THREE.MeshPhongMaterial({ color: 0x2d3338, specular: 0x99aabb, shininess: 70 });
-  const metal = new THREE.MeshPhongMaterial({ color: 0x555d64, specular: 0xffffff, shininess: 80 });
-  const wood = new THREE.MeshPhongMaterial({ color: 0x6a4325, specular: 0x33221a, shininess: 25 });
-  const cyl = (r, len, mat, x, y) => {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 16), mat);
-    m.rotation.z = Math.PI / 2;
-    m.position.set(x, y, 0);
+  const skin = gunTextures();
+  const wood = new THREE.MeshPhongMaterial({
+    map: skin.woodColor, bumpMap: skin.woodBump, bumpScale: 2.2, specular: 0x2a1a10, shininess: 10,
+  });
+  const smooth = new THREE.MeshPhongMaterial({ color: 0x1c2227, specular: 0xd0e2f4, shininess: 150 }); // polished bluing
+  const rough = new THREE.MeshPhongMaterial({ color: 0x30363b, specular: 0x445566, shininess: 14, bumpMap: skin.steelBump, bumpScale: 1.2 });
+  const bright = new THREE.MeshPhongMaterial({ color: 0x9aa4ad, specular: 0xffffff, shininess: 110 });
+
+  const cyl = (r, len, mat, x, y, seg = 24) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg), mat);
+    m.rotation.z = Math.PI / 2; m.position.set(x, y, 0);
     return m;
   };
-  g.add(cyl(.0125, .62, dark, .28, .02));        // barrel
-  g.add(cyl(.0105, .46, metal, .2, -.008));      // magazine tube
-  const box = (w, h, d, mat, x, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, 0); return m; };
-  g.add(box(.2, .055, .042, dark, -.05, .006));  // receiver
-  g.add(box(.17, .042, .05, wood, .2, -.024));   // pump
-  g.add(box(.012, .02, .012, metal, .585, .038)); // front sight
-  const stock = extrude(polygon([[-.15, .028], [-.5, .005], [-.52, -.085], [-.34, -.06], [-.15, -.035]]), .04, wood);
-  g.add(stock);
-  const guard = new THREE.Mesh(new THREE.TorusGeometry(.016, .0025, 6, 12, Math.PI), dark);
-  guard.rotation.z = Math.PI; guard.position.set(-.09, -.026, 0);
-  g.add(guard);
+  g.add(cyl(.0125, .62, smooth, .28, .022));            // barrel
+  g.add(cyl(.0138, .022, smooth, .585, .022));          // muzzle ring
+  g.add(cyl(.0105, .46, smooth, .2, -.008));            // magazine tube
+  g.add(cyl(.0128, .016, bright, .43, -.008));          // tube cap
+  const rib = new THREE.Mesh(new THREE.BoxGeometry(.6, .004, .011), smooth); rib.position.set(.28, .0368, 0); g.add(rib);
+  const bead = new THREE.Mesh(new THREE.SphereGeometry(.0042, 10, 8), bright); bead.position.set(.585, .04, 0); g.add(bead);
+
+  const recv = new THREE.Mesh(roundedBox(.2, .056, .044, .006), rough); recv.position.set(-.05, .004, 0); g.add(recv);
+  const port = new THREE.Mesh(new THREE.BoxGeometry(.06, .02, .004), new THREE.MeshPhongMaterial({ color: 0x050607 }));
+  port.position.set(-.035, .012, .0225); g.add(port);
+  const port2 = port.clone(); port2.position.z = -.0225; g.add(port2);
+  const gate = new THREE.Mesh(new THREE.BoxGeometry(.05, .004, .03), bright); gate.position.set(-.06, -.026, 0); g.add(gate);
+
+  // pump: a smooth rounded grip with grooves
+  const pump = cyl(.0235, .17, wood, .2, -.03, 28); pump.scale.set(1, 1, 1.12); g.add(pump);
+  for (let k = 0; k < 6; k++) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.0238, .0016, 6, 20), new THREE.MeshPhongMaterial({ color: 0x2a1a10, shininess: 5 }));
+    ring.rotation.y = Math.PI / 2; ring.position.set(.135 + k * .026, -.03, 0); g.add(ring);
+  }
+
+  // stock: a curved profile with rounded edges
+  const st = new THREE.Shape();
+  st.moveTo(-.145, .032);
+  st.bezierCurveTo(-.3, .03, -.42, .018, -.505, -.004);
+  st.lineTo(-.52, -.095);
+  st.bezierCurveTo(-.4, -.075, -.28, -.055, -.145, -.032);
+  st.closePath();
+  const stockGeo = new THREE.ExtrudeGeometry(st, { depth: .03, bevelEnabled: true, bevelThickness: .008, bevelSize: .008, bevelSegments: 4, curveSegments: 16 });
+  stockGeo.translate(0, 0, -.015);
+  g.add(new THREE.Mesh(stockGeo, wood));
+  const pad = new THREE.Mesh(roundedBox(.016, .1, .046, .004), new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 8 }));
+  pad.position.set(-.526, -.047, 0); g.add(pad);
+
+  // trigger guard and trigger
+  const guard = new THREE.Mesh(new THREE.TorusGeometry(.018, .0028, 8, 16, Math.PI), smooth);
+  guard.rotation.z = Math.PI; guard.position.set(-.085, -.026, 0); g.add(guard);
+  const trig = new THREE.Mesh(new THREE.BoxGeometry(.004, .016, .004), bright); trig.position.set(-.085, -.034, 0); trig.rotation.z = 0.3; g.add(trig);
+  const swivel = new THREE.Mesh(new THREE.TorusGeometry(.005, .0012, 6, 10), bright); swivel.position.set(-.37, -.05, .02); g.add(swivel);
+
   // muzzle flash: a hot core and a longer cone, additive and always drawn on top
   const glow = { color: 0xffd27a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, side: THREE.DoubleSide };
   const flash = new THREE.Group();
