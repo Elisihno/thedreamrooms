@@ -632,8 +632,6 @@ export function buildHouse(renderer, seed = 1) {
       faceTex.wrapS = faceTex.wrapT = THREE.ClampToEdgeWrapping;
       const faceMat = new THREE.MeshLambertMaterial({ map: faceTex });
       const edgeMat = new THREE.MeshLambertMaterial({ color: 0x2a1c12 });
-      const brass = new THREE.MeshPhongMaterial({ color: 0xb89a32, specular: 0xffeeaa, shininess: 60 });
-      const knobGeo = new THREE.SphereGeometry(0.04, 10, 8);
       const T = 0.06;
       for (const k of doors) {
         if (exitKeys.has(k)) continue;
@@ -649,18 +647,12 @@ export function buildHouse(renderer, seed = 1) {
         const slab = new THREE.Mesh(new THREE.BoxGeometry(...dims), mats);
         slab.position.set(axis === 'x' ? dw / 2 : 0, DOOR_H / 2, axis === 'x' ? 0 : dw / 2);
         hinge.add(slab);
-        for (const s of [-1, 1]) {   // a knob on each side of the door
-          const knob = new THREE.Mesh(knobGeo, brass);
-          const u = dw - 0.1;
-          knob.position.set(axis === 'x' ? u : s * (T / 2 + 0.04), 1.0, axis === 'x' ? s * (T / 2 + 0.04) : u);
-          hinge.add(knob);
-        }
         const hw = dw / 2, t = 0.07;
         const col = axis === 'x'
           ? { minX: mid - hw, maxX: mid + hw, minZ: f - t, maxZ: f + t, level }
           : { minX: f - t, maxX: f + t, minZ: mid - hw, maxZ: mid + hw, level };
         const door = { kind: 'roomdoor', level, axis, f, mid, dw, hinge, col, open: false, t: 0, sign: 1 };
-        if (rand() < 0.35) door.open = true, door.t = 1, hinge.rotation.y = 1.65; else colliders.push(col);
+        colliders.push(col);   // every door starts closed
         door.target = { kind: 'roomdoor', door };
         slab.userData.roomDoor = door;
         pickables.push(slab);
