@@ -317,6 +317,7 @@ function updateLights(t, dt) {
 
 // ---- loop ---------------------------------------------------------------
 const clock = new THREE.Clock();
+let lastYaw = player.yaw, lastPitch = player.pitch;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
@@ -366,7 +367,9 @@ function frame() {
   house.update(dt, player);
   updateTarget();
 
-  heldView.update(t, dt, mag);
+  const yawRate = (player.yaw - lastYaw) / Math.max(dt, 1e-3), pitchRate = (player.pitch - lastPitch) / Math.max(dt, 1e-3);
+  lastYaw = player.yaw; lastPitch = player.pitch;
+  heldView.update(t, dt, { walk: mag, bobAccel: -64 * bob, yawRate, pitchRate });
 
   renderer.render(scene, camera);
   if (heldView.visible) {
@@ -380,3 +383,4 @@ function frame() {
 frame();
 
 window.__game = { player, house, camera, THREE }; // for debugging
+window.__held = heldView;
