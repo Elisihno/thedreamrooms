@@ -59,10 +59,14 @@
   #win.hatch { background: radial-gradient(ellipse at 50% 20%, #1c2c5a, #04070e 75%); color: #dfe8ff; }
   #win.car { background: linear-gradient(to top, #ff8a4c, #ffd39a 60%, #fff0cf); color: #3a2010; }
   #win.car button { background: rgba(58,32,16,.1); border-color: rgba(58,32,16,.4); color: #3a2010; }
-  #light { position: fixed; right: 16px; bottom: 110px; z-index: 2; width: 84px; padding: 8px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; font: 700 13px system-ui, sans-serif; letter-spacing: .06em; white-space: pre; line-height: 1.35; cursor: pointer; }
-  #light.on { border-color: #ffe9a0; background: rgba(255,233,160,.18); color: #ffe9a0; }
-  #light.low { color: #ff8a70; border-color: #ff8a70; }
-  #light[hidden] { display: none; }
+  /* the flashlight battery: a rough, worn bar with ragged edges, bottom left above the floor name */
+  #battery { position: fixed; z-index: 2; left: 16px; bottom: 40px; width: 120px; height: 16px; padding: 3px; background: #1a1612; clip-path: polygon(0 12%, 4% 0, 18% 8%, 33% 0, 51% 6%, 68% 0, 84% 9%, 100% 2%, 98% 55%, 100% 100%, 82% 92%, 64% 100%, 47% 93%, 29% 100%, 12% 91%, 0 100%, 2% 50%); pointer-events: none; opacity: .75; }
+  #battery.on { opacity: 1; }
+  #battFill { height: 100%; width: 100%; background: repeating-linear-gradient(95deg, #c79a3a 0 5px, #a77d28 5px 8px, #d6ac4e 8px 11px); clip-path: polygon(0 10%, 3% 0, 97% 12%, 100% 0, 100% 100%, 96% 88%, 4% 100%, 0 85%); filter: saturate(.6) brightness(.8); transition: width .5s linear; }
+  #battery.on #battFill { filter: none; }
+  #battery.low #battFill { background: repeating-linear-gradient(95deg, #b8412c 0 5px, #8a2a1a 5px 8px, #cf5a40 8px 11px); animation: lowflash 1s steps(2) infinite; }
+  @keyframes lowflash { 50% { opacity: .45; } }
+  #battery[hidden] { display: none; }
   #inv { position: fixed; top: 40px; right: 12px; display: flex; gap: 8px; pointer-events: none; }
   .slot { padding: 0; pointer-events: none; position: relative; width: 52px; height: 52px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
   .slot.sel { border-color: #fff; background: rgba(255,255,255,.22); box-shadow: 0 0 0 2px rgba(255,255,255,.5); }
@@ -76,10 +80,10 @@
 <div id="hide"></div>
 <div id="dot"></div>
 <div id="floor"></div>
+<div id="battery" hidden><div id="battFill"></div></div>
 <button id="use" type="button" aria-label="Use" hidden><img alt=""></button>
 <div id="inv"></div>
 <div id="toast" hidden></div>
-<button id="light" type="button" hidden>LIGHT</button>
 <button id="fire" type="button" hidden>FIRE</button>
 <button id="drop" type="button" hidden>DROP</button>
 <div id="win" hidden><div><h1 id="winTitle">You escaped</h1><p id="winTime"></p><button id="again" type="button">Play again</button></div></div>

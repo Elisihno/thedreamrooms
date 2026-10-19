@@ -138,7 +138,7 @@ addEventListener('keyup', e => keys.delete(e.code));
 const canvas = renderer.domElement;
 canvas.addEventListener('click', () => {
   if (matchMedia('(pointer: coarse)').matches) return;
-  if (document.pointerLockElement === canvas) { if (!target && selected === 'shotgun') fire(); else useTarget(); }
+  if (document.pointerLockElement === canvas) { if (target) useTarget(); else if (selected === 'shotgun') fire(); else toggleLight(); }
   else canvas.requestPointerLock?.();
 });
 addEventListener('mousemove', e => {
@@ -167,7 +167,7 @@ canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   for (const t of e.changedTouches) {
     const mode = t.clientX < innerWidth / 2 ? 'move' : 'look';
-    touches.set(t.identifier, { mode, sx: t.clientX, sy: t.clientY, lx: t.clientX, ly: t.clientY });
+    touches.set(t.identifier, { mode, sx: t.clientX, sy: t.clientY, lx: t.clientX, ly: t.clientY, t0: performance.now(), moved: false });
     if (mode === 'move') {
       stick.style.left = t.clientX - 70 + 'px';
       stick.style.top = t.clientY - 70 + 'px';
@@ -182,6 +182,7 @@ canvas.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
     const s = touches.get(t.identifier);
     if (!s) continue;
+    if (Math.hypot(t.clientX - s.sx, t.clientY - s.sy) > 12) s.moved = true;
     if (s.mode === 'move') {
       let dx = t.clientX - s.sx, dy = t.clientY - s.sy;
       const len = Math.hypot(dx, dy);
@@ -199,6 +200,7 @@ function endTouch(e) {
   for (const t of e.changedTouches) {
     const s = touches.get(t.identifier);
     if (s?.mode === 'move') { move.x = move.y = 0; stick.style.display = 'none'; }
+    if (s && !s.moved && performance.now() - s.t0 < 260 && e.type === 'touchend') toggleLight();   // a quick tap: flashlight on/off
     touches.delete(t.identifier);
   }
 }
@@ -343,12 +345,13 @@ function showToast(text, ms = 2600) {
 house.canTake = () => !selected;
 // ---- the flashlight: gear you own once you have found it, with a battery that drains -------------
 const gear = { flashlight: false, on: false, charge: 100 };
-const lightBtn = document.getElementById('light');
+const battEl = document.getElementById('battery'), battFill = document.getElementById('battFill');
+// the battery: a rough, worn bar at the bottom left; amber when the light is on, dull when off, red when low
 function renderLight() {
-  lightBtn.hidden = !gear.flashlight || wake.active || !!driving;
-  lightBtn.textContent = `LIGHT ${gear.on ? 'ON' : 'OFF'}\n${Math.round(gear.charge)}%`;
-  lightBtn.classList.toggle('on', gear.on);
-  lightBtn.classList.toggle('low', gear.charge < 20);
+  battEl.hidden = !gear.flashlight || wake.active || !!driving;
+  battFill.style.width = gear.charge.toFixed(1) + '%';
+  battEl.classList.toggle('on', gear.on);
+  battEl.classList.toggle('low', gear.charge < 20);
 }
 function toggleLight() {
   if (!gear.flashlight || wake.active || driving) return;
@@ -357,15 +360,13 @@ function toggleLight() {
   house.onSound('click');
   renderLight();
 }
-lightBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); toggleLight(); }, { passive: false });
-lightBtn.addEventListener('click', toggleLight);
 addEventListener('keydown', e => { if (e.code === 'KeyF' && !uiOpen) toggleLight(); });
 
 house.onPickup = type => {
   if (type === 'flashlight') {       // worn, not held: your hand stays free
     gear.flashlight = true; gear.on = true;
     renderLight();
-    showToast('Picked up the flashlight. It is on. Tap LIGHT to switch it.', 2600);
+    showToast('Picked up the flashlight. Click or tap the screen to switch it on and off.', 3000);
     chime();
     return;
   }
