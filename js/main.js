@@ -129,15 +129,16 @@ addEventListener('keydown', e => {
   if (uiOpen) { uiKey(e); return; }
   keys.add(e.code);
   if (e.code === 'KeyE') useTarget();
-  if (e.code === 'Space') { e.preventDefault(); fire(); }
+  if (e.code === 'Space') { e.preventDefault(); drop(); }   // PC: Space drops what you hold
   if (e.code === 'KeyQ') drop();
+  if (e.code === 'KeyR') fire();                             // PC: R fires (or click when nothing is in reach)
 });
 addEventListener('keyup', e => keys.delete(e.code));
 
 const canvas = renderer.domElement;
 canvas.addEventListener('click', () => {
   if (matchMedia('(pointer: coarse)').matches) return;
-  if (document.pointerLockElement === canvas) useTarget();
+  if (document.pointerLockElement === canvas) { if (!target && selected === 'shotgun') fire(); else useTarget(); }
   else canvas.requestPointerLock?.();
 });
 addEventListener('mousemove', e => {
