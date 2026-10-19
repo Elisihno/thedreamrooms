@@ -77,6 +77,7 @@ export function buildKey() {
   bow.holes.push(hole);
   g.add(extrude(bow, .012, keyWoodMaterial()));
   g.rotation.x = 1.3; // roll so the flat face shows; the tip stays straight ahead
+  g.userData.yaw = Math.PI / 2; // turned a quarter turn: tip to the left
   g.userData.offset = [-0.1, 0.02, 0];
   g.userData.scale = 1.7;
   return g;
@@ -114,7 +115,7 @@ export function buildPliers() {
   g.add(new THREE.Mesh(geo, [faces, edges]));
   // held like a card tilted toward you: jaws point forward and up, handles curve back toward you
   // jaws pointing straight ahead: the drawing leans 25 degrees, so turn it back in its own plane
-  g.userData.pose = [-Math.PI / 2 + 0.08, 0, 0.44]; // x, y, z of an 'YXZ' euler
+  g.userData.pose = [-Math.PI / 2 + 0.08, Math.PI / 2, 0.44]; // y = 90 degrees: tip to the left // x, y, z of an 'YXZ' euler
   g.userData.offset = [-0.1, 0.02, 0];
   g.userData.scale = 1.1;
   return g;
