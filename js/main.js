@@ -186,7 +186,7 @@ function updateTarget() {
 house.onHide = enterHide;
 
 // ---- inventory --------------------------------------------------------------
-const inv = { key: 1, pliers: 1 }; // the player starts with one of each
+const inv = { key: 0, pliers: 0 }; // everything has to be found
 const invEl = document.getElementById('inv');
 const toastEl = document.getElementById('toast');
 let toastTimer = 0;

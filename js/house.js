@@ -12,7 +12,7 @@ const LEVELS = [
     roles: { A: 'storage', B: 'storage', C: 'storage', D: 'storage', E: 'storage' },
     // the power box on the south wall; the hatch in the east wall is the second way out
     fixed: [{ item: 'circuitbox', cell: [5, 5], side: 'S' }],
-    exits: [{ id: 'hatch', edge: ['v', 9, 4], style: 'metal', locks: [['electric', 1.3], ['padlock', 0.95]] }],
+    exits: [{ id: 'hatch', edge: ['v', 9, 4], style: 'metal', locks: [['electric', 1.4], ['padlock', 1.05], ['padlock', 0.7]] }],
     walls: [0, 1, 4, 6], floors: [1, 5, 6],
     map: [
       'AAAABBBBB',
@@ -32,8 +32,8 @@ const LEVELS = [
       { item: 'livingset', cell: [0, 0] },
       { item: 'livingset', cell: [7, 2] },
     ],
-    // the front door, in the south wall of the hall: two padlocks
-    exits: [{ id: 'front', edge: ['h', 4, 6], style: 'wood', locks: [['padlock', 1.0], ['padlock', 1.45]] }],
+    // the front door, in the south wall of the hall: three padlocks
+    exits: [{ id: 'front', edge: ['h', 4, 6], style: 'wood', locks: [['padlock', 1.5], ['padlock', 1.1], ['padlock', 0.7]] }],
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
       'PPPQQQRRR',
@@ -276,7 +276,7 @@ export function buildHouse(renderer, seed = 1) {
   stairs.forEach(buildStairs);
   placeLoot();
 
-  // One pair of cutting pliers in a single drawer, and one key per storey, preferably in a chest.
+  // One pair of cutting pliers in a single drawer, one key per storey (preferably in a chest), and a spare key.
   function placeLoot() {
     const loader = new THREE.TextureLoader();
     const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 } };
@@ -306,6 +306,9 @@ export function buildHouse(renderer, seed = 1) {
       const chests = here.filter(p => p.kind === 'flap');
       place('key', pick(chests.length ? chests : here));
     }
+    // one spare key, anywhere, so the front door (3 keys) and the hatch (2 keys) can both be opened
+    const spare = holders.filter(p => !p.hasItem);
+    if (spare.length) place('key', pick(spare));
     pickables.push(...partMeshes, ...itemMeshes);
   }
 
@@ -455,7 +458,7 @@ export function buildHouse(renderer, seed = 1) {
 
 
     // A door in an outer wall, hinged on one side, with its locks on the inside face. The
-    // opening is blocked until it is open; an EXIT sign above it glows in the dark.
+    // opening is blocked until it is open.
     function buildExit(ex) {
       const [dir, ec, er] = ex.edge;
       const axis = dir === 'h' ? 'x' : 'z';
@@ -494,19 +497,6 @@ export function buildHouse(renderer, seed = 1) {
         }
         hinge.add(lockGroup);
       }
-
-      // EXIT sign on the inner face, above the door
-      const cv = document.createElement('canvas');
-      cv.width = 256; cv.height = 64;
-      const cx = cv.getContext('2d');
-      cx.fillStyle = '#0d5a2a'; cx.fillRect(0, 0, 256, 64);
-      cx.strokeStyle = '#7dffa8'; cx.lineWidth = 4; cx.strokeRect(4, 4, 248, 56);
-      cx.fillStyle = '#c8ffd9'; cx.font = 'bold 44px system-ui, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
-      cx.fillText('EXIT', 128, 34);
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.14), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
-      sign.position.set(axis === 'x' ? mid : f + inn[0] * (HT + 0.012), Y + DOOR_H + 0.22, axis === 'x' ? f + inn[1] * (HT + 0.012) : mid);
-      sign.rotation.y = Math.atan2(inn[0], inn[1]);
-      group.add(sign);
 
       const hw = DOOR_W / 2, t = 0.1;
       const col = axis === 'x'
