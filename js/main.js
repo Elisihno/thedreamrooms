@@ -137,6 +137,8 @@ addEventListener('resize', () => {
 // ---- using things -----------------------------------------------------------
 // Looking at a drawer, door or lid shows the Use button; E or a click does the same.
 const useBtn = document.getElementById('use');
+const dotEl = document.getElementById('dot');
+useBtn.querySelector('img').src = globalThis.__DR_TEX?.ui_hand ?? 'assets/textures/ui_hand.png';
 let target = null;
 const NAMES = { key: 'key', pliers: 'cutting pliers' };
 const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.open ? 'Close' : 'Open');
@@ -147,7 +149,8 @@ function updateTarget() {
   const t = house.pick(camera, player);
   target = t;
   useBtn.hidden = !t;
-  if (t) useBtn.textContent = label(t);
+  dotEl.hidden = !!t;
+  if (t) useBtn.setAttribute('aria-label', label(t));
 }
 
 // ---- inventory --------------------------------------------------------------
@@ -314,7 +317,6 @@ function updateLights(t, dt) {
 
 // ---- loop ---------------------------------------------------------------
 const clock = new THREE.Clock();
-let lastYaw = player.yaw, lastPitch = player.pitch;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
@@ -364,9 +366,7 @@ function frame() {
   house.update(dt, player);
   updateTarget();
 
-  const yawRate = (player.yaw - lastYaw) / Math.max(dt, 1e-3), pitchRate = (player.pitch - lastPitch) / Math.max(dt, 1e-3);
-  lastYaw = player.yaw; lastPitch = player.pitch;
-  heldView.update(t, dt, mag, yawRate, pitchRate);
+  heldView.update(t, dt, mag);
 
   renderer.render(scene, camera);
   if (heldView.visible) {

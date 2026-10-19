@@ -11,8 +11,12 @@
   #knob { position: absolute; left: 45px; top: 45px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.35); }
   #floor { position: fixed; left: 16px; bottom: 16px; color: rgba(255,255,255,.55); font: 600 13px system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; pointer-events: none; }
   #dot { position: fixed; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: rgba(255,255,255,.45); pointer-events: none; }
-  #use { position: fixed; right: 16px; bottom: 16px; padding: 16px 26px; border-radius: 12px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.16); color: #fff; font: 600 16px system-ui, sans-serif; z-index: 2; }
-  #use[hidden] { display: none; }
+  /* the hand cursor: appears at the crosshair when you can use what you are looking at */
+  #use { position: fixed; left: 50%; top: 50%; width: 84px; height: 84px; margin: -42px 0 0 -42px; padding: 0; border: 0; background: none; z-index: 2; cursor: pointer; animation: reach .9s ease-in-out infinite alternate; }
+  #use img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 5px rgba(0,0,0,.7)); pointer-events: none; }
+  #use[hidden], #dot[hidden] { display: none; }
+  @keyframes reach { from { transform: scale(1); } to { transform: scale(1.08); } }
+  @media (prefers-reduced-motion: reduce) { #use { animation: none; } }
   #inv { position: fixed; top: 40px; right: 12px; display: flex; gap: 8px; pointer-events: none; }
   .slot { padding: 0; cursor: pointer; pointer-events: auto; position: relative; width: 52px; height: 52px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
   .slot.sel { border-color: #fff; background: rgba(255,255,255,.22); box-shadow: 0 0 0 2px rgba(255,255,255,.5); }
@@ -27,7 +31,7 @@
 <div id="hint">Left side: move &middot; Right side: look &middot; (Desktop: WASD, click to look)</div>
 <div id="dot"></div>
 <div id="floor"></div>
-<button id="use" hidden>Open</button>
+<button id="use" type="button" aria-label="Use" hidden><img alt=""></button>
 <div id="inv"></div>
 <div id="toast" hidden></div>
 <div id="stick"><div id="knob"></div></div>

@@ -19,7 +19,7 @@ function polygon(points) {
   return s;
 }
 
-function buildKey() {
+export function buildKey() {
   const g = new THREE.Group();
   // blade with a sloped tip and teeth along the lower edge
   g.add(extrude(polygon([
@@ -36,27 +36,36 @@ function buildKey() {
   return g;
 }
 
-function buildPliers() {
+export function buildPliers() {
   const g = new THREE.Group();
-  const green = new THREE.MeshPhongMaterial({ color: 0x3f8f6a, specular: 0x224433, shininess: 30 });
+  const green = new THREE.MeshPhongMaterial({ color: 0x3f8f6a, specular: 0x335544, shininess: 40 });
+  const tube = (pts, r, mat) => new THREE.Mesh(
+    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([x, y]) => new THREE.Vector3(x, y, 0))), 28, r, 10), mat);
   for (const s of [-1, 1]) {
-    const jaw = extrude(polygon([[0, 0], [.075, s * .004], [.084, s * .014], [.02, s * .017], [0, s * .01]]), .008, steel());
-    jaw.rotation.z = s * .14; // a little open, like the picture
-    g.add(jaw);
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-.005, s * .01, 0), new THREE.Vector3(-.04, s * .04, 0), new THREE.Vector3(-.095, s * .062, 0),
-      new THREE.Vector3(-.15, s * .05, 0), new THREE.Vector3(-.185, s * .02, 0),
-    ]);
-    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 30, .0075, 8), green));
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(.0085, 10, 8), green);
-    cap.position.copy(curve.getPoint(1));
-    g.add(cap);
+    // one half of the head: jaw with a cutting edge, rounded body around the pivot
+    const half = polygon([[-.035, 0], [-.035, s * .02], [-.005, s * .027], [.03, s * .026], [.07, s * .016], [.098, s * .004], [.098, 0]]);
+    const jaw = extrude(half, .009, steel());
+    jaw.position.z = -s * .005;
+    const open = new THREE.Group();   // each half swings a little open about the pivot
+    open.rotation.z = s * .2;
+    open.add(jaw);
+    g.add(open);
+    // steel arm, then a thick green rubber grip that curves outward and back in
+    const arm = [[-.03, s * .01], [-.045, s * .02], [-.06, s * .028]];
+    const grip = [[-.06, s * .028], [-.1, s * .05], [-.14, s * .063], [-.18, s * .06], [-.205, s * .043]];
+    const armMesh = tube(arm, .0055, steel());
+    const gripMesh = tube(grip, .0105, green);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(.0105, 12, 10), green);
+    cap.position.set(...grip[grip.length - 1], 0);
+    for (const m of [armMesh, gripMesh, cap]) { m.rotation.z = 0; open.add(m); }
   }
-  const pivot = new THREE.Mesh(new THREE.CylinderGeometry(.016, .016, .014, 16), steel());
-  pivot.rotation.x = Math.PI / 2;
-  g.add(pivot);
-  g.position.x = .1; // keep the handles away from the camera
-  g.rotation.x = 1.2;
+  const bolt = new THREE.Mesh(new THREE.CylinderGeometry(.011, .011, .02, 16), steel());
+  bolt.rotation.x = Math.PI / 2;
+  g.add(bolt);
+  g.position.x = .16; // keep the handles away from the camera
+  g.rotation.x = 0.2; // a slight roll, so the top handle shows
+  g.userData.scale = 0.8;
+  g.userData.yaw = 0.42; // held pointing forward and a little toward the middle, so the side shows
   return g;
 }
 
@@ -73,8 +82,8 @@ export function createHeld() {
   const models = { key: buildKey(), pliers: buildPliers() };
   for (const m of Object.values(models)) {
     const holder = new THREE.Group();
-    holder.rotation.y = Math.PI / 2; // tip toward -z
-    holder.scale.setScalar(1.25);
+    holder.rotation.y = Math.PI / 2 + (m.userData.yaw ?? 0); // tip toward -z
+    holder.scale.setScalar(m.userData.scale ?? 1.25);
     holder.add(m);
     holder.visible = false;
     rig.add(holder);
@@ -82,7 +91,10 @@ export function createHeld() {
   }
 
   const REST = new THREE.Vector3(0.12, -0.075, -0.38);
-  let shown = null, raise = 1, lookX = 0, lookY = 0, walkSmooth = 0;
+  let shown = null, raise = 1, walkSmooth = 0;
+  // smooth pseudo-random wobble: three sines at unrelated speeds, roughly -1..1
+  const wobble = (t, f1, f2, f3, seed) =>
+    (Math.sin(t * f1 + seed) + 0.6 * Math.sin(t * f2 + 2 * seed) + 0.4 * Math.sin(t * f3 + 3 * seed)) / 2;
 
   return {
     scene, camera,
@@ -94,27 +106,22 @@ export function createHeld() {
       shown = type;
     },
     resize(aspect) { camera.aspect = aspect; camera.updateProjectionMatrix(); },
-    // walk: 0..1 how hard the player is moving; yawRate/pitchRate: camera turn speed in rad/s
-    update(t, dt, walk, yawRate, pitchRate) {
+    // walk: 0..1 how hard the player is moving. The hand is nearly still when standing and
+    // shakes a little while walking, like holding a key in real life.
+    update(t, dt, walk) {
       if (!this.visible) return;
-      const k = Math.min(1, dt * 8);
       walkSmooth += (walk - walkSmooth) * Math.min(1, dt * 6);
       raise = Math.min(1, raise + dt * 4);
-      // the hand trails the view a little when turning
-      lookY += (Math.max(-0.3, Math.min(0.3, -yawRate * 0.05)) - lookY) * k;
-      lookX += (Math.max(-0.3, Math.min(0.3, -pitchRate * 0.05)) - lookX) * k;
-
-      const w = walkSmooth, idle = 1 - 0.6 * w;
-      const tremor = (f, a) => Math.sin(t * f) * a;
+      const a = 0.12 + 0.88 * walkSmooth;
       rig.position.set(
-        REST.x + Math.sin(t * 4) * 0.012 * w + tremor(1.7, 0.0015) * idle,
-        REST.y + Math.sin(t * 8) * 0.014 * w + tremor(1.3, 0.0015) * idle - (1 - raise) * 0.25,
-        REST.z + Math.sin(t * 8 + 1) * 0.01 * w,
+        REST.x + wobble(t, 13.1, 7.3, 19.7, 0) * 0.0035 * a,
+        REST.y + wobble(t, 11.7, 6.1, 17.3, 1) * 0.0035 * a - (1 - raise) * 0.25,
+        REST.z + wobble(t, 9.3, 5.2, 15.1, 2) * 0.0025 * a,
       );
       rig.rotation.set(
-        lookX + Math.sin(t * 8 + 1) * 0.05 * w + tremor(7.1, 0.006) * (0.4 + w) + tremor(1.1, 0.004),
-        lookY + Math.sin(t * 4.3) * 0.035 * w,
-        Math.sin(t * 4 + 0.5) * 0.07 * w + tremor(11, 0.02) * w + tremor(1.9, 0.005),
+        wobble(t, 12.3, 6.7, 18.9, 3) * 0.02 * a,
+        wobble(t, 10.9, 5.7, 16.1, 4) * 0.02 * a,
+        wobble(t, 14.1, 8.3, 21.3, 5) * 0.03 * a,
       );
     },
   };
