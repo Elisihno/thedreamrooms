@@ -249,6 +249,7 @@ export function buildHouse(renderer, seed = 1) {
   const parts = [];      // movable furniture parts (drawers, doors, lids)
   const partMeshes = [];
   const pickables = []; // everything the crosshair can land on
+  const hideSpots = [];
   const items = [];      // things to find in drawers and chests
   const itemMeshes = [];
   const partMat = new THREE.MeshLambertMaterial({ map: tex.furniture[0], vertexColors: true });
@@ -563,6 +564,20 @@ export function buildHouse(renderer, seed = 1) {
       };
       item.build(b, pal, mv);
 
+      if (item.hide) {
+        // an invisible box over the table or bed: look at it to hide underneath
+        const hd = item.hide, [wx, wz] = xf(hd.x, hd.z);
+        const proxy = new THREE.Mesh(
+          new THREE.BoxGeometry(swap ? hd.d : hd.w, hd.h, swap ? hd.w : hd.d), new THREE.MeshBasicMaterial({ visible: false }));
+        proxy.position.set(wx, Y + hd.h / 2, wz);
+        group.add(proxy);
+        const spot = { x: wx, z: wz, level, eye: hd.eye };
+        spot.target = { kind: 'hide', spot };
+        proxy.userData.hide = spot;
+        pickables.push(proxy);
+        hideSpots.push(spot);
+      }
+
       for (const [w, d, lx, lz] of item.colliders ?? [[item.w, item.d, 0, item.d / 2]]) {
         const [ax, az] = xf(lx - w / 2, lz - d / 2), [bx, bz] = xf(lx + w / 2, lz + d / 2);
         colliders.push({ minX: Math.min(ax, bx), maxX: Math.max(ax, bx), minZ: Math.min(az, bz), maxZ: Math.max(az, bz), level });
@@ -607,7 +622,9 @@ export function buildHouse(renderer, seed = 1) {
     onThud: null,
     onUse: null,
     onPickup: null,
+    onHide: null,
     items,
+    hideSpots,
     // what the camera is looking at within reach: an item lying in an opened drawer or
     // chest (preferred), otherwise a movable part
     pick(camera, player) {
@@ -617,13 +634,16 @@ export function buildHouse(renderer, seed = 1) {
         const item = hit.object.userData.item;
         if (item) {
           if (item.part.open && item.part.t > 0.85 && item.part.level === player.level) return item;
-        } else if (!part && hit.object.userData.part.level === player.level) {
-          part = hit.object.userData.part;
+        } else if (!part) {
+          const spot = hit.object.userData.hide;
+          if (spot) { if (spot.level === player.level) part = spot.target; }
+          else if (hit.object.userData.part.level === player.level) part = hit.object.userData.part;
         }
       }
       return part;
     },
     use(target) {
+      if (target.kind === 'hide') { api.onHide?.(target.spot); return; }
       if (target.kind === 'item') {
         target.mesh.removeFromParent();
         pickables.splice(pickables.indexOf(target.mesh), 1);

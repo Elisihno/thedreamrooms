@@ -6,6 +6,7 @@ import * as THREE from '../vendor/three.module.min.js';
 //
 //   b(w, h, d, x, y0, zc, material)     static box: w wide, h tall, d deep, centred at (x, zc), bottom at y0
 //   b.cyl(r, h, x, y0, zc, material)    static cylinder
+//   item.hide = {x, z, w, d, h, eye}   a spot to hide in: box (item-local) the player looks at, camera height under it
 //   mv.drawer(boxes, dist)              part that slides out along +z when used
 //   mv.door(boxes, hx, hz, side)        part hinged on a vertical axis at (hx, hz); side +1: hinge on the left
 //   mv.flap(boxes, hy, hz, angle, loot) part hinged on a horizontal axis at (y=hy, z=hz); loot: item-local
@@ -25,12 +26,14 @@ const chairAt = (b, p, cx, cz, dx, dz) => {
 const handle = (p, x, y, z, w = .16) => [w, .03, .03, x, y, z, p.dark];
 
 export const ITEMS = {
-  bed: { w: 1.5, d: 1.95, tall: false, build(b, p) {
-    b(1.5, .3, 1.95, 0, .1, .975, p.body);
-    b(1.4, .18, 1.85, 0, .4, 1.0, p.light);
-    b(.5, .12, .35, -.35, .58, .3, p.light);
-    b(.5, .12, .35, .35, .58, .3, p.light);
-    b(1.42, .05, 1.1, 0, .58, 1.35, p.cloth);
+  // the frame stands on legs, leaving 40 cm underneath to hide in
+  bed: { w: 1.5, d: 1.95, tall: false, hide: { x: 0, z: .975, w: 1.5, d: 1.95, h: .85, eye: .26 }, build(b, p) {
+    for (const dx of [-.7, .7]) for (const dz of [.06, 1.89]) b(.07, .4, .07, dx, 0, dz, p.dark2);
+    b(1.5, .14, 1.95, 0, .4, .975, p.body);
+    b(1.4, .18, 1.85, 0, .54, 1.0, p.light);
+    b(.5, .12, .35, -.35, .72, .3, p.light);
+    b(.5, .12, .35, .35, .72, .3, p.light);
+    b(1.42, .05, 1.1, 0, .72, 1.35, p.cloth);
     b(1.5, .95, .08, 0, .1, .04, p.body);
   } },
   nightstand: { w: .45, d: .4, tall: false, build(b, p, mv) {
@@ -45,7 +48,7 @@ export const ITEMS = {
       mv.drawer([[1.04, .2, .42, 0, y + .01, .3, p.dark2], [1.08, .22, .02, 0, y, .51, p.dark2], handle(p, 0, y + .08, .54)], .34);
     }
   } },
-  tablechairs: { w: 1.4, d: 1.6, tall: false, center: true, build(b, p) {
+  tablechairs: { w: 1.4, d: 1.6, tall: false, center: true, hide: { x: 0, z: 0, w: 1.4, d: .85, h: .8, eye: .5 }, build(b, p) {
     b(1.4, .06, .85, 0, .72, 0, p.body);
     for (const dx of [-.62, .62]) for (const dz of [-.35, .35]) b(.07, .72, .07, dx, 0, dz, p.dark2);
     for (const x of [-.35, .35]) {
@@ -53,7 +56,7 @@ export const ITEMS = {
       chairAt(b, p, x, .55, 0, -1);
     }
   }, colliders: [[1.4, .85, 0, 0], [.5, .5, -.35, -.55], [.5, .5, .35, -.55], [.5, .5, -.35, .55], [.5, .5, .35, .55]] },
-  roundtable: { w: 1.1, d: 2.2, tall: false, center: true, build(b, p) {
+  roundtable: { w: 1.1, d: 2.2, tall: false, center: true, hide: { x: 0, z: 0, w: 1.1, d: 1.1, h: .8, eye: .5 }, build(b, p) {
     b.cyl(.55, .05, 0, .72, 0, p.body);
     b.cyl(.09, .72, 0, 0, 0, p.dark2);
     b.cyl(.3, .05, 0, 0, 0, p.dark2);

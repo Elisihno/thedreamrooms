@@ -30,6 +30,21 @@ scene.add(house.group);
 const player = { pos: house.spawn.clone(), y: house.spawn.y, level: house.spawnLevel, yaw: 0, pitch: 0, radius: 0.3 };
 const EYE = 1.6, WALK = 2.2;
 
+// Hiding under a table or bed: the view slides in underneath, the way out is the hand cursor
+// (or pushing the stick). player.hidden is true meanwhile.
+const hide = { spot: null, amt: 0, dir: 0, entry: { x: 0, z: 0 }, yawOut: 0, pushing: 0 };
+const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+function enterHide(spot) {
+  if (hide.spot) return;
+  hide.spot = spot; hide.amt = 0; hide.dir = 1; hide.pushing = 0;
+  hide.entry.x = player.pos.x; hide.entry.z = player.pos.z;
+  hide.yawOut = Math.atan2(-(hide.entry.x - spot.x), -(hide.entry.z - spot.z)); // look back out the way you came
+  player.hidden = true;
+}
+function leaveHide() {
+  if (hide.spot && hide.amt > 0.5) hide.dir = -1;
+}
+
 function collide(x, z) {
   for (const b of house.colliders) {
     if (b.level !== player.level) continue;
@@ -52,6 +67,7 @@ function collide(x, z) {
 }
 
 const floorLabel = document.getElementById('floor');
+const vignette = document.getElementById('hide');
 let shownLevel = -1;
 
 // ---- input --------------------------------------------------------------
@@ -76,6 +92,10 @@ addEventListener('mousemove', e => {
 function look(dx, dy) {
   player.yaw -= dx;
   player.pitch = Math.max(-1.3, Math.min(1.3, player.pitch - dy));
+  if (hide.spot && hide.amt > 0.95) { // only peek around from underneath
+    player.yaw = hide.yawOut + Math.max(-1.25, Math.min(1.25, angleDiff(player.yaw, hide.yawOut)));
+    player.pitch = Math.max(-0.6, Math.min(0.6, player.pitch));
+  }
 }
 
 // touch: left half = move stick, right half = look
@@ -143,15 +163,27 @@ let target = null;
 const NAMES = { key: 'key', pliers: 'cutting pliers' };
 const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.open ? 'Close' : 'Open');
 function useTarget() {
+  if (hide.spot) { leaveHide(); return; }
   if (target) house.use(target);
 }
 function updateTarget() {
+  if (hide.spot) { // the hand stays up while hiding, to come out
+    const show = hide.amt > 0.9 && hide.dir > 0;
+    target = null;
+    useBtn.hidden = !show;
+    dotEl.hidden = show;
+    useBtn.dataset.label = 'Come out';
+    useBtn.setAttribute('aria-label', 'Come out');
+    return;
+  }
   const t = house.pick(camera, player);
   target = t;
   useBtn.hidden = !t;
   dotEl.hidden = !!t;
-  if (t) useBtn.setAttribute('aria-label', label(t));
+  useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : '';
+  if (t) useBtn.setAttribute('aria-label', t.kind === 'hide' ? 'Hide' : label(t));
 }
+house.onHide = enterHide;
 
 // ---- inventory --------------------------------------------------------------
 const inv = { key: 1, pliers: 1 }; // the player starts with one of each
@@ -328,7 +360,19 @@ function frame() {
   if (keys.has('KeyA') || keys.has('ArrowLeft')) fz -= 1;
   if (keys.has('KeyD') || keys.has('ArrowRight')) fz += 1;
   const mag = Math.min(1, Math.hypot(fx, fz));
-  if (mag > 0.01) {
+
+  let hideE = 0;
+  if (hide.spot) {
+    hide.amt = Math.max(0, Math.min(1, hide.amt + hide.dir * dt / 0.5));
+    hideE = hide.amt * hide.amt * (3 - 2 * hide.amt);
+    player.pos.x = hide.entry.x + (hide.spot.x - hide.entry.x) * hideE;
+    player.pos.z = hide.entry.z + (hide.spot.z - hide.entry.z) * hideE;
+    if (hide.dir > 0 && hide.amt < 1) player.yaw += angleDiff(hide.yawOut, player.yaw) * Math.min(1, dt * 5);
+    // pushing the stick crawls you back out
+    if (hide.amt >= 1 && mag > 0.6) { hide.pushing += dt; if (hide.pushing > 0.25) leaveHide(); } else hide.pushing = 0;
+    if (hide.dir < 0 && hide.amt <= 0) { hide.spot = null; hide.dir = 0; player.hidden = false; }
+  }
+  if (mag > 0.01 && !hide.spot) {
     const n = Math.hypot(fx, fz);
     fx /= n; fz /= n;
     const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
@@ -359,8 +403,10 @@ function frame() {
     floorLabel.textContent = house.levels[shownLevel];
   }
 
-  const bob = mag > 0.01 ? Math.sin(t * 8) * 0.03 * mag : 0;
-  camera.position.set(player.pos.x, player.y + EYE + bob, player.pos.z);
+  const bob = mag > 0.01 && !hide.spot ? Math.sin(t * 8) * 0.03 * mag : 0;
+  const eye = hide.spot ? EYE + (hide.spot.eye - EYE) * hideE : EYE;
+  vignette.style.opacity = (hideE * 0.95).toFixed(3);
+  camera.position.set(player.pos.x, player.y + eye + bob, player.pos.z);
   camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
 
   updateLights(t, dt);
@@ -369,7 +415,7 @@ function frame() {
 
   const yawRate = (player.yaw - lastYaw) / Math.max(dt, 1e-3), pitchRate = (player.pitch - lastPitch) / Math.max(dt, 1e-3);
   lastYaw = player.yaw; lastPitch = player.pitch;
-  heldView.update(t, dt, { walk: mag, bobAccel: -64 * bob, yawRate, pitchRate });
+  heldView.update(t, dt, { walk: hide.spot ? 0 : mag, bobAccel: -64 * bob, yawRate, pitchRate });
 
   renderer.render(scene, camera);
   if (heldView.visible) {

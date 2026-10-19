@@ -17,6 +17,9 @@
   #use[hidden], #dot[hidden] { display: none; }
   @keyframes reach { from { transform: scale(1); } to { transform: scale(1.08); } }
   @media (prefers-reduced-motion: reduce) { #use { animation: none; } }
+  #use::after { content: attr(data-label); position: absolute; left: 50%; top: 100%; transform: translateX(-50%); white-space: nowrap; color: #fff; font: 600 13px system-ui, sans-serif; text-shadow: 0 1px 4px #000; }
+  /* dark edges while hiding */
+  #hide { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,.9) 100%); }
   #inv { position: fixed; top: 40px; right: 12px; display: flex; gap: 8px; pointer-events: none; }
   .slot { padding: 0; cursor: pointer; pointer-events: auto; position: relative; width: 52px; height: 52px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
   .slot.sel { border-color: #fff; background: rgba(255,255,255,.22); box-shadow: 0 0 0 2px rgba(255,255,255,.5); }
@@ -29,6 +32,7 @@
 </head>
 <body>
 <div id="hint">Left side: move &middot; Right side: look &middot; (Desktop: WASD, click to look)</div>
+<div id="hide"></div>
 <div id="dot"></div>
 <div id="floor"></div>
 <button id="use" type="button" aria-label="Use" hidden><img alt=""></button>
