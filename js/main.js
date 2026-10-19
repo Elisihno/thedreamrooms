@@ -191,7 +191,9 @@ house.onHide = enterHide;
 
 // ---- the hand ---------------------------------------------------------------------
 // One item in hand at most. Picking something up needs a free hand; DROP puts it down.
-let ammo = 3;  // shells loaded in the shotgun; the test start gives it 3
+// Test mode (open the page with #test, or ?test) loads the shotgun with 3 shells. Normally it starts empty.
+const testMode = location.hash === '#test' || new URLSearchParams(location.search).has('test');
+let ammo = testMode ? 3 : 0;  // shells loaded in the shotgun
 const invEl = document.getElementById('inv');
 const toastEl = document.getElementById('toast');
 let toastTimer = 0;
@@ -274,7 +276,7 @@ house.onLoad = () => {
 };
 // a key is used up when it opens a lock; an apple when it is put on the board
 house.onConsume = type => { if (selected === type) setHand(null); };
-setHand('shotgun'); // test start: begin with the shotgun in hand, loaded with 3 shells
+setHand('shotgun'); // test start: begin with the shotgun in hand
 
 // ---- keypad and note screens ------------------------------------------------------
 let uiOpen = false;
