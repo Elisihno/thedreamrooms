@@ -72,6 +72,21 @@ export function buildPliers() {
   return g;
 }
 
+// Apple: a squashed red sphere with a stem and a leaf.
+export function buildApple() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.05, 24, 18), new THREE.MeshPhongMaterial({ color: 0xc02a24, specular: 0x886666, shininess: 55 }));
+  body.scale.y = 0.9;
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.004, 0.03, 6), new THREE.MeshPhongMaterial({ color: 0x4a3320 }));
+  stem.position.y = 0.05;
+  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), new THREE.MeshPhongMaterial({ color: 0x3f8f45 }));
+  leaf.scale.set(1.6, 0.25, 0.8);
+  leaf.position.set(0.016, 0.062, 0);
+  g.add(body, stem, leaf);
+  g.userData.scale = 0.8;
+  return g;
+}
+
 export function createHeld() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 5);
@@ -82,7 +97,7 @@ export function createHeld() {
 
   const rig = new THREE.Group(); // the hand: this is what moves
   scene.add(rig);
-  const models = { key: buildKey(), pliers: buildPliers() };
+  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple() };
   for (const m of Object.values(models)) {
     const holder = new THREE.Group();
     holder.rotation.order = 'YXZ';

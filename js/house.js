@@ -28,9 +28,20 @@ const LEVELS = [
     roles: { P: 'living', Q: 'dining', R: 'kitchen', T: 'living', U: 'hall', V: 'pantry', W: 'bedroom' },
     // kitchen table in the kitchen, a rug and coffee table in each of the two living rooms
     fixed: [
-      { item: 'tablechairs', cell: [7, 0] },
+      { item: 'tablechairs', cell: [7, 1] },
       { item: 'livingset', cell: [0, 0] },
       { item: 'livingset', cell: [7, 2] },
+      // the kitchen: fridge on the east wall between the windows, units along the north and west walls
+      { item: 'fridge', cell: [8, 0], side: 'E', shift: 1.5 },
+      { item: 'counter', cell: [6, 0], side: 'W', shift: 0.7 },
+      { item: 'counter', cell: [6, 0], side: 'W', shift: -0.7 },
+      { item: 'counter', cell: [6, 0], side: 'N', shift: -0.05 },
+      { item: 'microcounter', cell: [6, 0], side: 'N', shift: 1.1 },
+      { item: 'kitchendrawers', cell: [7, 0], side: 'N', shift: -0.8 },
+      { item: 'stove', cell: [7, 0], side: 'N', shift: 0.3 },
+      { item: 'counter', cell: [7, 0], side: 'N', shift: 1.45 },
+      { item: 'counter', cell: [8, 0], side: 'N', shift: -0.4 },
+      { item: 'kitchendrawers', cell: [8, 0], side: 'N', shift: 0.7 },
     ],
     // the front door, in the south wall of the hall: three padlocks
     exits: [{ id: 'front', edge: ['h', 4, 6], style: 'wood', locks: [['code', 1.85], ['padlock', 1.5], ['padlock', 1.1], ['padlock', 0.7]] }],
@@ -258,6 +269,21 @@ function drawNote(code) {
   return cv;
 }
 
+function drawAppleIcon() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#c02a24';
+  g.beginPath(); g.moveTo(64, 36);
+  g.bezierCurveTo(30, 18, 8, 50, 20, 88); g.bezierCurveTo(30, 116, 52, 118, 64, 108);
+  g.bezierCurveTo(76, 118, 98, 116, 108, 88); g.bezierCurveTo(120, 50, 98, 18, 64, 36);
+  g.fill();
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(40, 56, 7, 12, -0.5, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#4a3320'; g.lineWidth = 6; g.beginPath(); g.moveTo(64, 36); g.lineTo(68, 14); g.stroke();
+  g.fillStyle = '#3f8f45'; g.beginPath(); g.ellipse(84, 20, 16, 7, -0.4, 0, Math.PI * 2); g.fill();
+  return cv.toDataURL('image/png');
+}
+
 // ---- generator ----------------------------------------------------------
 export function buildHouse(renderer, seed = 1) {
   const rand = rng(seed);
@@ -275,6 +301,7 @@ export function buildHouse(renderer, seed = 1) {
   const code = String((globalThis.crypto?.getRandomValues?.(new Uint32Array(1))[0] ?? Math.floor(Math.random() * 4294967296)) % 10000).padStart(4, '0');
   const noteCanvas = drawNote(code);
   const hideSpots = [];
+  const doorLog = []; // door and window edges per storey, for debugging
   const exits = [];  // doors out of the house
   const wires = [];  // cuttable wires in the power box
   const sparks = [];
@@ -301,16 +328,25 @@ export function buildHouse(renderer, seed = 1) {
     const loader = new THREE.TextureLoader();
     const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 }, note: { w: 0.14, h: 0.14 } };
     const place = (type, part) => {
-      let t;
-      if (type === 'note') t = new THREE.CanvasTexture(noteCanvas);
-      else t = loader.load(globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
-      t.colorSpace = THREE.SRGBColorSpace;
-      const mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(spec[type].w, spec[type].h),
-        new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, color: 0xd8d8d8 }));
-      mesh.rotation.order = 'YXZ';
-      mesh.rotation.x = -Math.PI / 2;
-      mesh.rotation.y = (rand() - 0.5) * 1.4;
+      let mesh;
+      if (type === 'apple') {
+        mesh = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 12), new THREE.MeshLambertMaterial({ color: 0xc02a24 }));
+        mesh.scale.y = 0.9;
+        const stem = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.028, 0.006), new THREE.MeshLambertMaterial({ color: 0x4a3320 }));
+        stem.position.y = 0.045;
+        mesh.add(stem);
+      } else {
+        let t;
+        if (type === 'note') t = new THREE.CanvasTexture(noteCanvas);
+        else t = loader.load(globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
+        t.colorSpace = THREE.SRGBColorSpace;
+        mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(spec[type].w, spec[type].h),
+          new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, color: 0xd8d8d8 }));
+        mesh.rotation.order = 'YXZ';
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.rotation.y = (rand() - 0.5) * 1.4;
+      }
       mesh.position.set(...part.loot.pos);
       part.loot.parent.add(mesh);
       const item = { kind: 'item', type, part, mesh };
@@ -320,6 +356,9 @@ export function buildHouse(renderer, seed = 1) {
       part.hasItem = true;
     };
     const holders = parts.filter(p => p.loot);
+    // the apple always lies in the fridge
+    const fridgeDoor = holders.find(p => p.tag === 'fridge');
+    if (fridgeDoor) place('apple', fridgeDoor);
     const pliersAt = pick(holders.filter(p => p.kind === 'drawer'));
     place('pliers', pliersAt);
     // the sticky note with the front door code: always in a drawer in a living room
@@ -390,6 +429,7 @@ export function buildHouse(renderer, seed = 1) {
     }
 
     for (const ex of cfg.exits ?? []) doors.add(key(...ex.edge)); // an exit is a doorway in an outer wall
+    doorLog.push({ level, doors: [...doors], windows: () => [...winEdges] });
 
     // floors & ceilings (the stair openings have neither on the storeys they join)
     const ceilTex = tex.floor[3];
@@ -574,7 +614,7 @@ export function buildHouse(renderer, seed = 1) {
         const [c, r] = f.cell;
         used.add(`${c},${r}`);
         centred.add(at(c, r));
-        placeItem(fb, ITEMS[f.item], c, r, f.side ?? null, f.turn ?? 0);
+        placeItem(fb, ITEMS[f.item], c, r, f.side ?? null, f.turn ?? 0, f.shift ?? 0);
       }
 
       for (const [id, role] of Object.entries(cfg.roles ?? {})) {
@@ -625,12 +665,13 @@ export function buildHouse(renderer, seed = 1) {
 
     // side: the wall the item backs onto ('N','S','W','E'), or null for a free-standing item
     // in the middle of the cell, turned by `turn` quarter turns.
-    function placeItem(fb, item, c, r, side, turn = 0) {
+    function placeItem(fb, item, c, r, side, turn = 0, shift = 0) {
       const cx = (c + 0.5) * CELL, cz = (r + 0.5) * CELL, gap = HT + 0.03;
       const base = side === 'N' ? [cx, r * CELL + gap] : side === 'S' ? [cx, (r + 1) * CELL - gap]
         : side === 'W' ? [c * CELL + gap, cz] : side === 'E' ? [(c + 1) * CELL - gap, cz] : [cx, cz];
       const ang = side ? { N: 0, S: Math.PI, W: Math.PI / 2, E: -Math.PI / 2 }[side] : turn * Math.PI / 2;
       const cs = Math.round(Math.cos(ang)), sn = Math.round(Math.sin(ang));
+      if (shift) { base[0] += shift * cs; base[1] -= shift * sn; } // slide along the wall
       // item-local (x across, z out) -> world; the rotation is a multiple of 90 degrees
       const xf = (lx, lz) => [base[0] + lx * cs + lz * sn, base[1] - lx * sn + lz * cs];
       const swap = sn !== 0;
@@ -675,7 +716,7 @@ export function buildHouse(renderer, seed = 1) {
       };
       const mv = {
         drawer: (boxes, dist) => makePart(boxes, [0, 0, 0], { kind: 'drawer', dist }),
-        door: (boxes, hx, hz, hinge) => makePart(boxes, [hx, 0, hz], { kind: 'door', angle: hinge > 0 ? -1.9 : 1.9 }),
+        door: (boxes, hx, hz, hinge, opts = {}) => makePart(boxes, [hx, 0, hz], { kind: 'door', angle: hinge > 0 ? -1.9 : 1.9, lootPos: opts.lootPos, tag: opts.tag }),
         flap: (boxes, hy, hz, angle, lootPos) => makePart(boxes, [0, hy, hz], { kind: 'flap', angle, lootPos }),
         // a wire behind the lid built just before it
         wire: (color, x, y0, h, z) => {
@@ -825,8 +866,10 @@ export function buildHouse(renderer, seed = 1) {
     tryCode,
     code,
     noteIcon: noteCanvas.toDataURL('image/png'),
+    appleIcon: drawAppleIcon(),
     items,
     hideSpots,
+    doorLog,
     exits,
     wires,
     // what the camera is looking at within reach: an item lying in an opened drawer or

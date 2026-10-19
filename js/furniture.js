@@ -8,6 +8,7 @@ import * as THREE from '../vendor/three.module.min.js';
 //   b.cyl(r, h, x, y0, zc, material)    static cylinder
 //   item.hide = {x, z, w, d, h, eye}   a spot to hide in: box (item-local) the player looks at, camera height under it
 //   mv.wire(color, x, y0, h, z)         a wire that can be cut with pliers; usable once the last part (the lid) is open
+//   mv.door(boxes, hx, hz, hinge, {lootPos, tag})   (lootPos: item-local spot where something can lie behind it)
 //   mv.drawer(boxes, dist)              part that slides out along +z when used
 //   mv.door(boxes, hx, hz, side)        part hinged on a vertical axis at (hx, hz); side +1: hinge on the left
 //   mv.flap(boxes, hy, hz, angle, loot) part hinged on a horizontal axis at (y=hy, z=hz); loot: item-local
@@ -71,10 +72,25 @@ export const ITEMS = {
     mv.drawer([[.34, .16, .4, .4, .5, .27, p.body], [.34, .16, .02, .4, .5, .56, p.body], handle(p, .4, .58, .59, .1)], .3);
     chairAt(b, p, -.2, .85, 0, -1);
   } },
+  // hollow, with a freezer on top and the fridge below; both doors open. The apple lies on the
+  // middle shelf (tag 'fridge' marks the door that opens onto it).
   fridge: { w: .7, d: .7, tall: true, build(b, p, mv) {
-    b(.7, 1.8, .7, 0, 0, .35, p.light);
-    mv.door([[.68, .56, .03, 0, 1.2, .715, p.light], [.03, .35, .04, .27, 1.3, .745, p.dark]], -.34, .715, 1);
-    mv.door([[.68, 1.1, .03, 0, .05, .715, p.light], [.03, .5, .04, .27, .5, .745, p.dark]], -.34, .715, 1);
+    b(.7, 1.8, .03, 0, 0, .015, p.light);                       // back
+    for (const s of [-1, 1]) b(.03, 1.8, .7, s * .335, 0, .35, p.light); // sides
+    b(.7, .03, .7, 0, 1.77, .35, p.light);                      // top
+    b(.7, .05, .7, 0, 0, .35, p.light);                         // bottom
+    b(.64, .04, .66, 0, 1.13, .35, p.light);                    // divider
+    for (const y of [.5, .8]) b(.64, .02, .62, 0, y, .36, p.dark2);   // fridge shelves
+    b(.64, .02, .62, 0, 1.45, .36, p.dark2);                    // freezer shelf
+    b(.09, .22, .09, -.2, .52, .3, p.light);                    // milk
+    b(.08, .11, .08, .12, .82, .42, p.paper);                   // jar
+    b(.2, .09, .14, .0, .06, .3, p.cloth);                      // box in the bottom drawer
+    b(.2, .12, .16, -.1, 1.17, .35, p.light);                   // frozen box
+    b(.18, .1, .14, .15, 1.47, .3, p.cloth);
+    // freezer door (top) and fridge door (below), hinged on the left
+    mv.door([[.68, .58, .03, 0, 1.17, .715, p.light], [.03, .3, .04, .27, 1.3, .745, p.dark]], -.34, .715, 1);
+    mv.door([[.68, 1.07, .03, 0, .05, .715, p.light], [.03, .5, .04, .27, .5, .745, p.dark]], -.34, .715, 1,
+      { lootPos: [0, .545, .36], tag: 'fridge' });
   } },
   counter: { w: 1.1, d: .6, tall: false, build(b, p, mv) {
     b(1.1, .86, .6, 0, 0, .3, p.body);
@@ -83,6 +99,36 @@ export const ITEMS = {
       mv.drawer([[.46, .18, .5, dx, .63, .35, p.dark2], [.48, .2, .02, dx, .62, .61, p.dark2], handle(p, dx, .7, .64, .14)], .32);
       const side = dx < 0 ? 1 : -1;
       mv.door([[.48, .5, .02, dx, .05, .61, p.dark2], handle(p, dx - side * .15, .45, .64, .03)], dx - side * .24, .61, side);
+    }
+  } },
+  // counter with a microwave on top; the microwave door swings open to the left
+  microcounter: { w: 1.1, d: .6, tall: false, build(b, p, mv) {
+    b(1.1, .86, .6, 0, 0, .3, p.body);
+    b(1.14, .05, .64, 0, .86, .32, p.dark2);
+    for (const dx of [-.26, .26]) {
+      mv.drawer([[.46, .18, .5, dx, .63, .35, p.dark2], [.48, .2, .02, dx, .62, .61, p.dark2], handle(p, dx, .7, .64, .14)], .32);
+      const side = dx < 0 ? 1 : -1;
+      mv.door([[.48, .5, .02, dx, .05, .61, p.dark2], handle(p, dx - side * .15, .45, .64, .03)], dx - side * .24, .61, side);
+    }
+    const xm = -.12, y = .91;                                    // microwave
+    b(.52, .02, .38, xm, y + .27, .33, p.light);                 // top
+    b(.52, .02, .38, xm, y, .33, p.light);                       // bottom
+    b(.52, .27, .02, xm, y, .15, p.light);                       // back
+    b(.02, .27, .38, xm - .25, y, .33, p.light);                 // left side
+    b(.15, .27, .38, xm + .185, y, .33, p.light);                // control panel
+    b(.1, .03, .01, xm + .185, y + .2, .525, p.dark);            // display
+    for (let k = 0; k < 3; k++) b(.04, .03, .01, xm + .15 + (k % 2) * .06, y + .11 - Math.floor(k / 2) * .05, .525, p.dark2);
+    b.cyl(.13, .015, xm - .06, y + .02, .33, p.dark2);           // turntable
+    mv.door([[.36, .26, .02, xm - .07, y + .005, .525, p.dark2], [.26, .16, .01, xm - .07, y + .05, .54, p.dark], [.02, .16, .03, xm + .08, y + .05, .54, p.dark]],
+      xm - .25, .525, 1);
+  } },
+  // a tall bank of four drawers
+  kitchendrawers: { w: 1.0, d: .6, tall: false, build(b, p, mv) {
+    b(1.0, .86, .6, 0, 0, .3, p.body);
+    b(1.04, .05, .64, 0, .86, .32, p.dark2);
+    for (let i = 0; i < 4; i++) {
+      const y = .04 + i * .2;
+      mv.drawer([[.88, .16, .5, 0, y + .01, .3, p.dark2], [.92, .18, .02, 0, y, .61, p.dark2], handle(p, 0, y + .1, .64, .16)], .36);
     }
   } },
   stove: { w: 1.0, d: .6, tall: false, build(b, p, mv) {
@@ -187,7 +233,7 @@ export const ITEMS = {
 export const ROLE_ITEMS = {
   living: ['sofa', 'tvunit', 'bookshelf', 'armchair', 'drawers', 'fireplace', 'armchair'],
   dining: ['tablechairs', 'drawers', 'chair'],
-  kitchen: ['fridge', 'stove', 'counter', 'counter', 'counter', 'tablechairs'],
+  kitchen: [], // laid out by hand in house.js
   study: ['desk', 'bookshelf', 'bookshelf', 'drawers'],
   hall: ['drawers', 'chair'],
   pantry: ['shelves', 'shelves', 'crates', 'counter'],

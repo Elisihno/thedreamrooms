@@ -161,7 +161,7 @@ const useBtn = document.getElementById('use');
 const dotEl = document.getElementById('dot');
 useBtn.querySelector('img').src = globalThis.__DR_TEX?.ui_hand ?? 'assets/textures/ui_hand.png';
 let target = null;
-const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note' };
+const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple' };
 const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.kind === 'wire' ? 'Cut' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
 function useTarget() {
   if (hide.spot) { leaveHide(); return; }
@@ -187,11 +187,11 @@ function updateTarget() {
 house.onHide = enterHide;
 
 // ---- inventory --------------------------------------------------------------
-const inv = { key: 0, pliers: 0, note: 0 }; // everything has to be found
+const inv = { key: 0, pliers: 0, note: 0, apple: 0 }; // everything has to be found
 const invEl = document.getElementById('inv');
 const toastEl = document.getElementById('toast');
 let toastTimer = 0;
-const iconSrc = type => (type === 'note' ? house.noteIcon : globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
+const iconSrc = type => (type === 'note' ? house.noteIcon : type === 'apple' ? house.appleIcon : globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
 // the item in hand: shown at the lower right of the view, highlighted in the strip
 let selected = null;
 const heldView = createHeld();
