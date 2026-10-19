@@ -161,10 +161,10 @@ const dotEl = document.getElementById('dot');
 useBtn.querySelector('img').src = globalThis.__DR_TEX?.ui_hand ?? 'assets/textures/ui_hand.png';
 let target = null;
 const NAMES = { key: 'key', pliers: 'cutting pliers' };
-const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.open ? 'Close' : 'Open');
+const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.kind === 'wire' ? 'Cut' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
 function useTarget() {
   if (hide.spot) { leaveHide(); return; }
-  if (target) house.use(target);
+  if (target) house.use(target, selected);
 }
 function updateTarget() {
   if (hide.spot) { // the hand stays up while hiding, to come out
@@ -228,15 +228,37 @@ function renderInventory() {
     invEl.append(slot);
   }
 }
+function showToast(text, ms = 2600) {
+  toastEl.textContent = text;
+  toastEl.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, ms);
+}
 house.onPickup = type => {
   inv[type]++;
   renderInventory();
-  toastEl.textContent = `Picked up ${NAMES[type]}`;
-  toastEl.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toastEl.hidden = true; }, 1800);
+  showToast(`Picked up ${NAMES[type]}`, 1800);
   chime();
 };
+house.onMessage = showToast;
+// a key is used up when it opens a lock
+house.onConsume = type => {
+  inv[type] = Math.max(0, inv[type] - 1);
+  if (!inv[type] && selected === type) select(type); // nothing left to hold
+  renderInventory();
+};
+
+// ---- escaping -------------------------------------------------------------------
+let escaped = false;
+house.onEscape = () => {
+  escaped = true;
+  const s = Math.round(performance.now() / 1000);
+  document.getElementById('winTime').textContent = `You got out in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}.`;
+  document.getElementById('win').hidden = false;
+  heldView.show(null);
+  chime();
+};
+document.getElementById('again').addEventListener('click', () => location.reload());
 renderInventory();
 
 useBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useTarget(); }, { passive: false });
@@ -291,6 +313,47 @@ function chime() {
     osc.start(now); osc.stop(now + 0.35);
   } catch { /* audio is optional */ }
 }
+
+house.onSound = name => {
+  if (!audio) return;
+  try {
+    const now = audio.currentTime;
+    const noise = (len, decay) => {
+      const buf = audio.createBuffer(1, audio.sampleRate * len, audio.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audio.sampleRate * decay));
+      const src = audio.createBufferSource();
+      src.buffer = buf;
+      return src;
+    };
+    const out = audio.createGain();
+    out.connect(audio.destination);
+    if (name === 'unlock') {          // a bright metal click
+      const src = noise(0.15, 0.015), hp = audio.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 2500;
+      out.gain.value = 0.7;
+      src.connect(hp).connect(out); src.start(now);
+    } else if (name === 'cut') {      // snip, then a short zap
+      const a = noise(0.12, 0.012), b = noise(0.4, 0.09), bp = audio.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.8;
+      out.gain.value = 0.7;
+      a.connect(out); a.start(now);
+      b.connect(bp).connect(out); b.start(now + 0.05);
+    } else {                          // a long door creak
+      const osc = audio.createOscillator(), g = audio.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(90, now);
+      osc.frequency.linearRampToValueAtTime(150, now + 0.9);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.12, now + 0.3);
+      g.gain.linearRampToValueAtTime(0.0001, now + 1.1);
+      const lp = audio.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 500;
+      osc.connect(lp).connect(g).connect(audio.destination);
+      osc.start(now); osc.stop(now + 1.1);
+    }
+  } catch { /* audio is optional */ }
+};
 
 house.onUse = (kind, open) => {
   if (!audio) return;
@@ -353,6 +416,11 @@ let lastYaw = player.yaw, lastPitch = player.pitch;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
+  if (escaped) { // the game is over: keep drawing the scene behind the message
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+    return;
+  }
 
   let fx = move.y, fz = move.x; // stick: up = forward
   if (keys.has('KeyW') || keys.has('ArrowUp')) fx -= 1;
@@ -430,3 +498,4 @@ frame();
 
 window.__game = { player, house, camera, THREE }; // for debugging
 window.__held = heldView;
+window.__inv = inv;

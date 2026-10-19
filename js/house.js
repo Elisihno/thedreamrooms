@@ -10,6 +10,9 @@ const LEVELS = [
   {
     name: 'Basement', windows: 0,
     roles: { A: 'storage', B: 'storage', C: 'storage', D: 'storage', E: 'storage' },
+    // the power box on the south wall; the hatch in the east wall is the second way out
+    fixed: [{ item: 'circuitbox', cell: [5, 5], side: 'S' }],
+    exits: [{ id: 'hatch', edge: ['v', 9, 4], style: 'metal', locks: [['electric', 1.3], ['padlock', 0.95]] }],
     walls: [0, 1, 4, 6], floors: [1, 5, 6],
     map: [
       'AAAABBBBB',
@@ -29,6 +32,8 @@ const LEVELS = [
       { item: 'livingset', cell: [0, 0] },
       { item: 'livingset', cell: [7, 2] },
     ],
+    // the front door, in the south wall of the hall: two padlocks
+    exits: [{ id: 'front', edge: ['h', 4, 6], style: 'wood', locks: [['padlock', 1.0], ['padlock', 1.45]] }],
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
       'PPPQQQRRR',
@@ -250,6 +255,9 @@ export function buildHouse(renderer, seed = 1) {
   const partMeshes = [];
   const pickables = []; // everything the crosshair can land on
   const hideSpots = [];
+  const exits = [];  // doors out of the house
+  const wires = [];  // cuttable wires in the power box
+  const sparks = [];
   const items = [];      // things to find in drawers and chests
   const itemMeshes = [];
   const partMat = new THREE.MeshLambertMaterial({ map: tex.furniture[0], vertexColors: true });
@@ -353,6 +361,8 @@ export function buildHouse(renderer, seed = 1) {
       }
     }
 
+    for (const ex of cfg.exits ?? []) doors.add(key(...ex.edge)); // an exit is a doorway in an outer wall
+
     // floors & ceilings (the stair openings have neither on the storeys they join)
     const ceilTex = tex.floor[3];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
@@ -444,6 +454,75 @@ export function buildHouse(renderer, seed = 1) {
     }
 
 
+    // A door in an outer wall, hinged on one side, with its locks on the inside face. The
+    // opening is blocked until it is open; an EXIT sign above it glows in the dark.
+    function buildExit(ex) {
+      const [dir, ec, er] = ex.edge;
+      const axis = dir === 'h' ? 'x' : 'z';
+      const f = (dir === 'h' ? er : ec) * CELL;                 // wall centre line
+      const mid = (dir === 'h' ? ec : er) * CELL + CELL / 2;    // middle of the doorway
+      const out = dir === 'h' ? [0, er === rows ? 1 : -1] : [ec === cols ? 1 : -1, 0]; // outward (x, z)
+      const inn = [-out[0], -out[1]];
+      const metal = ex.style === 'metal';
+      const doorMat = new THREE.MeshLambertMaterial({ map: tex.floor[metal ? 5 : 2], color: metal ? 0x80858a : 0xa07f58 });
+      const hinge = new THREE.Group();
+      hinge.position.set(axis === 'x' ? mid - DOOR_W / 2 : f, Y, axis === 'x' ? f : mid - DOOR_W / 2);
+      group.add(hinge);
+      // local frame of the hinge group: u along the door, v out of the inner face
+      const at3 = (u, y, v) => (axis === 'x' ? [u, y, inn[1] * v] : [inn[0] * v, y, u]);
+      const dims = (w, h, d) => (axis === 'x' ? [w, h, d] : [d, h, w]);
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(...dims(DOOR_W, DOOR_H, 0.07)), doorMat);
+      slab.position.set(...at3(DOOR_W / 2, DOOR_H / 2, 0));
+      hinge.add(slab);
+
+      const locks = [];
+      for (const [type, y] of ex.locks) {
+        const lockGroup = new THREE.Group();
+        lockGroup.position.set(...at3(DOOR_W * 0.8, y, 0.06));
+        if (type === 'padlock') {
+          const body = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.1, 0.12, 0.05)), new THREE.MeshPhongMaterial({ color: 0xb89a32, shininess: 60 }));
+          const shackle = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.06, 0.07, 0.03)), new THREE.MeshPhongMaterial({ color: 0x8a8f94, shininess: 80 }));
+          shackle.position.set(...at3(0, 0.09, 0));
+          lockGroup.add(body, shackle);
+          locks.push({ type, done: false, mesh: lockGroup });
+        } else {
+          const box = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.14, 0.2, 0.06)), new THREE.MeshPhongMaterial({ color: 0x2a2e33, shininess: 30 }));
+          const led = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.04, 0.04, 0.02)), new THREE.MeshBasicMaterial({ color: 0xff2a2a }));
+          led.position.set(...at3(0, 0.06, 0.035));
+          lockGroup.add(box, led);
+          locks.push({ type, done: false, mesh: lockGroup, led });
+        }
+        hinge.add(lockGroup);
+      }
+
+      // EXIT sign on the inner face, above the door
+      const cv = document.createElement('canvas');
+      cv.width = 256; cv.height = 64;
+      const cx = cv.getContext('2d');
+      cx.fillStyle = '#0d5a2a'; cx.fillRect(0, 0, 256, 64);
+      cx.strokeStyle = '#7dffa8'; cx.lineWidth = 4; cx.strokeRect(4, 4, 248, 56);
+      cx.fillStyle = '#c8ffd9'; cx.font = 'bold 44px system-ui, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+      cx.fillText('EXIT', 128, 34);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.14), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
+      sign.position.set(axis === 'x' ? mid : f + inn[0] * (HT + 0.012), Y + DOOR_H + 0.22, axis === 'x' ? f + inn[1] * (HT + 0.012) : mid);
+      sign.rotation.y = Math.atan2(inn[0], inn[1]);
+      group.add(sign);
+
+      const hw = DOOR_W / 2, t = 0.1;
+      const col = axis === 'x'
+        ? { minX: mid - hw, maxX: mid + hw, minZ: f - t, maxZ: f + t, level }
+        : { minX: f - t, maxX: f + t, minZ: mid - hw, maxZ: mid + hw, level };
+      colliders.push(col);
+
+      const angle = axis === 'x' ? (out[1] > 0 ? -1.9 : 1.9) : (out[0] > 0 ? 1.9 : -1.9); // swings outward
+      const exit = { id: ex.id, level, axis, f, mid, out, hinge, angle, locks, open: false, t: 0, col, escaped: false };
+      exit.target = { kind: 'exit', exit };
+      slab.userData.exit = exit;
+      pickables.push(slab);
+      exits.push(exit);
+    }
+
+
     // Furniture sits against walls, one item per cell, never in the stair cells or in
     // front of a doorway. Cells with a door only take shallow items, so paths stay clear.
     // Tables with chairs stand free in the middle of a roomy cell without a door.
@@ -463,7 +542,7 @@ export function buildHouse(renderer, seed = 1) {
         const [c, r] = f.cell;
         used.add(`${c},${r}`);
         centred.add(at(c, r));
-        placeItem(fb, ITEMS[f.item], c, r, null, f.turn ?? 0);
+        placeItem(fb, ITEMS[f.item], c, r, f.side ?? null, f.turn ?? 0);
       }
 
       for (const [id, role] of Object.entries(cfg.roles ?? {})) {
@@ -532,14 +611,18 @@ export function buildHouse(renderer, seed = 1) {
         fb.cyl(rad, h, wx, Y + y0 + h / 2, wz, material);
       };
 
-      let itemGroup = null;
-      const makePart = (boxes, pivot, extra) => {
+      let itemGroup = null, lastPart = null;
+      const ensureGroup = () => {
         if (!itemGroup) {
           itemGroup = new THREE.Group();
           itemGroup.position.set(base[0], Y, base[1]);
           itemGroup.rotation.y = ang;
           group.add(itemGroup);
         }
+        return itemGroup;
+      };
+      const makePart = (boxes, pivot, extra) => {
+        ensureGroup();
         const pg = new THREE.Group();
         pg.position.set(...pivot);
         const mesh = new THREE.Mesh(partGeometry(boxes, pivot), partMat);
@@ -556,11 +639,23 @@ export function buildHouse(renderer, seed = 1) {
         mesh.userData.part = part;
         parts.push(part);
         partMeshes.push(mesh);
+        lastPart = part;
       };
       const mv = {
         drawer: (boxes, dist) => makePart(boxes, [0, 0, 0], { kind: 'drawer', dist }),
         door: (boxes, hx, hz, hinge) => makePart(boxes, [hx, 0, hz], { kind: 'door', angle: hinge > 0 ? -1.9 : 1.9 }),
         flap: (boxes, hy, hz, angle, lootPos) => makePart(boxes, [0, hy, hz], { kind: 'flap', angle, lootPos }),
+        // a wire behind the lid built just before it
+        wire: (color, x, y0, h, z) => {
+          const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.035, h, 0.035), plain(color));
+          mesh.position.set(x, y0 + h / 2, z);
+          ensureGroup().add(mesh);
+          const wire = { mesh, y0, h, cut: false, box: lastPart, level };
+          wire.target = { kind: 'wire', wire };
+          mesh.userData.wire = wire;
+          pickables.push(mesh);
+          wires.push(wire);
+        },
       };
       item.build(b, pal, mv);
 
@@ -584,6 +679,7 @@ export function buildHouse(renderer, seed = 1) {
       }
     }
 
+    for (const ex of cfg.exits ?? []) buildExit(ex);
     furnish();
     batch.flush(group);
     for (const id of ids) {
@@ -611,6 +707,56 @@ export function buildHouse(renderer, seed = 1) {
   const spawnCell = LEVELS[spawnLevel].spawn ?? [4, 1];
   const first = LEVELS[0].map;
   const size = { w: first[0].length * CELL, d: first.length * CELL };
+  const say = text => api.onMessage?.(text);
+
+  function openExit(exit) {
+    exit.open = true;
+    const i = colliders.indexOf(exit.col);
+    if (i >= 0) colliders.splice(i, 1);
+    api.onSound?.('creak');
+  }
+
+  // Padlocks take a key from the hand; an electric lock only gives way once the power is cut.
+  function useExit(exit, held) {
+    const pending = exit.locks.filter(l => !l.done);
+    if (!pending.length) { openExit(exit); return; }
+    const padlock = pending.find(l => l.type === 'padlock');
+    if (padlock && held === 'key') {
+      padlock.done = true;
+      padlock.mesh.visible = false;
+      api.onConsume?.('key');
+      api.onSound?.('unlock');
+      const left = pending.length - 1;
+      if (!left) { say('Unlocked. The door swings open.'); openExit(exit); }
+      else if (pending.some(l => l.type === 'electric' && !l.done)) say('Click. Only the electric lock is left: find the power box.');
+      else say(`Click. ${left} lock${left > 1 ? 's' : ''} left.`);
+    } else if (padlock) {
+      say('Locked. Hold a key to unlock it.');
+    } else {
+      say('The electric lock is humming. Find the power box and cut the wires.');
+    }
+  }
+
+  function cutWire(wire, held) {
+    if (held !== 'pliers') { say('You need something to cut this wire.'); return; }
+    wire.cut = true;
+    wire.mesh.scale.y = 0.25;
+    wire.mesh.position.y = wire.y0 + wire.h * 0.125;
+    const spark = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true }));
+    spark.position.set(wire.mesh.position.x, wire.y0 + wire.h * 0.3, wire.mesh.position.z + 0.03);
+    wire.mesh.parent.add(spark);
+    sparks.push({ mesh: spark, t: 0 });
+    api.onSound?.('cut');
+    if (wires.some(w => !w.cut)) { say('Snip. One more wire.'); return; }
+    say('The power is cut. Somewhere a lock clicks open.');
+    api.onSound?.('unlock');
+    for (const exit of exits) {
+      for (const l of exit.locks) {
+        if (l.type === 'electric') { l.done = true; l.led.material.color.set(0x2aff5a); }
+      }
+    }
+  }
+
   // A mannequin topples away from the player once they walk up to it.
   const FALL = 0.8, BOUNCE = 0.3;
   const api = {
@@ -623,27 +769,40 @@ export function buildHouse(renderer, seed = 1) {
     onUse: null,
     onPickup: null,
     onHide: null,
+    onMessage: null,   // (text) a hint for the player
+    onSound: null,     // ('unlock' | 'cut' | 'creak')
+    onConsume: null,   // (type) an item was used up
+    onEscape: null,    // (exit) the player walked out
     items,
     hideSpots,
+    exits,
+    wires,
     // what the camera is looking at within reach: an item lying in an opened drawer or
-    // chest (preferred), otherwise a movable part
+    // chest (preferred), otherwise a movable part, a hiding spot, an exit door or a wire
     pick(camera, player) {
       raycaster.setFromCamera(centre, camera);
-      let part = null;
+      let found = null;
       for (const hit of raycaster.intersectObjects(pickables, false)) {
-        const item = hit.object.userData.item;
-        if (item) {
-          if (item.part.open && item.part.t > 0.85 && item.part.level === player.level) return item;
-        } else if (!part) {
-          const spot = hit.object.userData.hide;
-          if (spot) { if (spot.level === player.level) part = spot.target; }
-          else if (hit.object.userData.part.level === player.level) part = hit.object.userData.part;
+        const u = hit.object.userData;
+        if (u.item) {
+          if (u.item.part.open && u.item.part.t > 0.85 && u.item.part.level === player.level) return u.item;
+          continue;
         }
+        if (found) continue;
+        if (u.hide) { if (u.hide.level === player.level) found = u.hide.target; }
+        else if (u.exit) { if (u.exit.level === player.level && !u.exit.open) found = u.exit.target; }
+        else if (u.wire) {
+          const w = u.wire;
+          if (!w.cut && w.level === player.level && w.box.open && w.box.t > 0.85) found = w.target;
+        } else if (u.part.level === player.level) found = u.part;
       }
-      return part;
+      return found;
     },
-    use(target) {
+    // `held` is the type of the item in the player's hand ('key', 'pliers') or null
+    use(target, held) {
       if (target.kind === 'hide') { api.onHide?.(target.spot); return; }
+      if (target.kind === 'exit') { useExit(target.exit, held); return; }
+      if (target.kind === 'wire') { cutWire(target.wire, held); return; }
       if (target.kind === 'item') {
         target.mesh.removeFromParent();
         pickables.splice(pickables.indexOf(target.mesh), 1);
@@ -663,6 +822,25 @@ export function buildHouse(renderer, seed = 1) {
         if (part.kind === 'drawer') part.pg.position.z = part.pivot[2] + part.dist * e;
         else if (part.kind === 'door') part.pg.rotation.y = part.angle * e;
         else part.pg.rotation.x = part.angle * e;
+      }
+      for (const exit of exits) {
+        if (exit.open && exit.t < 1) {
+          exit.t = Math.min(1, exit.t + dt * 0.9);
+          exit.hinge.rotation.y = exit.angle * (exit.t * exit.t * (3 - 2 * exit.t));
+        }
+        if (exit.open && !exit.escaped && player.level === exit.level) {
+          const p = player.pos, o = exit.out;
+          const past = exit.axis === 'x' ? (p.z - exit.f) * o[1] : (p.x - exit.f) * o[0];
+          const across = Math.abs((exit.axis === 'x' ? p.x : p.z) - exit.mid);
+          if (past > 0.35 && across < DOOR_W) { exit.escaped = true; api.onEscape?.(exit); }
+        }
+      }
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const sp = sparks[i];
+        sp.t += dt;
+        sp.mesh.scale.setScalar(1 + sp.t * 8);
+        sp.mesh.material.opacity = Math.max(0, 1 - sp.t * 4);
+        if (sp.t > 0.3) { sp.mesh.removeFromParent(); sparks.splice(i, 1); }
       }
       for (const m of mannequins) {
         if (!m.fell) {

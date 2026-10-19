@@ -7,6 +7,7 @@ import * as THREE from '../vendor/three.module.min.js';
 //   b(w, h, d, x, y0, zc, material)     static box: w wide, h tall, d deep, centred at (x, zc), bottom at y0
 //   b.cyl(r, h, x, y0, zc, material)    static cylinder
 //   item.hide = {x, z, w, d, h, eye}   a spot to hide in: box (item-local) the player looks at, camera height under it
+//   mv.wire(color, x, y0, h, z)         a wire that can be cut with pliers; usable once the last part (the lid) is open
 //   mv.drawer(boxes, dist)              part that slides out along +z when used
 //   mv.door(boxes, hx, hz, side)        part hinged on a vertical axis at (hx, hz); side +1: hinge on the left
 //   mv.flap(boxes, hy, hz, angle, loot) part hinged on a horizontal axis at (y=hy, z=hz); loot: item-local
@@ -171,6 +172,14 @@ export const ITEMS = {
     b(.9, .05, .5, 0, .38, 0, p.body);
     for (const dx of [-.4, .4]) for (const dz of [-.2, .2]) b(.05, .38, .05, dx, 0, dz, p.dark2);
   }, colliders: [[.9, .5, 0, 0]] },
+  // basement power box: open the lid, then cut the red and blue wires with the pliers
+  circuitbox: { w: .5, d: .2, tall: true, build(b, p, mv) {
+    b(.5, .66, .1, 0, .95, .05, p.dark2);
+    b(.44, .6, .01, 0, .98, .105, p.dark);
+    mv.door([[.48, .64, .02, 0, .96, .16, p.light], [.03, .1, .03, .17, 1.22, .18, p.dark]], -.24, .16, 1);
+    mv.wire(0xd23a2e, -.1, .99, .56, .125);
+    mv.wire(0x2f72dd, .1, .99, .56, .125);
+  } },
   chair: { w: .5, d: .55, tall: false, build(b, p) { chairAt(b, p, 0, .33, 0, 1); } },
 };
 
