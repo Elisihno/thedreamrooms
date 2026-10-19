@@ -218,6 +218,24 @@ export const ITEMS = {
     b(.9, .05, .5, 0, .38, 0, p.body);
     for (const dx of [-.4, .4]) for (const dz of [-.2, .2]) b(.05, .38, .05, dx, 0, dz, p.dark2);
   }, colliders: [[.9, .5, 0, 0]] },
+  // a rusty metal box with a padlock on its lid; the lid only opens once the lock is cut
+  lockbox: { w: 1.2, d: .5, tall: false, build(b, p, mv) {
+    b(1.2, .04, .5, 0, 0, .25, p.steel);
+    b(1.2, .3, .03, 0, 0, .015, p.steel);
+    b(1.2, .3, .03, 0, 0, .485, p.steel);
+    for (const s of [-1, 1]) b(.03, .3, .5, s * .585, 0, .25, p.steel);
+    for (const s of [-1, 1]) b(.06, .31, .52, s * .4, 0, .25, p.dark2);          // iron bands
+    mv.flap([[1.2, .04, .5, 0, .3, .25, p.steel], [.06, .045, .52, -.4, .3, .25, p.dark2], [.06, .045, .52, .4, .3, .25, p.dark2]],
+      .3, .015, -1.9, [0, .062, .25], { tag: 'gunbox' });
+    mv.lock(0, .22, .5);
+  } },
+  // cutting board lying on a counter; hold a knife and use it to cut something
+  cuttingboard: { w: .5, d: .34, tall: false, colliders: [], build(b, p, mv) {
+    b(.46, .03, .3, 0, .91, .3, p.body);
+    b(.34, .004, .012, 0, .94, .3, p.dark2);
+    b(.12, .004, .1, .12, .94, .26, p.dark2);
+    mv.target('board', .46, .06, .3, 0, .91, .3);
+  } },
   // basement power box: open the lid, then cut the red, blue and yellow wires with the pliers
   circuitbox: { w: .5, d: .2, tall: true, build(b, p, mv) {
     b(.5, .66, .1, 0, .95, .05, p.dark2);

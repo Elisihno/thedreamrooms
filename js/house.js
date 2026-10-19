@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { ITEMS, ROLE_ITEMS, buildMannequin } from './furniture.js';
+import { makeApple } from './apple.js';
 
 // ---- layout -------------------------------------------------------------
 // One map per storey, bottom to top. Each letter is a room; every character is one
@@ -36,6 +37,7 @@ const LEVELS = [
       { item: 'counter', cell: [6, 0], side: 'W', shift: 0.7 },
       { item: 'counter', cell: [6, 0], side: 'W', shift: -0.7 },
       { item: 'counter', cell: [6, 0], side: 'N', shift: -0.05 },
+      { item: 'cuttingboard', cell: [6, 0], side: 'N', shift: -0.05 },
       { item: 'microcounter', cell: [6, 0], side: 'N', shift: 1.1 },
       { item: 'kitchendrawers', cell: [7, 0], side: 'N', shift: -0.8 },
       { item: 'stove', cell: [7, 0], side: 'N', shift: 0.3 },
@@ -75,6 +77,7 @@ const LEVELS = [
     name: 'Attic', windows: 0.45,
     roles: { A: 'attic', B: 'attic', C: 'attic', D: 'attic' },
     mannequins: [[2, 1], [1, 4], [6, 4]], // [col, row] of each mannequin's cell
+    fixed: [{ item: 'lockbox', cell: [8, 0], side: 'N' }], // holds the shotgun
     walls: [2, 5, 7, 9], floors: [0, 2, 3, 4, 7, 9],
     map: [
       'AAAAABBBB',
@@ -269,21 +272,6 @@ function drawNote(code) {
   return cv;
 }
 
-function drawAppleIcon() {
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = 128;
-  const g = cv.getContext('2d');
-  g.fillStyle = '#c02a24';
-  g.beginPath(); g.moveTo(64, 36);
-  g.bezierCurveTo(30, 18, 8, 50, 20, 88); g.bezierCurveTo(30, 116, 52, 118, 64, 108);
-  g.bezierCurveTo(76, 118, 98, 116, 108, 88); g.bezierCurveTo(120, 50, 98, 18, 64, 36);
-  g.fill();
-  g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(40, 56, 7, 12, -0.5, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = '#4a3320'; g.lineWidth = 6; g.beginPath(); g.moveTo(64, 36); g.lineTo(68, 14); g.stroke();
-  g.fillStyle = '#3f8f45'; g.beginPath(); g.ellipse(84, 20, 16, 7, -0.4, 0, Math.PI * 2); g.fill();
-  return cv.toDataURL('image/png');
-}
-
 // ---- generator ----------------------------------------------------------
 export function buildHouse(renderer, seed = 1) {
   const rand = rng(seed);
@@ -316,7 +304,7 @@ export function buildHouse(renderer, seed = 1) {
   };
   const pal = {
     body: fm(0xc8b8a4), dark2: fm(0x8a7e70), light: fm(0xf0e8dc),
-    cloth: fm(0xa89288), paper: fm(0xb09a78), dark: plain(0x161312),
+    cloth: fm(0xa89288), paper: fm(0xb09a78), dark: plain(0x161312), steel: fm(0x8c949a),
   };
 
   LEVELS.forEach((cfg, level) => buildFloor(cfg, level));
@@ -327,14 +315,24 @@ export function buildHouse(renderer, seed = 1) {
   function placeLoot() {
     const loader = new THREE.TextureLoader();
     const spec = { key: { w: 0.34, h: 0.19 }, pliers: { w: 0.27, h: 0.28 }, note: { w: 0.14, h: 0.14 } };
+    const col = hex => ({ color: new THREE.Color(hex) });
+    const solid = new THREE.MeshLambertMaterial({ vertexColors: true });
+    const boxesMesh = boxes => new THREE.Mesh(partGeometry(boxes, [0, 0, 0]), solid);
+    const steel = col(0xb9bec3), darkSteel = col(0x2a3035), wood = col(0x5a3a22), brass = col(0xb89a32);
     const place = (type, part) => {
       let mesh;
       if (type === 'apple') {
-        mesh = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 12), new THREE.MeshLambertMaterial({ color: 0xc02a24 }));
-        mesh.scale.y = 0.9;
-        const stem = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.028, 0.006), new THREE.MeshLambertMaterial({ color: 0x4a3320 }));
-        stem.position.y = 0.045;
-        mesh.add(stem);
+        mesh = makeApple(0.05);
+        mesh.rotation.y = 0.6;
+      } else if (type === 'knife') {
+        mesh = boxesMesh([[.09, .016, .024, -.07, 0, 0, wood], [.012, .02, .026, -.015, 0, 0, steel], [.15, .004, .03, .06, .004, 0, steel]]);
+        mesh.rotation.y = rand() * Math.PI * 2;
+      } else if (type === 'shotgun') {
+        mesh = boxesMesh([
+          [.55, .026, .026, .22, .03, 0, darkSteel], [.44, .02, .02, .15, .005, 0, steel], [.18, .05, .04, -.1, 0, 0, darkSteel],
+          [.15, .04, .044, .12, -.012, 0, wood], [.34, .06, .034, -.37, -.012, 0, wood], [.05, .1, .036, -.55, -.034, 0, wood],
+        ]);
+        mesh.position.y = 0.04;
       } else {
         let t;
         if (type === 'note') t = new THREE.CanvasTexture(noteCanvas);
@@ -348,6 +346,7 @@ export function buildHouse(renderer, seed = 1) {
         mesh.rotation.y = (rand() - 0.5) * 1.4;
       }
       mesh.position.set(...part.loot.pos);
+      if (type === 'shotgun') mesh.position.y += 0.04;
       part.loot.parent.add(mesh);
       const item = { kind: 'item', type, part, mesh };
       mesh.userData.item = item;
@@ -356,10 +355,15 @@ export function buildHouse(renderer, seed = 1) {
       part.hasItem = true;
     };
     const holders = parts.filter(p => p.loot);
-    // the apple always lies in the fridge
+    // the apple always lies in the fridge, the shotgun in the locked metal box
     const fridgeDoor = holders.find(p => p.tag === 'fridge');
     if (fridgeDoor) place('apple', fridgeDoor);
-    const pliersAt = pick(holders.filter(p => p.kind === 'drawer'));
+    const gunBox = holders.find(p => p.tag === 'gunbox');
+    if (gunBox) place('shotgun', gunBox);
+    // a kitchen knife in one of the kitchen drawers
+    const knifeDrawers = holders.filter(p => p.kind === 'drawer' && p.role === 'kitchen' && !p.hasItem);
+    if (knifeDrawers.length) place('knife', pick(knifeDrawers));
+    const pliersAt = pick(holders.filter(p => p.kind === 'drawer' && !p.hasItem));
     place('pliers', pliersAt);
     // the sticky note with the front door code: always in a drawer in a living room
     const noteDrawers = holders.filter(p => p.kind === 'drawer' && p.role === 'living' && !p.hasItem);
@@ -717,7 +721,29 @@ export function buildHouse(renderer, seed = 1) {
       const mv = {
         drawer: (boxes, dist) => makePart(boxes, [0, 0, 0], { kind: 'drawer', dist }),
         door: (boxes, hx, hz, hinge, opts = {}) => makePart(boxes, [hx, 0, hz], { kind: 'door', angle: hinge > 0 ? -1.9 : 1.9, lootPos: opts.lootPos, tag: opts.tag }),
-        flap: (boxes, hy, hz, angle, lootPos) => makePart(boxes, [0, hy, hz], { kind: 'flap', angle, lootPos }),
+        flap: (boxes, hy, hz, angle, lootPos, opts = {}) => makePart(boxes, [0, hy, hz], { kind: 'flap', angle, lootPos, tag: opts.tag }),
+        // a padlock on the part built just before it: the part stays shut until it is cut off
+        lock: (x, y0, z) => {
+          const lg = new THREE.Group();
+          const brass = new THREE.MeshPhongMaterial({ color: 0xb89a32, specular: 0xffeeaa, shininess: 60 });
+          const body = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.03), brass);
+          const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.006, 6, 12, Math.PI), new THREE.MeshPhongMaterial({ color: 0x9aa0a6, shininess: 90 }));
+          shackle.position.y = 0.04;
+          lg.add(body, shackle);
+          lg.position.set(x, y0 + 0.04, z + 0.015);
+          ensureGroup().add(lg);
+          lastPart.locked = true;
+          lastPart.lockMesh = lg;
+        },
+        // an invisible box to look at and use (a cutting board, say)
+        target: (kind, w, h, d, x, y0, zc) => {
+          const proxy = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ visible: false }));
+          proxy.position.set(x, y0 + h / 2, zc);
+          ensureGroup().add(proxy);
+          const t = { kind, level };
+          proxy.userData.useTarget = t;
+          pickables.push(proxy);
+        },
         // a wire behind the lid built just before it
         wire: (color, x, y0, h, z) => {
           const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.035, h, 0.035), plain(color));
@@ -826,6 +852,29 @@ export function buildHouse(renderer, seed = 1) {
     return true;
   }
 
+  function cutLock(part, held) {
+    if (held !== 'pliers') { say('Locked tight. Something strong could cut through this padlock.'); return; }
+    part.locked = false;
+    part.lockMesh.visible = false;
+    const spark = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true }));
+    spark.position.copy(part.lockMesh.position);
+    part.lockMesh.parent.add(spark);
+    sparks.push({ mesh: spark, t: 0 });
+    api.onSound?.('cut');
+    say('Snip. The lock drops away.');
+  }
+
+  // Cut the old apple open with the knife: shotgun shells fall out.
+  function cutApple(held) {
+    const hasApple = api.hasItem?.('apple');
+    if (held !== 'knife') { say(hasApple ? 'Hold the knife to cut the apple on the board.' : 'A cutting board, stained dark.'); return; }
+    if (!hasApple) { say('Nothing to cut. The board is stained dark.'); return; }
+    api.onConsume?.('apple');
+    api.onSound?.('chop');
+    api.onPickup?.('shells');
+    say('The apple splits open. Shotgun shells were hidden inside.');
+  }
+
   function cutWire(wire, held) {
     if (held !== 'pliers') { say('You need something to cut this wire.'); return; }
     wire.cut = true;
@@ -863,10 +912,10 @@ export function buildHouse(renderer, seed = 1) {
     onConsume: null,   // (type) an item was used up
     onEscape: null,    // (exit) the player walked out
     onKeypad: null,    // (target) the player wants to type a code
+    hasItem: null,     // (type) does the player carry this?
     tryCode,
     code,
     noteIcon: noteCanvas.toDataURL('image/png'),
-    appleIcon: drawAppleIcon(),
     items,
     hideSpots,
     doorLog,
@@ -887,6 +936,7 @@ export function buildHouse(renderer, seed = 1) {
         if (u.hide) { if (u.hide.level === player.level) found = u.hide.target; }
         else if (u.exit) { if (u.exit.level === player.level && !u.exit.open) found = u.exit.target; }
         else if (u.keypad) { if (u.keypad.exit.level === player.level && !u.keypad.lock.done) found = u.keypad; }
+        else if (u.useTarget) { if (u.useTarget.level === player.level) found = u.useTarget; }
         else if (u.wire) {
           const w = u.wire;
           if (!w.cut && w.level === player.level && w.box.open && w.box.t > 0.85) found = w.target;
@@ -899,6 +949,8 @@ export function buildHouse(renderer, seed = 1) {
       if (target.kind === 'hide') { api.onHide?.(target.spot); return; }
       if (target.kind === 'exit') { useExit(target.exit, held); return; }
       if (target.kind === 'keypad') { api.onKeypad?.(target); return; }
+      if (target.kind === 'board') { cutApple(held); return; }
+      if (target.locked) { cutLock(target, held); return; }
       if (target.kind === 'wire') { cutWire(target.wire, held); return; }
       if (target.kind === 'item') {
         target.mesh.removeFromParent();

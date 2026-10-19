@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
+import { makeApple } from './apple.js';
 
 // The item in the player's hand. It lives in its own small scene, drawn on top of the world
 // with a cleared depth buffer, so it never clips into walls.
@@ -72,18 +73,74 @@ export function buildPliers() {
   return g;
 }
 
-// Apple: a squashed red sphere with a stem and a leaf.
+// Apple: the old, lopsided one, held up by its stem.
 export function buildApple() {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.05, 24, 18), new THREE.MeshPhongMaterial({ color: 0xc02a24, specular: 0x886666, shininess: 55 }));
-  body.scale.y = 0.9;
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.004, 0.03, 6), new THREE.MeshPhongMaterial({ color: 0x4a3320 }));
-  stem.position.y = 0.05;
-  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), new THREE.MeshPhongMaterial({ color: 0x3f8f45 }));
-  leaf.scale.set(1.6, 0.25, 0.8);
-  leaf.position.set(0.016, 0.062, 0);
-  g.add(body, stem, leaf);
-  g.userData.scale = 0.8;
+  g.add(makeApple(0.05));
+  g.userData.scale = 0.9;
+  return g;
+}
+
+// Kitchen knife: along +x (tip toward +x), like the key.
+export function buildKnife() {
+  const g = new THREE.Group();
+  const blade = extrude(polygon([[0, .016], [.15, .016], [.215, .002], [.19, -.011], [.11, -.019], [0, -.019]]), .004,
+    new THREE.MeshPhongMaterial({ color: 0xc4c9ce, specular: 0xffffff, shininess: 100 }));
+  const wood = new THREE.MeshPhongMaterial({ color: 0x3a2416, specular: 0x221108, shininess: 20 });
+  const handle = extrude(polygon([[-.115, .015], [0, .015], [0, -.016], [-.115, -.013]]), .02, wood);
+  const bolster = extrude(polygon([[-.004, .017], [.012, .017], [.012, -.02], [-.004, -.02]]), .022, steel());
+  g.add(blade, handle, bolster);
+  for (const x of [-.09, -.05]) {
+    const rivet = new THREE.Mesh(new THREE.CylinderGeometry(.0028, .0028, .024, 8), new THREE.MeshPhongMaterial({ color: 0xc9b377 }));
+    rivet.rotation.x = Math.PI / 2;
+    rivet.position.set(x, 0, 0);
+    g.add(rivet);
+  }
+  g.rotation.x = 1.0; // roll so the flat of the blade shows
+  g.userData.yaw = 0.2;
+  g.userData.scale = 1.0;
+  return g;
+}
+
+// Shotgun: along +x (muzzle toward +x). The flash sits at the muzzle and is shown for a moment
+// when it fires.
+export function buildShotgun() {
+  const g = new THREE.Group();
+  const dark = new THREE.MeshPhongMaterial({ color: 0x2d3338, specular: 0x99aabb, shininess: 70 });
+  const metal = new THREE.MeshPhongMaterial({ color: 0x555d64, specular: 0xffffff, shininess: 80 });
+  const wood = new THREE.MeshPhongMaterial({ color: 0x6a4325, specular: 0x33221a, shininess: 25 });
+  const cyl = (r, len, mat, x, y) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 16), mat);
+    m.rotation.z = Math.PI / 2;
+    m.position.set(x, y, 0);
+    return m;
+  };
+  g.add(cyl(.0125, .62, dark, .28, .02));        // barrel
+  g.add(cyl(.0105, .46, metal, .2, -.008));      // magazine tube
+  const box = (w, h, d, mat, x, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, 0); return m; };
+  g.add(box(.2, .055, .042, dark, -.05, .006));  // receiver
+  g.add(box(.17, .042, .05, wood, .2, -.024));   // pump
+  g.add(box(.012, .02, .012, metal, .585, .038)); // front sight
+  const stock = extrude(polygon([[-.15, .028], [-.5, .005], [-.52, -.085], [-.34, -.06], [-.15, -.035]]), .04, wood);
+  g.add(stock);
+  const guard = new THREE.Mesh(new THREE.TorusGeometry(.016, .0025, 6, 12, Math.PI), dark);
+  guard.rotation.z = Math.PI; guard.position.set(-.09, -.026, 0);
+  g.add(guard);
+  // muzzle flash: a hot core and a longer cone, additive and always drawn on top
+  const glow = { color: 0xffd27a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, side: THREE.DoubleSide };
+  const flash = new THREE.Group();
+  const core = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 10), new THREE.MeshBasicMaterial({ ...glow, color: 0xfff0b8, opacity: 0.95 }));
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(.07, .3, 14, 1, true), new THREE.MeshBasicMaterial({ ...glow, opacity: 0.75 }));
+  cone.rotation.z = -Math.PI / 2; cone.position.x = .13;
+  core.renderOrder = cone.renderOrder = 10;
+  flash.add(core, cone);
+  flash.position.set(.64, .02, 0);
+  flash.visible = false;
+  g.add(flash);
+  g.userData.flash = flash;
+  g.userData.pose = [0.04, Math.PI / 2 + 0.16, 0.0];
+  g.userData.offset = [-0.02, 0.0, -0.3];
+  g.userData.scale = 0.7;
   return g;
 }
 
@@ -97,7 +154,7 @@ export function createHeld() {
 
   const rig = new THREE.Group(); // the hand: this is what moves
   scene.add(rig);
-  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple() };
+  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple(), knife: buildKnife(), shotgun: buildShotgun() };
   for (const m of Object.values(models)) {
     const holder = new THREE.Group();
     holder.rotation.order = 'YXZ';
@@ -105,8 +162,9 @@ export function createHeld() {
       const [x, y, z] = m.userData.pose;
       holder.rotation.set(x, y, z);
     } else {
-      holder.rotation.y = Math.PI / 2; // tip toward -z
+      holder.rotation.y = Math.PI / 2 + (m.userData.yaw ?? 0); // tip toward -z
     }
+    if (m.userData.offset) holder.position.set(...m.userData.offset);
     holder.scale.setScalar(m.userData.scale ?? 1.25);
     holder.add(m);
     holder.visible = false;
@@ -115,7 +173,7 @@ export function createHeld() {
   }
 
   const REST = new THREE.Vector3(0.12, -0.075, -0.38);
-  let shown = null, raise = 1, walkSmooth = 0, prevWalk = 0;
+  let shown = null, raise = 1, walkSmooth = 0, prevWalk = 0, kickT = 99;
 
   // The hand is a loosely held weight on springs. The view moves it around (a step bounces
   // the camera, a turn drags it), and it lags behind and settles with a little overshoot.
@@ -134,6 +192,13 @@ export function createHeld() {
       shown = type;
     },
     resize(aspect) { camera.aspect = aspect; camera.updateProjectionMatrix(); },
+    // the gun goes off: a kick back, a flash at the muzzle
+    kick() {
+      kickT = 0;
+      const f = models.shotgun.userData.flash;
+      f.visible = true;
+      f.scale.setScalar(0.8 + Math.random() * 0.5);
+    },
     // walk: 0..1 how hard the player moves; bobAccel: vertical acceleration of the camera bob;
     // yawRate / pitchRate: how fast the view turns (rad/s)
     update(t, dt, { walk, bobAccel, yawRate, pitchRate }) {
@@ -154,14 +219,17 @@ export function createHeld() {
           s[j] += v[j] * h;
         }
       }
+      kickT += dt;
+      if (kickT > 0.07) models.shotgun.userData.flash.visible = false;
+      const kick = Math.exp(-kickT * 11);
       // a slow breathing drift, so it is never perfectly still
       const idle = 0.0006;
       rig.position.set(
         REST.x + s[0] + Math.sin(t * 0.9) * idle,
         REST.y + s[1] + Math.sin(t * 1.3 + 1) * idle - (1 - raise) * 0.25,
-        REST.z + s[2],
+        REST.z + s[2] + kick * 0.09,
       );
-      rig.rotation.set(s[3], s[4], s[5] + Math.sin(t * 0.7) * 0.003);
+      rig.rotation.set(s[3] + kick * 0.2, s[4], s[5] + Math.sin(t * 0.7) * 0.003);
     },
   };
 }

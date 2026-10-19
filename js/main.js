@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { buildHouse, levelY } from './house.js';
 import { createHeld } from './held.js';
+import { icons } from './icons.js';
 
 const seed = Number(new URLSearchParams(location.search).get('seed')) || 1;
 
@@ -76,6 +77,7 @@ addEventListener('keydown', e => {
   if (uiOpen) { uiKey(e); return; }
   keys.add(e.code);
   if (e.code === 'KeyE') useTarget();
+  if (e.code === 'Space') { e.preventDefault(); fire(); }
 });
 addEventListener('keyup', e => keys.delete(e.code));
 
@@ -161,8 +163,8 @@ const useBtn = document.getElementById('use');
 const dotEl = document.getElementById('dot');
 useBtn.querySelector('img').src = globalThis.__DR_TEX?.ui_hand ?? 'assets/textures/ui_hand.png';
 let target = null;
-const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple' };
-const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.kind === 'wire' ? 'Cut' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
+const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple', knife: 'kitchen knife', shotgun: 'shotgun', shells: 'shotgun shells' };
+const label = t => (t.kind === 'item' ? `Take ${NAMES[t.type]}` : t.kind === 'wire' ? 'Cut' : t.kind === 'board' ? 'Cutting board' : t.locked ? 'Locked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
 function useTarget() {
   if (hide.spot) { leaveHide(); return; }
   if (target) house.use(target, selected);
@@ -181,27 +183,51 @@ function updateTarget() {
   target = t;
   useBtn.hidden = !t;
   dotEl.hidden = !!t;
-  useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : '';
+  useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : t?.kind === 'board' ? 'Cutting board' : t?.locked ? 'Locked' : '';
   if (t) useBtn.setAttribute('aria-label', t.kind === 'hide' ? 'Hide' : label(t));
 }
 house.onHide = enterHide;
 
 // ---- inventory --------------------------------------------------------------
-const inv = { key: 0, pliers: 0, note: 0, apple: 0 }; // everything has to be found
+const inv = { key: 0, pliers: 0, note: 0, apple: 0, knife: 0, shotgun: 0, shells: 0 }; // everything has to be found
+let ammo = 0;  // shells loaded in the shotgun (it starts empty)
 const invEl = document.getElementById('inv');
 const toastEl = document.getElementById('toast');
 let toastTimer = 0;
-const iconSrc = type => (type === 'note' ? house.noteIcon : type === 'apple' ? house.appleIcon : globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
+const iconSrc = type => (type === 'note' ? house.noteIcon : icons[type] ?? globalThis.__DR_TEX?.[`item_${type}`] ?? `assets/textures/item_${type}.png`);
 // the item in hand: shown at the lower right of the view, highlighted in the strip
 let selected = null;
 const heldView = createHeld();
 heldView.resize(innerWidth / innerHeight);
 function select(type) {
   if (type === 'note') { openNote(); return; } // the note is read, not held
+  if (type === 'shells') { loadShells(); return; } // shells are loaded, not held
   selected = selected === type ? null : type;
   heldView.show(selected);
   renderInventory();
 }
+
+// Shells go into the shotgun: each pack gives 3 shots.
+function loadShells() {
+  if (!inv.shotgun) { showToast('You need a shotgun to load these.'); return; }
+  inv.shells = Math.max(0, inv.shells - 1);
+  ammo += 3;
+  house.onSound('load');
+  showToast(`Loaded 3 shells. ${ammo} in the shotgun.`);
+  renderInventory();
+}
+
+const fireBtn = document.getElementById('fire');
+function fire() {
+  if (selected !== 'shotgun' || uiOpen || escaped) return;
+  if (ammo <= 0) { house.onSound('dry'); showToast('Click. The shotgun is empty.', 1400); return; }
+  ammo--;
+  house.onSound('shot');
+  heldView.kick();
+  renderInventory();
+}
+fireBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fire(); }, { passive: false });
+fireBtn.addEventListener('click', fire);
 addEventListener('keydown', e => {
   if (uiOpen) return;
   const n = Number(e.key);
@@ -221,15 +247,16 @@ function renderInventory() {
     img.src = iconSrc(type);
     img.alt = NAMES[type];
     slot.append(img);
-    if (inv[type] > 1) {
+    if (type === 'shotgun' || inv[type] > 1) {
       const n = document.createElement('span');
-      n.textContent = inv[type];
+      n.textContent = type === 'shotgun' ? ammo : inv[type]; // the shotgun shows its shells
       slot.append(n);
     }
     slot.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); select(type); }, { passive: false });
     slot.addEventListener('click', () => select(type));
     invEl.append(slot);
   }
+  fireBtn.hidden = selected !== 'shotgun';
 }
 function showToast(text, ms = 2600) {
   toastEl.textContent = text;
@@ -246,6 +273,7 @@ house.onPickup = type => {
 };
 house.onMessage = showToast;
 // a key is used up when it opens a lock
+house.hasItem = type => inv[type] > 0;
 house.onConsume = type => {
   inv[type] = Math.max(0, inv[type] - 1);
   if (!inv[type] && selected === type) select(type); // nothing left to hold
@@ -400,6 +428,36 @@ house.onSound = name => {
       hp.type = 'highpass'; hp.frequency.value = 2500;
       out.gain.value = 0.7;
       src.connect(hp).connect(out); src.start(now);
+    } else if (name === 'chop') {     // a blade through something dry
+      const a = noise(0.18, 0.03), lp = audio.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 1800;
+      out.gain.value = 0.8;
+      a.connect(lp).connect(out); a.start(now);
+      const th = audio.createOscillator(), tg = audio.createGain();
+      th.frequency.setValueAtTime(140, now); th.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+      tg.gain.setValueAtTime(0.5, now); tg.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      th.connect(tg).connect(audio.destination); th.start(now); th.stop(now + 0.15);
+    } else if (name === 'shot') {     // a boom: a burst of noise and a deep thump
+      const a = noise(0.9, 0.2), lp = audio.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(3000, now); lp.frequency.exponentialRampToValueAtTime(200, now + 0.5);
+      out.gain.value = 1;
+      a.connect(lp).connect(out); a.start(now);
+      const th = audio.createOscillator(), tg = audio.createGain();
+      th.type = 'sine'; th.frequency.setValueAtTime(95, now); th.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+      tg.gain.setValueAtTime(0.9, now); tg.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      th.connect(tg).connect(audio.destination); th.start(now); th.stop(now + 0.5);
+    } else if (name === 'dry') {      // an empty click
+      const a = noise(0.06, 0.008), hp = audio.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 1800;
+      out.gain.value = 0.5;
+      a.connect(hp).connect(out); a.start(now);
+    } else if (name === 'load') {     // two clacks
+      for (const dt of [0, 0.16]) {
+        const a = noise(0.07, 0.01), bp = audio.createBiquadFilter();
+        bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 1.2;
+        out.gain.value = 0.6;
+        a.connect(bp).connect(out); a.start(now + dt);
+      }
     } else if (name === 'wrong') {    // a low buzz
       const osc = audio.createOscillator(), g = audio.createGain();
       osc.type = 'square'; osc.frequency.value = 110;
@@ -572,3 +630,4 @@ frame();
 window.__game = { player, house, camera, THREE }; // for debugging
 window.__held = heldView;
 window.__inv = inv;
+window.__ammo = () => ammo;
