@@ -330,7 +330,7 @@ export function createHollow(house, opts = {}) {
   };
   let path = null, idx = 0, prev = null, segLen = 1;
   let pause = 0, stunT = 0, searchT = 0, lose = 0, seenAgo = 99, foundT = 0, stepT = 0, losT = 0;
-  let sees = false, graceT = opts.grace ?? 25, walkPhase = 0, killT = 0, lean = 0;
+  let huntT = 0, sees = false, graceT = opts.grace ?? 25, walkPhase = 0, killT = 0, lean = 0;
   const last = { x: 0, z: 0, level: 0 };
 
   function place(c) { me.x = c.x; me.z = c.z; me.level = c.level; me.y = levelY(c.level); path = null; }
@@ -473,7 +473,7 @@ export function createHollow(house, opts = {}) {
       const sensed = graceT === 0 && !ctx.noSense && (sees || (same && d < smell) || (!same && Math.abs(me.level - p.level) === 1 && Math.hypot(dx, dz) < smell * 0.5));
       if (sensed) {
         if (me.state !== 'hunt') {
-          me.state = 'hunt';
+          me.state = 'hunt'; huntT = 0; pause = 0.5;   // a beat to notice you before she moves
           me.onSound?.('growl', same ? Math.max(0.3, 1 - d / 16) : 0.4);
           if (seenAgo > 5 && sees) { me.addFear(22); me.onSound?.('sting', 1); }
         }
@@ -512,9 +512,10 @@ export function createHollow(house, opts = {}) {
         }
       }
 
+      huntT = me.state === 'hunt' ? huntT + dt : 0;
       // ---- catching ----
       if (graceT === 0 && same && !ctx.dead) {
-        if (!ctx.hidden && d < 0.9 && Math.abs(me.y - p.y) < 1.4) caught();
+        if (!ctx.hidden && d < 0.9 && huntT > 0.5 && Math.abs(me.y - p.y) < 1.4) caught();
         if (ctx.hidden && d < 1.9) {
           foundT += dt * (0.6 + me.fear / 60);
           if (foundT > 3.2) caught();
