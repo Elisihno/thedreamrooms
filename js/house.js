@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { ITEMS, ROLE_ITEMS, buildMannequin } from './furniture.js';
 import { makeApple } from './apple.js';
+import { makeVase } from './vase.js';
 import { paperCanvas, crumpledPaperGeometry } from './icons.js';
 
 // ---- layout -------------------------------------------------------------
@@ -69,7 +70,7 @@ const LEVELS = [
     roles: { P: 'bedroom', Q: 'bedroom', R: 'study', T: 'bedroom', U: 'hall', V: 'bedroom' },
     // the player starts in room P: [col, row] of the spawn cell, plus pieces fixed to a cell
     spawn: [1, 1],
-    fixed: [{ item: 'roundtable', cell: [1, 0] }, { item: 'tablechairs', cell: [0, 1], turn: 1 }],
+    fixed: [{ item: 'roundtable', cell: [1, 0], vase: true }, { item: 'tablechairs', cell: [0, 1], turn: 1 }],
     // the trash can stands against a wall of the start bedroom, in the first of these cells with a free wall
     guarantee: [{ item: 'trashcan', cells: [[2, 2], [0, 2], [2, 0], [0, 0]] }],
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
@@ -760,7 +761,7 @@ export function buildHouse(renderer, seed = 1) {
         const [c, r] = f.cell;
         used.add(`${c},${r}`);
         centred.add(at(c, r));
-        placeItem(fb, ITEMS[f.item], c, r, f.side ?? null, f.turn ?? 0, f.shift ?? 0);
+        placeItem(fb, ITEMS[f.item], c, r, f.side ?? null, f.turn ?? 0, f.shift ?? 0, !!f.vase);
       }
 
       // items that must exist: put each against a wall of the first listed cell that has a free one
@@ -827,7 +828,7 @@ export function buildHouse(renderer, seed = 1) {
 
     // side: the wall the item backs onto ('N','S','W','E'), or null for a free-standing item
     // in the middle of the cell, turned by `turn` quarter turns.
-    function placeItem(fb, item, c, r, side, turn = 0, shift = 0) {
+    function placeItem(fb, item, c, r, side, turn = 0, shift = 0, withVase = false) {
       const cx = (c + 0.5) * CELL, cz = (r + 0.5) * CELL, gap = HT + 0.03;
       const base = side === 'N' ? [cx, r * CELL + gap] : side === 'S' ? [cx, (r + 1) * CELL - gap]
         : side === 'W' ? [c * CELL + gap, cz] : side === 'E' ? [(c + 1) * CELL - gap, cz] : [cx, cz];
@@ -915,6 +916,13 @@ export function buildHouse(renderer, seed = 1) {
         },
       };
       item.build(b, pal, mv);
+
+      if (item.vaseSpot && withVase) {   // the spiral vase stands on the start bedroom's round table
+        const [vx, vz] = xf(item.vaseSpot.x, item.vaseSpot.z);
+        const vase = makeVase(1.3);
+        vase.position.set(vx, Y + item.vaseSpot.y, vz);
+        group.add(vase);
+      }
 
       if (item.hide) {
         // an invisible box over the table or bed: look at it to hide underneath

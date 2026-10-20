@@ -58,7 +58,7 @@ export const ITEMS = {
       chairAt(b, p, x, .55, 0, -1);
     }
   }, colliders: [[1.4, .85, 0, 0], [.5, .5, -.35, -.55], [.5, .5, .35, -.55], [.5, .5, -.35, .55], [.5, .5, .35, .55]] },
-  roundtable: { w: 1.1, d: 2.2, tall: false, center: true, hide: { x: 0, z: 0, w: 1.1, d: 1.1, h: .8, eye: .5 }, build(b, p) {
+  roundtable: { w: 1.1, d: 2.2, tall: false, center: true, vaseSpot: { x: 0, z: 0, y: .77 }, hide: { x: 0, z: 0, w: 1.1, d: 1.1, h: .8, eye: .5 }, build(b, p) {
     b.cyl(.55, .05, 0, .72, 0, p.body);
     b.cyl(.09, .72, 0, 0, 0, p.dark2);
     b.cyl(.3, .05, 0, 0, 0, p.dark2);
