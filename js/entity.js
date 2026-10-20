@@ -50,6 +50,7 @@ export function buildHollow() {
 
   // arms: very long, with long fingers
   const arms = [];
+  let batGroup = null;
   for (const s of [-1, 1]) {
     const sh = limb(torso, 0.06, 0.045, 0.76, s * 0.26, 0.8, 0);
     const el = limb(sh, 0.045, 0.032, 0.76, 0, -0.76, 0);
@@ -57,6 +58,24 @@ export function buildHollow() {
     for (let i = 0; i < 4; i++) {
       const f = mesh(new THREE.ConeGeometry(0.011, 0.26, 5), skin, el, (i - 1.5) * 0.02, -1.0, 0);
       f.rotation.x = Math.PI + (i % 2 ? 0.15 : -0.1);
+    }
+    if (s === 1) {   // a nail-studded bat in the right hand
+      const bat = new THREE.Group();
+      bat.position.set(0, -0.86, 0.02);
+      bat.rotation.x = Math.PI - 1.2;          // points down and forward; local +y is along the bat
+      batGroup = bat;
+      const wood = new THREE.MeshLambertMaterial({ color: 0x9a7650, emissive: 0x2a1c10 });
+      const iron = new THREE.MeshLambertMaterial({ color: 0xd0d0d8, emissive: 0x34343c });
+      const blood = new THREE.MeshLambertMaterial({ color: 0x8a1010, emissive: 0x3a0606 });
+      mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.3, 8), wood, bat, 0, 0.05, 0);          // handle
+      mesh(new THREE.CylinderGeometry(0.065, 0.025, 0.75, 10), wood, bat, 0, 0.5, 0);        // barrel
+      mesh(new THREE.CylinderGeometry(0.066, 0.066, 0.12, 10), blood, bat, 0, 0.82, 0);      // stained end
+      for (let r = 0; r < 4; r++) for (let a = 0; a < 6; a++) {                                // spikes
+        const y = 0.3 + r * 0.16, ang = a * Math.PI / 3 + r * 0.5, rad = 0.025 + (y - 0.2) * 0.07;
+        const spike = mesh(new THREE.ConeGeometry(0.014, 0.1, 5), iron, bat, Math.cos(ang) * (rad + 0.03), y, Math.sin(ang) * (rad + 0.03));
+        spike.rotation.set(Math.sin(ang) * 1.45, 0, -Math.cos(ang) * 1.45);
+      }
+      el.add(bat);
     }
     arms.push({ sh, el, s });
   }
@@ -92,7 +111,7 @@ export function buildHollow() {
   gg.computeVertexNormals();
   mesh(gg, gownMat, body, 0, 1.0, 0);
 
-  return { root, body, torso, legs, arms, neck, head };
+  return { root, body, torso, legs, arms, neck, head, bat: batGroup };
 }
 
 // ---- finding the way ------------------------------------------------------------------------
@@ -322,6 +341,7 @@ export function createHollow(house, opts = {}) {
     if (wps && wps.length) segLen = Math.max(0.01, Math.hypot(wps[0].x - me.x, wps[0].z - me.z));
     return !!wps;
   }
+  me.model = model;
   me.place = place;
   me.goTo = goTo;
 
@@ -439,7 +459,11 @@ export function createHollow(house, opts = {}) {
     if (me.state === 'kill') {
       killT += dt;
       me._heading = Math.atan2(dx, dz);
-      if (d > 0.5 && d < 5) { me.x += dx / d * 2.4 * dt; me.z += dz / d * 2.4 * dt; }
+      if (d < 6 && d > 0.01) {   // settle at bat's reach: step back if too close, in if too far
+        const want = 2.1 - 0.8 * ease(0.4, 0.72, killT) + 0.55 * ease(0.95, 1.3, killT) - 0.55 * ease(1.35, 1.55, killT);   // winds up from a distance, steps in to strike
+        const move = Math.sign(d - want) * Math.min(Math.abs(d - want), 5 * dt);
+        me.x += dx / d * move; me.z += dz / d * move;
+      }
     } else if (me.state === 'stun') {
       stunT -= dt;
       if (stunT <= 0) { me.state = 'search'; searchT = 7; last.x = p.pos.x; last.z = p.pos.z; last.level = p.level; goTo(last.level, last.x, last.z); me.onSound?.('growl', 0.8); }
@@ -511,6 +535,16 @@ export function createHollow(house, opts = {}) {
     animate(dt, t, moving ? speedOf() : 0);
   };
 
+  // the arm with the bat: raised overhead, brought down hard, twice
+  const ease = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+  function batAngle(k) {
+    const up = -2.0, down = -1.0;
+    if (k < 1.0) return -0.9 + (up + 0.9) * ease(0.1, 0.55, k) + (down - up) * ease(0.55, 0.72, k);
+    return down + (up - down) * ease(1.0, 1.4, k) + (down - up) * ease(1.4, 1.55, k);
+  }
+
+  me.debugKillT = v => { killT = v; };   // for testing the animation frame by frame
+
   function caught() {
     if (me.state === 'kill') return;
     me.state = 'kill'; killT = 0; path = null;
@@ -529,7 +563,7 @@ export function createHollow(house, opts = {}) {
     walkPhase += dt * speed * 3.1;
     const m = model, w = Math.sin(walkPhase), amp = Math.min(1, speed / 1.5);
     const hunt = me.state === 'hunt' || me.state === 'kill';
-    lean += ((hunt ? 0.38 : 0.12) - lean) * Math.min(1, dt * 4);
+    lean += ((me.state === 'kill' ? 0.3 + 0.35 * (ease(0.55, 0.72, killT) * (1 - ease(1.0, 1.4, killT)) + ease(1.4, 1.55, killT)) : hunt ? 0.38 : 0.12) - lean) * Math.min(1, dt * (me.state === 'kill' ? 14 : 4));
     const fallA = me.state === 'stun' ? Math.min(1, (9 - stunT) / 0.55) : 0;
     m.body.rotation.x = -fallA * 1.5;
     group.position.y = me.y + fallA * 0.12;
@@ -541,11 +575,13 @@ export function createHollow(house, opts = {}) {
     }
     for (const a of m.arms) {
       const ph = Math.sin(walkPhase + (a.s > 0 ? Math.PI : 0));
-      const reach = me.state === 'kill' ? -1.6 : hunt ? -0.7 : 0;
+      let reach = me.state === 'kill' ? -0.9 : hunt ? -0.7 : 0;
+      if (me.state === 'kill' && a.s === 1) reach = batAngle(killT);
       a.sh.rotation.x = reach + ph * 0.3 * amp + (me.state === 'stun' ? 0 : Math.sin(t * 1.1 + a.s) * 0.04);
       a.sh.rotation.z = a.s * (0.06 + (hunt ? 0.12 : 0));
-      a.el.rotation.x = hunt ? -0.5 : -0.12 - Math.sin(t * 0.9 + a.s) * 0.04;
+      a.el.rotation.x = me.state === 'kill' && a.s === 1 ? -0.25 - 1.65 * Math.max(0, Math.min(1, (reach - -1.0) / -1.0)) : hunt ? -0.5 : -0.12 - Math.sin(t * 0.9 + a.s) * 0.04;
     }
+    m.bat.rotation.x = Math.PI - (me.state === 'kill' ? 0.1 : hunt ? 0.9 : 1.2);   // the bat follows the arm in the kill
     // the head cocks and twitches
     const tw = Math.sin(t * 2.3) * Math.sin(t * 0.7);
     m.head.rotation.z = 0.16 + tw * 0.09 + (hunt ? 0.1 : 0);

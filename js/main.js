@@ -898,7 +898,20 @@ function entitySound(name, vol = 1) {
     else if (name === 'growl') { osc('sawtooth', 78, 40, 1.4, 0.3, 260); osc('sawtooth', 83, 44, 1.4, 0.22, 260); }
     else if (name === 'sting') { osc('square', 880, 860, 0.9, 0.12, 2400); osc('square', 932, 900, 0.9, 0.12, 2400); osc('sawtooth', 120, 60, 0.9, 0.3, 400); }
     else if (name === 'hurt') osc('sawtooth', 420, 70, 0.7, 0.3, 900);
-    else if (name === 'catch') { osc('sawtooth', 200, 40, 1.2, 0.6, 800); osc('square', 1400, 300, 0.5, 0.25); }
+    else if (name === 'swing') {                       // air torn by the bat
+      const len = 0.35, buf = audio.createBuffer(1, audio.sampleRate * len, audio.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / d.length);
+      const src = audio.createBufferSource(), bp = audio.createBiquadFilter();
+      src.buffer = buf; bp.type = 'bandpass'; bp.Q.value = 1.2;
+      bp.frequency.setValueAtTime(400, now); bp.frequency.exponentialRampToValueAtTime(2400, now + len);
+      g.gain.value = 0.7; src.connect(bp).connect(g); src.start(now);
+    } else if (name === 'hit') {                       // a dull crack and a body blow
+      osc('sine', 120, 30, 0.35, 1.0);
+      const len = 0.25, buf = audio.createBuffer(1, audio.sampleRate * len, audio.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audio.sampleRate * 0.04));
+      const src = audio.createBufferSource(), lp = audio.createBiquadFilter();
+      src.buffer = buf; lp.type = 'lowpass'; lp.frequency.value = 1400; g.gain.value = 0.9; src.connect(lp).connect(g); src.start(now);
+    } else if (name === 'catch') { osc('sawtooth', 200, 40, 1.2, 0.6, 800); osc('square', 1400, 300, 0.5, 0.25); }
   } catch { /* audio is optional */ }
 }
 const hollow = hashFlags.has('nohollow') ? null : createHollow(house, hashFlags.has('hollow') ? { near: 6, grace: 2 } : {});
@@ -914,6 +927,36 @@ if (hollow) {
   };
 }
 window.__hollow = hollow;
+// blood on the screen: splatters from each blow, with drips that run down
+const bloodEl = document.getElementById('blood'), bctx = bloodEl.getContext('2d');
+let drips = [];
+function bloodHit(n) {
+  if (bloodEl.width !== innerWidth || bloodEl.height !== innerHeight) { bloodEl.width = innerWidth; bloodEl.height = innerHeight; }
+  const W = bloodEl.width, H = bloodEl.height;
+  entitySound('hit', 1);
+  heldView.kick();
+  for (let i = 0; i < 9 + n * 6; i++) {
+    const x = W * (0.12 + Math.random() * 0.76), y = H * (0.08 + Math.random() * 0.7), r = (0.03 + Math.random() * 0.08) * Math.min(W, H);
+    const g = bctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(120,6,6,.92)'); g.addColorStop(0.7, 'rgba(90,0,0,.85)'); g.addColorStop(1, 'rgba(60,0,0,0)');
+    bctx.fillStyle = g; bctx.beginPath(); bctx.arc(x, y, r, 0, 7); bctx.fill();
+    for (let k = 0; k < 7; k++) {                                   // flecks thrown outward
+      const a = Math.random() * 6.3, d = r * (1 + Math.random() * 1.8), rr = 1 + Math.random() * 5;
+      bctx.fillStyle = 'rgba(110,4,4,.9)'; bctx.beginPath(); bctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, rr, 0, 7); bctx.fill();
+    }
+    if (Math.random() < 0.6) drips.push({ x, y, w: 2 + Math.random() * 5, v: 25 + Math.random() * 70, life: 1.6 + Math.random() * 1.5 });
+  }
+}
+function bloodDrips(dt) {
+  for (const d of drips) {
+    if (d.life <= 0) continue;
+    d.life -= dt;
+    const ny = d.y + d.v * dt;
+    bctx.strokeStyle = 'rgba(100,3,3,.9)'; bctx.lineWidth = d.w; bctx.lineCap = 'round';
+    bctx.beginPath(); bctx.moveTo(d.x, d.y); bctx.lineTo(d.x, ny); bctx.stroke();
+    d.y = ny;
+  }
+}
 const fearEl = document.getElementById('fear'), fearFill = document.getElementById('fearFill'), fearV = document.getElementById('fearV');
 let beatT = 0;
 
@@ -921,7 +964,7 @@ let beatT = 0;
 const clock = new THREE.Clock();
 let lastYaw = player.yaw, lastPitch = player.pitch, lastShown = -1;
 function frame() {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  const dt = Math.min(clock.getDelta(), 0.05) * (window.__slow ?? 1);
   const t = clock.elapsedTime;
   if (escaped) { // the game is over: keep drawing the scene behind the message
     renderer.render(scene, camera);
@@ -1005,18 +1048,25 @@ function frame() {
     f.t += dt;
     const k = f.t;
     if (f.kind === 'caught') {
-      // it is on you: turn to face it, shake, and the screen goes black
+      // Dread raises her spiked bat and brings it down on you twice; blood runs down the screen
       const tx = hollow.x - player.pos.x, tz = hollow.z - player.pos.z;
+      const hits = [0.74, 1.55];
       player.yaw += angleDiff(Math.atan2(-tx, -tz), player.yaw) * Math.min(1, dt * 9);
-      player.pitch += (0.85 - player.pitch) * Math.min(1, dt * 6);
-      pitchAdd = Math.sin(t * 47) * 0.014 * smooth(0.1, 0.5, k) * (1 - smooth(1.0, 1.6, k));
-      rollAdd = Math.sin(t * 33) * 0.035 * smooth(0.1, 0.6, k) + 1.35 * smooth(0.9, 1.9, k);
-      eye = EYE + (0.25 - EYE) * smooth(0.9, 1.9, k);          // it drags you down
-      fov = 72 + 14 * smooth(0, 1.0, k);
+      player.pitch += (0.3 - player.pitch) * Math.min(1, dt * 6);
+      f.hit = f.hit ?? 0;
+      if (f.hit < 2 && k >= hits[f.hit]) { bloodHit(f.hit++); }
+      if (!f.swung1 && k > 0.5) { f.swung1 = true; entitySound('swing', 1); }
+      if (!f.swung2 && k > 1.32) { f.swung2 = true; entitySound('swing', 1); }
+      let jolt = 0;
+      hits.forEach((h, n) => { if (k > h) jolt += Math.exp(-(k - h) * 7) * (n ? 1.3 : 1); });
+      pitchAdd = -0.3 * jolt + Math.sin(t * 40) * 0.006 * jolt;
+      rollAdd = (0.35 * jolt) + 1.35 * smooth(1.6, 2.5, k);
+      eye = EYE + (0.25 - EYE) * smooth(1.6, 2.5, k);              // you go down
+      fov = 82;
       glowEl.style.background = 'radial-gradient(ellipse at center, rgba(150,0,0,0), rgba(150,0,0,.8))';
-      glowEl.style.opacity = String(0.9 * smooth(0.7, 1.2, k) * (1 - smooth(1.8, 2.3, k)));
-      fadeEl.style.opacity = String(smooth(1.7, 2.4, k));
-      if (k > 2.6) {
+      glowEl.style.opacity = String(Math.min(1, 0.9 * smooth(0.7, 1.0, k)) * (1 - smooth(2.2, 2.7, k)));
+      fadeEl.style.opacity = String(smooth(2.2, 2.9, k));
+      if (k > 3.1) {
         driving = null; escaped = true;
         dayEl.textContent = `Day ${day + 1}`; dayEl.style.opacity = '1'; dayEl.hidden = false;
         setTimeout(() => { location.hash = `#day${day + 1}`; location.reload(); }, 2800);
@@ -1054,6 +1104,7 @@ function frame() {
       if (k > (hatch ? 5.2 : 5.0)) { driving = null; showWin(hatch ? 'You escaped' : 'You escaped', 'got out', f.kind); }
     }
     if (driving && driving.kind !== 'caught') drawFx(driving);
+    if (driving && driving.kind === 'caught') bloodDrips(dt);
   }
   if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
   vignette.style.opacity = wake.active ? vignette.style.opacity : (hideE * 0.95).toFixed(3);
