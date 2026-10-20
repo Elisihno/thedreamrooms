@@ -342,6 +342,22 @@ export function createHollow(house, opts = {}) {
     return !!wps;
   }
   me.model = model;
+  me.speedMul = 1; me.senseMul = 1;
+  me.setGrace = n => { graceT = n; };
+  // stand in view of the player for the title screen; returns the yaw that looks at her
+  me.placeForTitle = player => {
+    for (const dist of [3.4, 3.0, 2.6]) for (let a = 0; a < 24; a++) {
+      const ang = a / 24 * Math.PI * 2;
+      const x = player.pos.x + Math.sin(ang) * dist, z = player.pos.z + Math.cos(ang) * dist;
+      const c = nav.centre(nav.free(player.level, x, z));
+      if (Math.hypot(c.x - x, c.z - z) > 0.2) continue;
+      if (!lineClear(house.colliders, player.level, player.pos.x, player.pos.z, c.x, c.z)) continue;
+      place({ x: c.x, z: c.z, level: player.level, y: player.y });
+      me._heading = me.yaw = Math.atan2(player.pos.x - c.x, player.pos.z - c.z);
+      return Math.atan2(-(c.x - player.pos.x), -(c.z - player.pos.z));
+    }
+    return null;
+  };
   me.place = place;
   me.goTo = goTo;
 
@@ -391,7 +407,7 @@ export function createHollow(house, opts = {}) {
     return false;
   };
 
-  const speedOf = () => (me.state === 'hunt' ? 1.9 + 0.55 * me.fear / 100
+  const speedOf = () => (me.speedMul ?? 1) * (me.state === 'hunt' ? 1.9 + 0.55 * me.fear / 100
     : me.state === 'search' ? 1.3 : 0.95);
 
   function follow(dt) {
@@ -469,7 +485,7 @@ export function createHollow(house, opts = {}) {
       if (stunT <= 0) { me.state = 'search'; searchT = 7; last.x = p.pos.x; last.z = p.pos.z; last.level = p.level; goTo(last.level, last.x, last.z); me.onSound?.('growl', 0.8); }
     } else {
       // ---- senses ----
-      const smell = (4 + me.fear * 0.16) * (ctx.hidden ? 0.35 : 1);
+      const smell = (4 + me.fear * 0.16) * (me.senseMul ?? 1) * (ctx.hidden ? 0.35 : 1);
       const sensed = graceT === 0 && !ctx.noSense && (sees || (same && d < smell) || (!same && Math.abs(me.level - p.level) === 1 && Math.hypot(dx, dz) < smell * 0.5));
       if (sensed) {
         if (me.state !== 'hunt') {
@@ -560,7 +576,6 @@ export function createHollow(house, opts = {}) {
     }
     group.position.set(me.x, me.y, me.z);
     group.rotation.y = me.yaw;
-    group.visible = true;
     walkPhase += dt * speed * 3.1;
     const m = model, w = Math.sin(walkPhase), amp = Math.min(1, speed / 1.5);
     const hunt = me.state === 'hunt' || me.state === 'kill';
