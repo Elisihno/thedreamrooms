@@ -490,9 +490,14 @@ export function buildHouse(renderer, seed = 1) {
     const stairDoor = up ? key('h', up.col, up.row) : null;
     // wall edges that hand-placed furniture stands against must never get a doorway
     const reserved = new Set();
+    // a doorway must not open straight onto the hole where the stairs come up
+    if (down) reserved.add(key('h', down.col, down.row));
     for (const f of cfg.fixed ?? []) {
-      if (!f.side) continue;
       const [c, r] = f.cell;
+      if (!f.side) { // a free-standing set (table and chairs) must not stand in front of any doorway of its cell
+        if (ITEMS[f.item]?.center) for (const k of [key('h', c, r), key('h', c, r + 1), key('v', c, r), key('v', c + 1, r)]) reserved.add(k);
+        continue;
+      }
       reserved.add({ N: key('h', c, r), S: key('h', c, r + 1), W: key('v', c, r), E: key('v', c + 1, r) }[f.side]);
     }
     const lastResort = new Map();
@@ -1218,6 +1223,15 @@ export function buildHouse(renderer, seed = 1) {
     onRead: null,      // the sticky note was read
     onLoad: null,      // shells were loaded into the shotgun
     dropItem,
+    // the creature pushes a room door open from where it stands
+    openDoorFor(door, from, silent) {
+      if (door.open) return;
+      door.sign = door.axis === 'x' ? (from.z > door.f ? 1 : -1) : (from.x < door.f ? 1 : -1);
+      door.open = true;
+      const i = colliders.indexOf(door.col);
+      if (i >= 0) colliders.splice(i, 1);
+      if (!silent) api.onSound?.('doorOpen');
+    },
     tryCode,
     code,
     noteIcon: noteCanvas.toDataURL('image/png'),

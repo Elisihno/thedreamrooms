@@ -2,10 +2,11 @@ import * as THREE from '../vendor/three.module.min.js';
 import { buildHouse, levelY } from './house.js';
 import { createHeld } from './held.js';
 import { icons } from './icons.js';
+import { createHollow, ENTITY_NAME } from './entity.js';
 
 // Every run is different: the house layout, doors and hiding places come from a random seed.
 // Page flags (after the #, joined with . or &): fast = skip the title, test = fast plus a loaded
-// shotgun, s123 = use seed 123 (for testing).
+// shotgun, s123 = use seed 123, nohollow = no creature, hollow = the creature starts close (for testing).
 const hashFlags = new Set(location.hash.slice(1).split(/[&.,]/).filter(Boolean));
 const seedFlag = [...hashFlags].map(f => /^s(\d+)$/.exec(f)).find(Boolean);
 const seed = Number(new URLSearchParams(location.search).get('seed')) || (seedFlag ? Number(seedFlag[1]) : 0)
@@ -297,6 +298,7 @@ function fire() {
   house.onSound('shot');
   heldView.kick();
   house.shoot(camera, player);
+  if (hollow) { hollow.addFear(10); if (hollow.tryShoot(camera, player)) showToast(`${ENTITY_NAME} is down. Run, or hide.`, 2400); }
   renderInventory();
 }
 
@@ -375,12 +377,11 @@ house.onPickup = type => {
   chime();
 };
 house.onMessage = showToast;
-// Something loud happened (a window was shot out): the entity is meant to come and look. It is not
-// in the game yet, so for now the house just answers with a low rumble.
+// Something loud happened (a window was shot out): the creature comes to look.
 let lastAlert = null;
 house.onAlert = a => {
   lastAlert = { ...a, at: performance.now() };
-  setTimeout(() => { house.onSound('alert'); showToast('Something in the house heard that...', 3200); }, 1600);
+  setTimeout(() => { house.onSound('alert'); showToast('Something in the house heard that...', 3200); hollow?.investigate(a.x, a.z, a.level); }, 1600);
 };
 window.__alert = () => lastAlert;
 Object.defineProperty(window, '__gear', { get: () => gear });
@@ -466,13 +467,14 @@ function showWin(title, verb, kind = 'front') {
   winEl.className = kind;
   const s = Math.round((performance.now() - playStart) / 1000);
   document.getElementById('winTitle').textContent = title;
-  document.getElementById('winTime').textContent = `You ${verb} in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}.`;
+  const clock = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  document.getElementById('winTime').textContent = kind === 'dead' ? `You lasted ${clock}.` : `You ${verb} in ${clock}.`;
   winEl.hidden = false;
   fadeEl.style.opacity = '0';
   glowEl.style.opacity = '0';
   fxEl.hidden = true;
   heldView.show(null);
-  chime();
+  if (kind !== 'dead') chime();
 }
 // ---- the three endings ------------------------------------------------------------------------
 // Each escape has its own short film: the front door walks out into warm daylight, the hatch climbs
@@ -588,6 +590,7 @@ addEventListener('keydown', initAudio);
 addEventListener('click', initAudio);
 
 house.onThud = () => {
+  hollow?.addFear(14);
   if (!audio) return;
   try {
     const now = audio.currentTime, len = 0.5;
@@ -861,6 +864,50 @@ function updateLights(t, dt) {
   }
 }
 
+// ---- the creature -----------------------------------------------------------------------------
+// ENTITY_NAME wanders the house and follows your fear (see entity.js). Fear shows as a bar and a
+// heartbeat at the edges of the screen.
+function entitySound(name, vol = 1) {
+  if (!audio || vol <= 0) return;
+  try {
+    const now = audio.currentTime;
+    const g = audio.createGain();
+    g.connect(audio.destination);
+    const osc = (type, f0, f1, dur, level, lp) => {
+      const o = audio.createOscillator(), og = audio.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, now); o.frequency.exponentialRampToValueAtTime(f1, now + dur);
+      og.gain.setValueAtTime(0.0001, now); og.gain.linearRampToValueAtTime(level * vol, now + Math.min(0.08, dur / 3)); og.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      let node = o;
+      if (lp) { const f = audio.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; o.connect(f); node = f; }
+      node.connect(og).connect(g);
+      o.start(now); o.stop(now + dur + 0.02);
+    };
+    if (name === 'step') osc('sine', 85, 38, 0.2, 0.55);
+    else if (name === 'beat') { osc('sine', 62, 38, 0.16, 0.9); setTimeout(() => { if (audio) entitySound('beat2', vol * 0.7); }, 190); }
+    else if (name === 'beat2') osc('sine', 56, 36, 0.16, 0.8);
+    else if (name === 'growl') { osc('sawtooth', 78, 40, 1.4, 0.3, 260); osc('sawtooth', 83, 44, 1.4, 0.22, 260); }
+    else if (name === 'sting') { osc('square', 880, 860, 0.9, 0.12, 2400); osc('square', 932, 900, 0.9, 0.12, 2400); osc('sawtooth', 120, 60, 0.9, 0.3, 400); }
+    else if (name === 'hurt') osc('sawtooth', 420, 70, 0.7, 0.3, 900);
+    else if (name === 'catch') { osc('sawtooth', 200, 40, 1.2, 0.6, 800); osc('square', 1400, 300, 0.5, 0.25); }
+  } catch { /* audio is optional */ }
+}
+const hollow = hashFlags.has('nohollow') ? null : createHollow(house, hashFlags.has('hollow') ? { near: 6, grace: 2 } : {});
+if (hollow) {
+  scene.add(hollow.group);
+  hollow.spawn(player);
+  hollow.onSound = entitySound;
+  hollow.onCaught = () => {
+    if (driving) return;
+    driving = { kind: 'caught', t: 0 };
+    entitySound('catch', 1);
+    setHand(null);
+  };
+}
+window.__hollow = hollow;
+const fearEl = document.getElementById('fear'), fearFill = document.getElementById('fearFill'), fearV = document.getElementById('fearV');
+let beatT = 0;
+
 // ---- loop ---------------------------------------------------------------
 const clock = new THREE.Clock();
 let lastYaw = player.yaw, lastPitch = player.pitch, lastShown = -1;
@@ -948,7 +995,17 @@ function frame() {
     const f = driving;
     f.t += dt;
     const k = f.t;
-    if (f.kind === 'car') {
+    if (f.kind === 'caught') {
+      // it is on you: turn to face it, shake, and the screen goes black
+      const tx = hollow.x - player.pos.x, tz = hollow.z - player.pos.z;
+      player.yaw += angleDiff(Math.atan2(-tx, -tz), player.yaw) * Math.min(1, dt * 9);
+      player.pitch += (0.85 - player.pitch) * Math.min(1, dt * 6);
+      pitchAdd = Math.sin(t * 47) * 0.014 * smooth(0.1, 0.5, k);
+      rollAdd = Math.sin(t * 33) * 0.035 * smooth(0.1, 0.6, k);
+      fov = 72 + 14 * smooth(0, 1.0, k);
+      fadeEl.style.opacity = String(smooth(1.0, 1.6, k));
+      if (k > 2.1) { driving = null; showWin(`${ENTITY_NAME} got you`, 'lasted', 'dead'); }
+    } else if (f.kind === 'car') {
       // slide into the driver's seat, then the car pulls out through the garage door
       const seat = { x: 16.1, z: 13.4 };
       const settle = smooth(0, 0.9, k), go = Math.max(0, k - 0.9);
@@ -980,7 +1037,7 @@ function frame() {
       fadeEl.style.opacity = String(smooth(hatch ? 3.9 : 3.6, hatch ? 4.8 : 4.5, k));
       if (k > (hatch ? 5.2 : 5.0)) { driving = null; showWin(hatch ? 'You escaped' : 'You escaped', 'got out', f.kind); }
     }
-    if (driving) drawFx(driving);
+    if (driving && driving.kind !== 'caught') drawFx(driving);
   }
   if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
   vignette.style.opacity = wake.active ? vignette.style.opacity : (hideE * 0.95).toFixed(3);
@@ -997,6 +1054,22 @@ function frame() {
   updateLights(t, dt);
   house.update(dt, player);
   updateTarget();
+  if (hollow) {
+    const finale = driving && driving.kind !== 'caught';
+    hollow.update(dt, t, {
+      player, flash: gear.on, hidden: !!hide.spot && hide.amt > 0.8,
+      frozen: wake.active || !startEl.hidden || finale, dead: driving?.kind === 'caught',
+    });
+    const f = hollow.fear;
+    fearEl.hidden = wake.active || !startEl.hidden || !!driving;
+    fearFill.style.width = f.toFixed(0) + '%';
+    beatT -= dt;
+    if (f > 18 && !driving && startEl.hidden && !wake.active) {
+      if (beatT <= 0) { beatT = 1.25 - f * 0.0085; entitySound('beat', 0.25 + f * 0.007); fearV.dataset.pulse = t; }
+      const since = t - (+fearV.dataset.pulse || 0);
+      fearV.style.opacity = (Math.min(0.8, f / 100 * 0.9) * (0.55 + 0.45 * Math.exp(-since * 5))).toFixed(3);
+    } else fearV.style.opacity = '0';
+  }
 
   const yawRate = (player.yaw - lastYaw) / Math.max(dt, 1e-3), pitchRate = (player.pitch - lastPitch) / Math.max(dt, 1e-3);
   lastYaw = player.yaw; lastPitch = player.pitch;

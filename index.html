@@ -74,10 +74,19 @@
   .slot span { position: absolute; right: 3px; bottom: 1px; color: #fff; font: 700 12px system-ui, sans-serif; }
   #toast { position: fixed; left: 0; right: 0; bottom: 84px; text-align: center; color: #fff; font: 600 14px system-ui, sans-serif; pointer-events: none; }
   #toast[hidden] { display: none; }
+  /* fear: a thin red bar top left and a heartbeat glow at the screen edges */
+  #fear { position: fixed; z-index: 2; left: 16px; top: 16px; width: 110px; pointer-events: none; font: 700 11px system-ui, sans-serif; letter-spacing: .16em; color: rgba(255,255,255,.7); }
+  #fear i { display: block; margin-top: 4px; height: 5px; background: rgba(255,255,255,.14); }
+  #fear b { display: block; height: 100%; width: 0; background: #b3261a; }
+  #fear[hidden] { display: none; }
+  #fearV { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(120,0,0,0) 45%, rgba(120,0,0,.75) 100%); }
+  #win.dead { background: radial-gradient(ellipse at 50% 40%, #2a0505, #000 80%); color: #e9c4c0; }
 </style>
 </head>
 <body>
 <div id="hide"></div>
+<div id="fear" hidden>FEAR<i><b id="fearFill"></b></i></div>
+<div id="fearV"></div>
 <div id="dot"></div>
 <div id="floor"></div>
 <div id="battery" hidden><div id="battFill"></div></div>
