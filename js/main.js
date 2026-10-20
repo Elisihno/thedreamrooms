@@ -220,7 +220,7 @@ const useBtn = document.getElementById('use');
 const dotEl = document.getElementById('dot');
 useBtn.querySelector('img').src = globalThis.__DR_TEX?.ui_hand ?? 'assets/textures/ui_hand.png';
 let target = null;
-const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple', knife: 'kitchen knife', shotgun: 'shotgun', shells: 'shotgun shells', battery: 'car battery', fuel: 'fuel can', paper: 'paper', flashlight: 'flashlight' };
+const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple', knife: 'kitchen knife', shotgun: 'shotgun', shells: 'shotgun shells', battery: 'car battery', fuel: 'fuel can', paper: 'paper', flashlight: 'flashlight', vase: 'vase' };
 const label = t => (t.kind === 'item' ? (t.type === 'shells' && selected === 'shotgun' ? 'Load shells' : t.type === 'note' ? 'Read note' : `Take ${NAMES[t.type]}`) : t.kind === 'roomdoor' ? (t.door.open ? 'Close' : 'Open') : t.kind === 'trash' ? 'Trash can' : t.kind === 'wire' ? 'Cut' : t.kind === 'carhood' ? 'Car hood' : t.kind === 'carfuel' ? 'Fuel tank' : t.kind === 'cardoor' ? 'Car door' : t.kind === 'board' ? 'Cutting board' : t.locked ? 'Locked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
 function useTarget() {
   if (wake.active || driving) return;
@@ -306,9 +306,9 @@ function drop() {
   const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
   const [x, z] = collide(player.pos.x + fx * 0.75, player.pos.z + fz * 0.75);
   const type = selected;
-  house.dropItem(type, x, player.y, z, player.yaw, player.level);
+  house.dropItem(type, x, player.y, z, player.yaw, player.level, null, true);
   setHand(null);
-  house.onSound('drop');
+  if (type !== 'vase') house.onSound('drop');   // the vase makes its own sound when it lands
   showToast(`Dropped the ${NAMES[type]}`, 1200);
 }
 for (const [el, fn] of [[fireBtn, fire], [dropBtn, drop]]) {
@@ -691,6 +691,21 @@ house.onSound = name => {
       tg.gain.setValueAtTime(0.5, now); tg.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
       th.connect(tg).connect(audio.destination); th.start(now + 0.35); th.stop(now + 0.56);
       tg.gain.cancelScheduledValues(now); tg.gain.setValueAtTime(0.0001, now); tg.gain.setValueAtTime(0.5, now + 0.35); tg.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    } else if (name === 'vase') {      // a ceramic clack, then a ringing
+      const a = noise(0.09, 0.012), hp = audio.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 1400;
+      out.gain.value = 0.8;
+      a.connect(hp).connect(out); a.start(now);
+      for (const [f, d] of [[1180, 0.9], [1760, 0.6], [2410, 0.4]]) {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(0.09 * d, now + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, now + d);
+        o.connect(g).connect(audio.destination); o.start(now); o.stop(now + d + 0.05);
+      }
+      const th = audio.createOscillator(), tg = audio.createGain();
+      th.frequency.setValueAtTime(110, now); th.frequency.exponentialRampToValueAtTime(55, now + 0.12);
+      tg.gain.setValueAtTime(0.4, now); tg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      th.connect(tg).connect(audio.destination); th.start(now); th.stop(now + 0.17);
     } else if (name === 'pour') {     // liquid glugging
       for (let i = 0; i < 4; i++) {
         const o = audio.createOscillator(), g = audio.createGain();

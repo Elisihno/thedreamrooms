@@ -2,9 +2,9 @@ import * as THREE from '../vendor/three.module.min.js';
 
 // The black and white spiral vase: a smooth, glossy lathe-turned shape. The stripes spiral up it, so
 // the picture wraps around once per revolution and never shows a seam.
-let vaseMat = null;
-function spiralMaterial() {
-  if (vaseMat) return vaseMat;
+let vaseMat = null, spiralCv = null;
+export function spiralCanvas() {
+  if (spiralCv) return spiralCv;
   const S = 512, cv = document.createElement('canvas');
   cv.width = cv.height = S;
   const g = cv.getContext('2d'), img = g.createImageData(S, S), d = img.data;
@@ -18,7 +18,12 @@ function spiralMaterial() {
     d[k] = d[k + 1] = d[k + 2] = c; d[k + 3] = 255;
   }
   g.putImageData(img, 0, 0);
-  const tex = new THREE.CanvasTexture(cv);
+  spiralCv = cv;
+  return cv;
+}
+function spiralMaterial() {
+  if (vaseMat) return vaseMat;
+  const tex = new THREE.CanvasTexture(spiralCanvas());
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
   tex.anisotropy = 4;

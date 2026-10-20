@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { makeApple } from './apple.js';
 import { paperCanvas, crumpledPaperGeometry } from './icons.js';
+import { makeVase } from './vase.js';
 
 // The item in the player's hand. It lives in its own small scene, drawn on top of the world
 // with a cleared depth buffer, so it never clips into walls.
@@ -335,6 +336,17 @@ export function buildPaper() {
   return g;
 }
 
+// The spiral vase, held upright by its body in the lower right of the view.
+export function buildVase() {
+  const g = new THREE.Group();
+  const v = makeVase(1);
+  v.position.y = -0.26;              // the foot hangs below the hand
+  g.add(v);
+  g.userData.offset = [0.1, -0.02, -0.02];
+  g.userData.scale = 0.5;
+  return g;
+}
+
 // Three shotgun shells held together: red hulls with brass bases, along +x.
 export function buildShells() {
   const g = new THREE.Group();
@@ -362,7 +374,7 @@ export function createHeld() {
 
   const rig = new THREE.Group(); // the hand: this is what moves
   scene.add(rig);
-  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple(), knife: buildKnife(), shotgun: buildShotgun(), shells: buildShells(), battery: buildBattery(), fuel: buildFuel(), paper: buildPaper() };
+  const models = { key: buildKey(), pliers: buildPliers(), apple: buildApple(), knife: buildKnife(), shotgun: buildShotgun(), shells: buildShells(), battery: buildBattery(), fuel: buildFuel(), paper: buildPaper(), vase: buildVase() };
   for (const m of Object.values(models)) {
     const holder = new THREE.Group();
     holder.rotation.order = 'YXZ';

@@ -300,6 +300,8 @@ export function buildHouse(renderer, seed = 1) {
   const noteCanvas = drawNote(code);
   const hideSpots = [];
   const roomDoors = [];
+  let vaseStart = null;
+  const wobbles = [];   // dropped vases, falling and wobbling
   const shootables = []; // panes that can be shot out
   const shards = [];     // flying glass
   const timers = [];     // things that happen a moment later
@@ -344,7 +346,7 @@ export function buildHouse(renderer, seed = 1) {
     return texCache[type];
   };
   // How far above the surface the mesh's origin sits when it lies there.
-  const LIFT = { apple: 0.045, shotgun: 0.05, shells: 0.015, knife: 0.01, battery: 0.005, fuel: 0.005, flashlight: 0.02, paper: 0.004 };
+  const LIFT = { apple: 0.045, shotgun: 0.05, shells: 0.015, knife: 0.01, battery: 0.005, fuel: 0.005, flashlight: 0.02, paper: 0.004, vase: 0 };
 
   // `spin` is the yaw to lie at (random when not given).
   function makeItemMesh(type, spin) {
@@ -360,6 +362,9 @@ export function buildHouse(renderer, seed = 1) {
         [.55, .026, .026, .22, .03, 0, darkSteel], [.44, .02, .02, .15, .005, 0, steel], [.18, .05, .04, -.1, 0, 0, darkSteel],
         [.15, .04, .044, .12, -.012, 0, wood], [.34, .06, .034, -.37, -.012, 0, wood], [.05, .1, .036, -.55, -.034, 0, wood],
       ]);
+      mesh.rotation.y = spin ?? 0;
+    } else if (type === 'vase') {
+      mesh = makeVase(1.3);
       mesh.rotation.y = spin ?? 0;
     } else if (type === 'flashlight') {
       mesh = boxesMesh([[.16, .04, .04, -.02, 0, 0, col(0x3a3f45)], [.05, .065, .065, .085, -.012, 0, steel], [.01, .055, .055, .115, -.008, 0, col(0xfff0b0)],
@@ -388,9 +393,13 @@ export function buildHouse(renderer, seed = 1) {
   }
 
   // Put a carried item down: it lies on the surface at (x, y, z) and can be picked up again.
-  function dropItem(type, x, y, z, yaw, level, board = null) {
+  function dropItem(type, x, y, z, yaw, level, board = null, fall = false) {
     const mesh = makeItemMesh(type, yaw);
     mesh.position.set(x, y + (LIFT[type] ?? 0.02), z);
+    if (type === 'vase' && fall) {            // let go of it: it drops from hand height, lands and wobbles
+      mesh.position.y = y + 1.0;
+      wobbles.push({ mesh, floorY: y, vy: 0, landed: false, t: 0 });
+    }
     group.add(mesh);
     const item = { kind: 'item', type, part: null, mesh, floor: true, level, board };
     mesh.userData.item = item;
@@ -428,6 +437,8 @@ export function buildHouse(renderer, seed = 1) {
     if (gunBox) place('shotgun', gunBox);
     // the smiley-face paper lies in the middle of the attic's east room, always
     dropItem('paper', 19.5, levelY(3), 7.5, 0.5, 3);
+    // the vase starts on the start bedroom's round table
+    if (vaseStart) dropItem('vase', vaseStart.x, vaseStart.y, vaseStart.z, 0.4, vaseStart.level);
     // car parts lie on the floor in open rooms: the fuel can in the basement, the battery in the attic
     dropItem('fuel', 4.5, levelY(0), 13.5, 0.4, 0);
     dropItem('battery', 10.5, levelY(3), 4.5, 1.1, 3);
@@ -919,9 +930,7 @@ export function buildHouse(renderer, seed = 1) {
 
       if (item.vaseSpot && withVase) {   // the spiral vase stands on the start bedroom's round table
         const [vx, vz] = xf(item.vaseSpot.x, item.vaseSpot.z);
-        const vase = makeVase(1.3);
-        vase.position.set(vx, Y + item.vaseSpot.y, vz);
-        group.add(vase);
+        vaseStart = { x: vx, z: vz, y: Y + item.vaseSpot.y, level };   // made into a pick-up item once the loot is placed
       }
 
       if (item.hide) {
@@ -1267,6 +1276,21 @@ export function buildHouse(renderer, seed = 1) {
     },
     update(dt, player) {
       api.lastPlayer = player;
+      for (let i = wobbles.length - 1; i >= 0; i--) {   // a dropped vase falls, lands with a clink and rocks about its foot
+        const w = wobbles[i];
+        if (!w.mesh.parent) { wobbles.splice(i, 1); continue; }   // picked up again
+        if (!w.landed) {
+          w.vy -= 11 * dt; w.mesh.position.y += w.vy * dt;
+          if (w.mesh.position.y <= w.floorY) { w.mesh.position.y = w.floorY; w.landed = true; w.t = 0; api.onSound?.('vase'); }
+        } else {
+          w.t += dt;
+          const k = Math.exp(-w.t * 3.0);
+          w.mesh.rotation.x = 0.24 * k * Math.sin(w.t * 27);
+          w.mesh.rotation.z = 0.2 * k * Math.cos(w.t * 23 + 1);
+          w.mesh.position.x += Math.sin(w.t * 60) * 0.0015 * k;   // a little skitter
+          if (w.t > 1.8) { w.mesh.rotation.x = w.mesh.rotation.z = 0; wobbles.splice(i, 1); }
+        }
+      }
       for (let i = timers.length - 1; i >= 0; i--) { timers[i].t -= dt; if (timers[i].t <= 0) { const fn = timers[i].fn; timers.splice(i, 1); fn(); } }
       for (let i = pops.length - 1; i >= 0; i--) {   // the flashlight flies out of the can in an arc
         const p = pops[i];

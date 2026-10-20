@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { appleSkinCanvas } from './apple.js';
+import { spiralCanvas } from './vase.js';
 
 // Inventory icons, drawn on small canvases and returned as data URLs.
 
@@ -184,7 +185,22 @@ function flashlight(g) {
   g.fillStyle = '#c8321f'; g.fillRect(-20, -13, 8, 4);
 }
 
+function vaseIcon(g) {
+  // the bottle silhouette filled with the spiral texture, with a bright highlight down one side
+  g.save();
+  g.beginPath();
+  g.moveTo(48, 6); g.lineTo(80, 6); g.bezierCurveTo(84, 22, 68, 32, 80, 46);
+  g.bezierCurveTo(118, 64, 112, 112, 64, 122); g.bezierCurveTo(16, 112, 10, 64, 48, 46);
+  g.bezierCurveTo(60, 32, 44, 22, 48, 6); g.closePath(); g.clip();
+  g.drawImage(spiralCanvas(), 0, 0, 256, 512, 10, 4, 108, 122);   // half the texture: three bold stripes
+  const sh = g.createLinearGradient(14, 0, 114, 0);
+  sh.addColorStop(0, 'rgba(0,0,0,.35)'); sh.addColorStop(0.28, 'rgba(255,255,255,.3)'); sh.addColorStop(0.42, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,0,0,.4)');
+  g.fillStyle = sh; g.fillRect(0, 0, 128, 128);
+  g.restore();
+}
+
 export const icons = {
+  vase: make(vaseIcon),
   paper: make(g => { g.drawImage(paperCanvas(256), 0, 0, 256, 353, 24, 4, 80, 110); }),
   flashlight: make(flashlight),
   battery: make(battery),
