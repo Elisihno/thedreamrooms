@@ -21,7 +21,7 @@ scene.background = new THREE.Color(0x0a0a0e);
 scene.fog = new THREE.FogExp2(0x0a0a0e, 0.05);
 scene.add(new THREE.AmbientLight(0x7a7a92, 2.1));
 
-const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 60);
+const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.1, 45);
 scene.add(camera);
 
 // flashlight

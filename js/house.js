@@ -208,7 +208,7 @@ function makeBatch(tw = TILE_W, th = TILE_H) {
         part.setAttribute('position', new THREE.BufferAttribute(geo.attributes.position.array.slice(s, e), 3));
         part.setAttribute('normal', new THREE.BufferAttribute(geo.attributes.normal.array.slice(s, e), 3));
         part.setAttribute('uv', new THREE.BufferAttribute(geo.attributes.uv.array.slice(f * 12, f * 12 + 12), 2));
-        add(part, mats[f]);
+        if (mats[f]) add(part, mats[f]);   // a null material skips the face
       }
     },
     // upright cylinder centred at (cx, cy, cz)
@@ -562,8 +562,11 @@ export function buildHouse(renderer, seed = 1) {
       const mid = (a0 + a1) / 2;
       const sx = axis === 'x' ? len : THICK, sz = axis === 'x' ? THICK : len;
       const cx = axis === 'x' ? mid : f, cz = axis === 'x' ? f : mid;
+      // The top face is skipped where it meets the ceiling (it would sit exactly level with the next
+      // storey's floor and flicker against it), and the bottom face where it meets the floor.
+      const top = y1 >= WALL_H - 1e-6 ? null : side, bottom = y0 <= 1e-6 ? null : side;
       batch.box(sx, h, sz, cx, Y + y0 + h / 2, cz,
-        axis === 'x' ? [side, side, side, side, posMat, negMat] : [posMat, negMat, side, side, side, side]);
+        axis === 'x' ? [side, side, top, bottom, posMat, negMat] : [posMat, negMat, top, bottom, side, side]);
       if (solid) colliders.push({ minX: cx - sx / 2, maxX: cx + sx / 2, minZ: cz - sz / 2, maxZ: cz + sz / 2, level });
     }
 
