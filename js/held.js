@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { makeApple } from './apple.js';
-import { paperCanvas } from './icons.js';
+import { paperCanvas, crumpledPaperGeometry } from './icons.js';
 
 // The item in the player's hand. It lives in its own small scene, drawn on top of the world
 // with a cleared depth buffer, so it never clips into walls.
@@ -327,7 +327,7 @@ export function buildPaper() {
   const g = new THREE.Group();
   const tex = new THREE.CanvasTexture(paperCanvas(256));
   tex.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.276), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+  const m = new THREE.Mesh(crumpledPaperGeometry(0.2, 0.276), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, transparent: true, alphaTest: 0.4 }));
   g.add(m);
   g.userData.pose = [-0.2, 0, 0];
   g.userData.offset = [0.04, 0.04, -0.12];

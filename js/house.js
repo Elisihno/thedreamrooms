@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { ITEMS, ROLE_ITEMS, buildMannequin } from './furniture.js';
 import { makeApple } from './apple.js';
-import { paperCanvas } from './icons.js';
+import { paperCanvas, crumpledPaperGeometry } from './icons.js';
 
 // ---- layout -------------------------------------------------------------
 // One map per storey, bottom to top. Each letter is a room; every character is one
@@ -377,7 +377,7 @@ export function buildHouse(renderer, seed = 1) {
       mesh.rotation.y = spin ?? rand() * Math.PI * 2;
     } else {
       mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(spec[type].w, spec[type].h),
+        type === 'paper' ? crumpledPaperGeometry(spec[type].w, spec[type].h) : new THREE.PlaneGeometry(spec[type].w, spec[type].h),
         new THREE.MeshBasicMaterial({ map: itemTexture(type), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, color: 0xd8d8d8 }));
       mesh.rotation.order = 'YXZ';
       mesh.rotation.x = -Math.PI / 2;

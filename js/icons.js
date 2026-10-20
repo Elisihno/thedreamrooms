@@ -1,3 +1,4 @@
+import * as THREE from '../vendor/three.module.min.js';
 import { appleSkinCanvas } from './apple.js';
 
 // Inventory icons, drawn on small canvases and returned as data URLs.
@@ -82,24 +83,95 @@ function fuel(g) {
   g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(36, 44, 6, 56);
 }
 
+// ---- the crumpled paper ---------------------------------------------------------------------
+// One height function drives both the 3D shape (crumpled, curled at the edges) and the texture
+// (creases shaded in, so the picture reads as rough, worn paper). u runs left to right and v bottom
+// to top over the sheet, both 0..1.
+const FOLDS = (() => {
+  let s = 21;
+  const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  return Array.from({ length: 13 }, () => ({ x: r(), y: r(), a: r() * Math.PI, k: 0.5 + r() * 1.0, w: 0.018 + r() * 0.045, sign: r() < 0.5 ? -1 : 1 }));
+})();
+export function paperHeight(u, v) {
+  let h = 0;
+  for (const f of FOLDS) {   // creases: narrow ridges and valleys across the sheet
+    const d = (u - f.x) * Math.cos(f.a) + (v - f.y) * Math.sin(f.a);
+    h += f.sign * f.k * Math.exp(-(d * d) / (f.w * f.w));
+  }
+  h += 0.5 * Math.sin(u * 9 + v * 5) * Math.sin(v * 11 - u * 4) + 0.28 * Math.sin(u * 23 + 1) * Math.sin(v * 19 + 2);
+  const e = Math.min(u, 1 - u, v, 1 - v);   // the edges curl
+  h += 0.9 * Math.exp(-(e * e) / 0.004) * (0.5 + 0.5 * Math.sin(u * 6 + v * 3));
+  return h;
+}
+
+export function crumpledPaperGeometry(w, hgt) {
+  const geo = new THREE.PlaneGeometry(w, hgt, 22, 30);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) p.setZ(i, paperHeight(p.getX(i) / w + 0.5, p.getY(i) / hgt + 0.5) * 0.013);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+// value noise for ragged, torn edges
+const hash = (x, y) => { const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return n - Math.floor(n); };
+const vnoise = (x, y) => {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, sx = xf * xf * (3 - 2 * xf), sy = yf * yf * (3 - 2 * yf);
+  const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+};
+
 // The paper with a smiley face and an arrow, drawn on a canvas (also used as its texture).
+let paperCache = null;
 export function paperCanvas(size = 256) {
+  if (paperCache && paperCache.width === size) return paperCache;
   const cv = document.createElement('canvas');
   cv.width = size; cv.height = Math.round(size * 1.38);
   const g = cv.getContext('2d'), W = cv.width, H = cv.height;
-  g.fillStyle = '#efeadc'; g.fillRect(0, 0, W, H);
-  for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(120,100,60,${0.02 + (i % 5) * 0.012})`; g.beginPath(); g.arc((i * 83) % W, (i * 137) % H, 8 + (i % 7) * 5, 0, 7); g.fill(); }
-  g.strokeStyle = 'rgba(90,70,40,.35)'; g.lineWidth = 3; g.strokeRect(2, 2, W - 4, H - 4);
+  g.fillStyle = '#e3dac2'; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 90; i++) {            // yellowed, stained patches
+    g.fillStyle = `rgba(${110 + (i % 4) * 12},${86 + (i % 3) * 10},${44},${0.03 + (i % 6) * 0.012})`;
+    g.beginPath(); g.arc((i * 83) % W, (i * 137) % H, 6 + (i % 9) * 6, 0, 7); g.fill();
+  }
+  for (let i = 0; i < 3; i++) {             // a few dark stains with a ring
+    const x = W * (0.2 + 0.3 * i), y = H * (0.15 + 0.32 * ((i * 2) % 3)), r = 14 + i * 9;
+    const sg = g.createRadialGradient(x, y, r * 0.2, x, y, r);
+    sg.addColorStop(0, 'rgba(90,62,30,.35)'); sg.addColorStop(0.8, 'rgba(90,62,30,.18)'); sg.addColorStop(1, 'rgba(70,46,22,.0)');
+    g.fillStyle = sg; g.beginPath(); g.ellipse(x, y, r * 1.3, r, i, 0, 7); g.fill();
+  }
   const cx = W / 2, cy = H * 0.34, r = W * 0.26;
   g.lineCap = 'round'; g.strokeStyle = '#1d1a14'; g.fillStyle = '#1d1a14';
-  g.lineWidth = W * 0.035;
-  g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();                       // face
-  g.beginPath(); g.arc(cx - r * 0.38, cy - r * 0.25, W * 0.025, 0, 7); g.fill();       // eyes
-  g.beginPath(); g.arc(cx + r * 0.38, cy - r * 0.25, W * 0.025, 0, 7); g.fill();
+  g.lineWidth = W * 0.036;
+  g.beginPath(); g.arc(cx + 2, cy, r, 0.1, Math.PI * 2 + 0.05); g.stroke();                       // face, hand drawn
+  g.beginPath(); g.arc(cx - r * 0.38, cy - r * 0.25, W * 0.026, 0, 7); g.fill();                    // eyes
+  g.beginPath(); g.arc(cx + r * 0.38, cy - r * 0.22, W * 0.024, 0, 7); g.fill();
   g.beginPath(); g.arc(cx, cy + r * 0.05, r * 0.6, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();   // smile
-  g.lineWidth = W * 0.05;                                                              // the arrow, pointing down
-  g.beginPath(); g.moveTo(cx, H * 0.58); g.lineTo(cx, H * 0.86); g.stroke();
-  g.beginPath(); g.moveTo(cx - W * 0.16, H * 0.76); g.lineTo(cx, H * 0.9); g.lineTo(cx + W * 0.16, H * 0.76); g.stroke();
+  g.lineWidth = W * 0.052;                                                                          // the arrow, pointing down
+  g.beginPath(); g.moveTo(cx, H * 0.58); g.lineTo(cx + 3, H * 0.86); g.stroke();
+  g.beginPath(); g.moveTo(cx - W * 0.16, H * 0.76); g.lineTo(cx + 2, H * 0.9); g.lineTo(cx + W * 0.16, H * 0.76); g.stroke();
+  // worn, whitish scuffs along the creases
+  g.strokeStyle = 'rgba(250,244,226,.5)'; g.lineWidth = 1.6;
+  for (const f of FOLDS) {
+    const px = f.x * W, py = (1 - f.y) * H, dx = -Math.sin(f.a), dy = Math.cos(f.a);
+    g.beginPath(); g.moveTo(px - dx * W, py + dy * W * 0 - dy * W); g.lineTo(px + dx * W, py + dy * W); g.stroke();
+  }
+  // shade the creases, add grain, and rip the edges
+  const img = g.getImageData(0, 0, W, H), d = img.data, eps = 0.004;
+  for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
+    const u = px / (W - 1), v = 1 - py / (H - 1), k = (py * W + px) * 4;
+    const dhu = paperHeight(u + eps, v) - paperHeight(u - eps, v), dhv = paperHeight(u, v + eps) - paperHeight(u, v - eps);
+    const shade = Math.max(0.35, Math.min(1.35, 1 - (dhu * 0.55 - dhv * 0.55) * 2.4));       // light from the upper left
+    const grain = 0.9 + 0.2 * hash(px, py) + 0.1 * (vnoise(px * 0.3, py * 0.3) - 0.5);
+    const m = shade * grain;
+    d[k] = Math.min(255, d[k] * m); d[k + 1] = Math.min(255, d[k + 1] * m); d[k + 2] = Math.min(255, d[k + 2] * m);
+    const e = Math.min(u, 1 - u, v, 1 - v);       // torn, ragged edges and a ripped corner
+    const rag = 0.006 + 0.03 * vnoise(u * 38, v * 52) + 0.015 * vnoise(u * 90, v * 120);
+    let alpha = e > rag ? 255 : e > rag - 0.008 ? 120 : 0;
+    if (u + v < 0.16 + 0.12 * vnoise(u * 20, v * 20)) alpha = 0;
+    if ((1 - u) + (1 - v) < 0.1 + 0.1 * vnoise(u * 24 + 5, v * 24)) alpha = 0;
+    d[k + 3] = alpha;
+  }
+  g.putImageData(img, 0, 0);
+  paperCache = cv;
   return cv;
 }
 
