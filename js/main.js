@@ -116,7 +116,8 @@ function endWake() {
 }
 // after being caught the next day begins: a black card, then waking up again in a new house
 const dayFlag = [...hashFlags].map(f => /^day(\d+)$/.exec(f)).find(Boolean);
-const day = dayFlag ? +dayFlag[1] : 1;
+const LAST_DAY = 7;
+const day = Math.min(LAST_DAY, dayFlag ? +dayFlag[1] : 1);
 const dayEl = document.getElementById('day');
 if (day > 1 && !fastStart) {
   startEl.hidden = true; lidT.hidden = lidB.hidden = false;
@@ -1068,8 +1069,14 @@ function frame() {
       fadeEl.style.opacity = String(smooth(2.2, 2.9, k));
       if (k > 3.1) {
         driving = null; escaped = true;
-        dayEl.textContent = `Day ${day + 1}`; dayEl.style.opacity = '1'; dayEl.hidden = false;
-        setTimeout(() => { location.hash = `#day${day + 1}`; location.reload(); }, 2800);
+        dayEl.style.opacity = '1'; dayEl.hidden = false;
+        if (day >= LAST_DAY) {       // the seventh day is the end
+          dayEl.innerHTML = 'The End<small>Tap to start over</small>';
+          setTimeout(() => { dayEl.style.pointerEvents = 'auto'; dayEl.addEventListener('pointerdown', () => { location.hash = '#fast'; location.reload(); }); }, 3000);
+        } else {
+          dayEl.textContent = `Day ${day + 1}`;
+          setTimeout(() => { location.hash = `#day${day + 1}`; location.reload(); }, 2800);
+        }
       }
     } else if (f.kind === 'car') {
       // slide into the driver's seat, then the car pulls out through the garage door
