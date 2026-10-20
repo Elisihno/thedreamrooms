@@ -17,9 +17,9 @@ renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x030303);
-scene.fog = new THREE.FogExp2(0x030303, 0.09);
-scene.add(new THREE.AmbientLight(0x5a5a6e, 1.15));
+scene.background = new THREE.Color(0x0a0a0e);
+scene.fog = new THREE.FogExp2(0x0a0a0e, 0.05);
+scene.add(new THREE.AmbientLight(0x7a7a92, 2.1));
 
 const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 60);
 scene.add(camera);
@@ -819,7 +819,7 @@ house.onUse = (kind, open) => {
 // A fixed pool of point lights follows the nearest rooms, so the shader cost stays
 // constant however many rooms the house has.
 const pool = Array.from({ length: 4 }, () => {
-  const l = new THREE.PointLight(0xffd9a0, 0, 8, 1.4);
+  const l = new THREE.PointLight(0xffd9a0, 0, 10, 1.3);
   l.userData.room = null;
   scene.add(l);
   return l;
@@ -842,7 +842,7 @@ function updateLights(t, dt) {
     const room = l.userData.room;
     if (!room) continue;
     l.position.lerp(room.pos, Math.min(1, dt * 4));
-    l.intensity = 1.4 * room.base * (0.85 + 0.15 * Math.sin(t * (2 + room.base * 3) + room.pos.x));
+    l.intensity = 2.4 * room.base * (0.85 + 0.15 * Math.sin(t * (2 + room.base * 3) + room.pos.x));
   }
 }
 
