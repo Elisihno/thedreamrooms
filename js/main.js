@@ -114,6 +114,15 @@ function endWake() {
   document.body.classList.remove('waking');
   showToast('Where am I?', 2600);
 }
+// after being caught the next day begins: a black card, then waking up again in a new house
+const dayFlag = [...hashFlags].map(f => /^day(\d+)$/.exec(f)).find(Boolean);
+const day = dayFlag ? +dayFlag[1] : 1;
+const dayEl = document.getElementById('day');
+if (day > 1 && !fastStart) {
+  startEl.hidden = true; lidT.hidden = lidB.hidden = false;
+  dayEl.textContent = `Day ${day}`; dayEl.style.opacity = '1'; dayEl.hidden = false;
+  setTimeout(() => { dayEl.style.opacity = '0'; startWake(); setTimeout(() => { dayEl.hidden = true; }, 1600); }, 2200);
+} else
 if (fastStart) { startEl.hidden = true; lidT.hidden = lidB.hidden = true; } else { lidT.hidden = lidB.hidden = false; }
 startEl.addEventListener('pointerdown', startWake);
 addEventListener('keydown', e => { if (!startEl.hidden && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); startWake(); } else skipWake(); });
@@ -1000,11 +1009,18 @@ function frame() {
       const tx = hollow.x - player.pos.x, tz = hollow.z - player.pos.z;
       player.yaw += angleDiff(Math.atan2(-tx, -tz), player.yaw) * Math.min(1, dt * 9);
       player.pitch += (0.85 - player.pitch) * Math.min(1, dt * 6);
-      pitchAdd = Math.sin(t * 47) * 0.014 * smooth(0.1, 0.5, k);
-      rollAdd = Math.sin(t * 33) * 0.035 * smooth(0.1, 0.6, k);
+      pitchAdd = Math.sin(t * 47) * 0.014 * smooth(0.1, 0.5, k) * (1 - smooth(1.0, 1.6, k));
+      rollAdd = Math.sin(t * 33) * 0.035 * smooth(0.1, 0.6, k) + 1.35 * smooth(0.9, 1.9, k);
+      eye = EYE + (0.25 - EYE) * smooth(0.9, 1.9, k);          // it drags you down
       fov = 72 + 14 * smooth(0, 1.0, k);
-      fadeEl.style.opacity = String(smooth(1.0, 1.6, k));
-      if (k > 2.1) { driving = null; showWin(`${ENTITY_NAME} got you`, 'lasted', 'dead'); }
+      glowEl.style.background = 'radial-gradient(ellipse at center, rgba(150,0,0,0), rgba(150,0,0,.8))';
+      glowEl.style.opacity = String(0.9 * smooth(0.7, 1.2, k) * (1 - smooth(1.8, 2.3, k)));
+      fadeEl.style.opacity = String(smooth(1.7, 2.4, k));
+      if (k > 2.6) {
+        driving = null; escaped = true;
+        dayEl.textContent = `Day ${day + 1}`; dayEl.style.opacity = '1'; dayEl.hidden = false;
+        setTimeout(() => { location.hash = `#day${day + 1}`; location.reload(); }, 2800);
+      }
     } else if (f.kind === 'car') {
       // slide into the driver's seat, then the car pulls out through the garage door
       const seat = { x: 16.1, z: 13.4 };

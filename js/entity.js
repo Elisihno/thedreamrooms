@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { levelY } from './house.js';
 
-export const ENTITY_NAME = 'The Hollow';
+export const ENTITY_NAME = 'Dread';
 
 // ---- the body ---------------------------------------------------------------------------
 // A tall, thin, ashen figure in a torn gown. Its arms hang to its knees, its face is two
