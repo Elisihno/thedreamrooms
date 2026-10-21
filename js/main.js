@@ -970,8 +970,8 @@ document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () =
 refreshMenu();
 $('btnOptions').addEventListener('click', () => { $('opts').hidden = false; $('menuMain').hidden = true; });
 $('optBack').addEventListener('click', () => { $('opts').hidden = true; $('menuMain').hidden = false; });
-$('btnPlay').addEventListener('click', () => { initAudio(); title.phase = 'down'; $('menuMain').hidden = true; });
-$('modBack').addEventListener('click', () => { title.phase = 'up'; $('mods').hidden = true; });
+$('btnPlay').addEventListener('click', () => { initAudio(); title.phase = 'down'; $('menuMain').hidden = true; $('gameTitle').classList.add('gone'); });
+$('modBack').addEventListener('click', () => { title.phase = 'up'; $('mods').hidden = true; $('gameTitle').classList.remove('gone'); });
 $('btnBegin').addEventListener('click', () => {
   initAudio();
   $('mods').hidden = true;
