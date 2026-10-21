@@ -78,11 +78,11 @@
   .dd-list li { padding: 7px 10px; color: #111; font: 400 clamp(13px, 2.2vw, 17px) system-ui, sans-serif; cursor: pointer; }
   .dd-list li:hover { background: #ddd; }
   .dd-list li.on { font-weight: 700; }
-  .setup .checks { position: absolute; left: 60%; top: 9%; display: grid; grid-template-columns: auto auto; gap: 6px 26px; justify-items: center; font-size: clamp(14px, 2.4vw, 19px); }
+  .setup .checks { position: absolute; left: 60%; top: 6%; display: grid; grid-template-columns: auto auto; gap: 6px 26px; justify-items: center; font-size: clamp(14px, 2.4vw, 19px); }
   .setup .checks label { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .setup .checks input { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; margin: 0; background: #f2f2f2; cursor: pointer; }
   .setup .checks input:checked { background: #f2f2f2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M4 11l4.5 5L18 6' fill='none' stroke='%23222' stroke-width='2.5'/%3E%3C/svg%3E") center no-repeat; }
-  .setup .desc { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); width: min(40vw, 340px); min-height: 80px; box-sizing: border-box; padding: 8px 12px; border: 2px solid #eee; font-size: clamp(14px, 2.4vw, 18px); line-height: 1.25; background: rgba(0,0,0,.25); }
+  .setup .desc { position: absolute; left: 50%; top: 41%; transform: translateX(-50%); width: min(46vw, 380px); min-height: 70px; box-sizing: border-box; padding: 6px 12px; border: 2px solid #eee; font-size: clamp(13px, 2.2vw, 17px); line-height: 1.25; background: rgba(0,0,0,.25); }
   .setup .desc b { display: block; font-size: clamp(18px, 3.2vw, 25px); font-weight: 400; margin-bottom: 3px; }
   .setup .sbtn { position: absolute; bottom: max(14px, env(safe-area-inset-bottom, 0px)); padding: 1px 14px; border: 2px solid #eee; background: rgba(0,0,0,.2); color: #fff; font: italic 400 clamp(18px, 3.4vw, 26px) Georgia, serif; cursor: pointer; }
   .setup .sbtn.back { left: max(20px, env(safe-area-inset-left, 0px)); }
@@ -92,7 +92,7 @@
     .setup .sl { top: 15%; left: 18px; }
     .setup .sr { top: 15%; right: 18px; }
     .setup .checks { left: 18px; right: 18px; top: 30%; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 13px; }
-    .setup .desc { left: 18px; right: 18px; width: auto; transform: none; bottom: 16%; }
+    .setup .desc { left: 18px; right: 18px; width: auto; transform: none; top: 44%; }
   }
   .panel[hidden], #menuMain[hidden] { display: none; }
   #lidT, #lidB { position: fixed; left: 0; right: 0; height: 50%; z-index: 7; background: #000; pointer-events: none; }
