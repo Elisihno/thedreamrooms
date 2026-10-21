@@ -67,29 +67,32 @@
   /* the play screen, laid out like Granny's: difficulty on the left, what it means in the middle, quality on the right */
   .setup { position: absolute; inset: 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; color: #eee; -webkit-backdrop-filter: blur(9px) brightness(.5); backdrop-filter: blur(9px) brightness(.5); }
   .setup[hidden] { display: none; }
-  .setup h2 { position: absolute; left: max(22px, env(safe-area-inset-left, 0px)); top: max(10px, env(safe-area-inset-top, 0px)); margin: 0; font: italic 400 clamp(38px, 8vw, 62px) Georgia, serif; letter-spacing: .02em; text-shadow: 0 3px 8px #000; }
-  .setup .lab { font-size: clamp(24px, 5vw, 40px); margin-bottom: 8px; text-shadow: 0 2px 6px #000; }
-  .setup .sl { position: absolute; left: max(36px, env(safe-area-inset-left, 0px)); top: 31%; }
-  .setup .sr { position: absolute; right: max(30px, env(safe-area-inset-right, 0px)); top: 40%; }
-  .setup .dd { appearance: none; -webkit-appearance: none; min-width: 150px; padding: 9px 36px 9px 12px; border: 0; border-radius: 0; background: #f4f4f4 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Cpath d='M2 8l4 4 8-9' fill='none' stroke='%23222' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 10px center; color: #111; font: 400 clamp(16px, 3vw, 24px) system-ui, sans-serif; }
-  .setup .checks { position: absolute; left: 62%; top: 8%; display: grid; grid-template-columns: auto auto; gap: 8px 36px; justify-items: center; font-size: clamp(18px, 3.4vw, 26px); }
-  .setup .checks label { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  .setup .checks input { appearance: none; -webkit-appearance: none; width: 30px; height: 30px; margin: 0; background: #f2f2f2; cursor: pointer; }
-  .setup .checks input:checked { background: #f2f2f2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpath d='M6 15l6 7 12-14' fill='none' stroke='%23222' stroke-width='3'/%3E%3C/svg%3E") center no-repeat; }
-  .setup .portrait { position: absolute; right: max(18px, env(safe-area-inset-right, 0px)); top: max(10px, env(safe-area-inset-top, 0px)); width: clamp(64px, 12vw, 96px); height: clamp(64px, 12vw, 96px); border-radius: 50%; border: 4px solid #8f3a22; box-shadow: 0 0 0 3px #1a0d08, 0 0 18px rgba(200,60,30,.5); overflow: hidden; background: #0a0a0e; }
-  .setup .portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .setup .desc { position: absolute; left: 50%; bottom: 17%; transform: translateX(-50%); width: min(44vw, 440px); min-height: 120px; box-sizing: border-box; padding: 10px 16px; border: 3px solid #eee; font-size: clamp(16px, 3vw, 24px); line-height: 1.25; background: rgba(0,0,0,.25); }
-  .setup .desc b { display: block; font-size: clamp(22px, 4.2vw, 34px); font-weight: 400; margin-bottom: 4px; }
-  .setup .sbtn { position: absolute; bottom: max(18px, env(safe-area-inset-bottom, 0px)); padding: 2px 18px; border: 2px solid #eee; background: rgba(0,0,0,.2); color: #fff; font: italic 400 clamp(24px, 5vw, 36px) Georgia, serif; cursor: pointer; }
-  .setup .sbtn.back { left: max(26px, env(safe-area-inset-left, 0px)); }
-  .setup .sbtn.cont { right: max(26px, env(safe-area-inset-right, 0px)); }
+  .setup h2 { position: absolute; left: max(18px, env(safe-area-inset-left, 0px)); top: max(6px, env(safe-area-inset-top, 0px)); margin: 0; font: italic 400 clamp(28px, 5vw, 42px) Georgia, serif; text-shadow: 0 3px 8px #000; }
+  .setup .lab { font-size: clamp(17px, 3vw, 24px); margin-bottom: 5px; text-shadow: 0 2px 6px #000; }
+  .setup .sl { position: absolute; left: max(28px, env(safe-area-inset-left, 0px)); top: 30%; }
+  .setup .sr { position: absolute; right: max(24px, env(safe-area-inset-right, 0px)); top: 40%; }
+  .dd { position: relative; display: inline-block; font-style: normal; }
+  .dd-btn { display: block; width: clamp(104px, 18vw, 140px); padding: 6px 28px 6px 9px; border: 0; border-radius: 0; text-align: left; background: #f4f4f4 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M2 7l3.5 3.5L12 3' fill='none' stroke='%23222' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 8px center; color: #111; font: 400 clamp(13px, 2.2vw, 17px) system-ui, sans-serif; cursor: pointer; }
+  .dd-list { position: absolute; left: 0; right: 0; top: 100%; z-index: 3; margin: 2px 0 0; padding: 0; list-style: none; background: #f4f4f4; box-shadow: 0 4px 14px rgba(0,0,0,.6); }
+  .dd-list[hidden] { display: none; }
+  .dd-list li { padding: 7px 10px; color: #111; font: 400 clamp(13px, 2.2vw, 17px) system-ui, sans-serif; cursor: pointer; }
+  .dd-list li:hover { background: #ddd; }
+  .dd-list li.on { font-weight: 700; }
+  .setup .checks { position: absolute; left: 60%; top: 9%; display: grid; grid-template-columns: auto auto; gap: 6px 26px; justify-items: center; font-size: clamp(14px, 2.4vw, 19px); }
+  .setup .checks label { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .setup .checks input { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; margin: 0; background: #f2f2f2; cursor: pointer; }
+  .setup .checks input:checked { background: #f2f2f2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M4 11l4.5 5L18 6' fill='none' stroke='%23222' stroke-width='2.5'/%3E%3C/svg%3E") center no-repeat; }
+  .setup .desc { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); width: min(40vw, 340px); min-height: 80px; box-sizing: border-box; padding: 8px 12px; border: 2px solid #eee; font-size: clamp(14px, 2.4vw, 18px); line-height: 1.25; background: rgba(0,0,0,.25); }
+  .setup .desc b { display: block; font-size: clamp(18px, 3.2vw, 25px); font-weight: 400; margin-bottom: 3px; }
+  .setup .sbtn { position: absolute; bottom: max(14px, env(safe-area-inset-bottom, 0px)); padding: 1px 14px; border: 2px solid #eee; background: rgba(0,0,0,.2); color: #fff; font: italic 400 clamp(18px, 3.4vw, 26px) Georgia, serif; cursor: pointer; }
+  .setup .sbtn.back { left: max(20px, env(safe-area-inset-left, 0px)); }
+  .setup .sbtn.cont { right: max(20px, env(safe-area-inset-right, 0px)); }
   @media (max-aspect-ratio: 1/1) {
     .setup { overflow: auto; }
-    .setup .sl { top: 17%; left: 22px; }
-    .setup .sr { top: 17%; right: 22px; }
-    .setup .checks { left: 22px; right: 22px; top: 33%; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 15px; }
-    .setup .desc { left: 22px; right: 22px; width: auto; transform: none; bottom: 17%; }
-    .setup .portrait { display: none; }
+    .setup .sl { top: 15%; left: 18px; }
+    .setup .sr { top: 15%; right: 18px; }
+    .setup .checks { left: 18px; right: 18px; top: 30%; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 13px; }
+    .setup .desc { left: 18px; right: 18px; width: auto; transform: none; bottom: 16%; }
   }
   .panel[hidden], #menuMain[hidden] { display: none; }
   #lidT, #lidB { position: fixed; left: 0; right: 0; height: 50%; z-index: 7; background: #000; pointer-events: none; }
@@ -163,16 +166,15 @@
   <section class="setup" id="mods" hidden>
     <h2>Play</h2>
     <div class="sl"><div class="lab">Difficulty</div>
-      <select class="dd" id="sMode"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option><option value="extreme">Extreme</option><option value="practice">Practice</option></select></div>
+      <div id="sMode"></div></div>
     <div class="checks">
       <label><span>Darker</span><input type="checkbox" id="sDark"></label>
       <label><span>Fear meter</span><input type="checkbox" id="sFear"></label>
       <label><span>Limping</span><input type="checkbox" id="sLimp"></label>
       <label><span>Music</span><input type="checkbox" id="sSound"></label>
     </div>
-    <div class="portrait"><img id="dreadFace" alt=""></div>
     <div class="sr"><div class="lab">Quality</div>
-      <select class="dd" id="sQuality"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+      <div id="sQuality"></div></div>
     <div class="desc" id="sDesc"></div>
     <button class="sbtn back" id="modBack" type="button">&lsaquo; Back</button>
     <button class="sbtn cont" id="btnContinue" type="button">Continue &rsaquo;</button>

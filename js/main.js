@@ -2,7 +2,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import { buildHouse, levelY } from './house.js';
 import { createHeld } from './held.js';
 import { icons } from './icons.js';
-import { createHollow, buildHollow, ENTITY_NAME } from './entity.js';
+import { createHollow, ENTITY_NAME } from './entity.js';
 
 // Every run is different: the house layout, doors and hiding places come from a random seed.
 // Page flags (after the #, joined with . or &): fast = skip the title, test = fast plus a loaded
@@ -989,47 +989,52 @@ function beginGame(mode) {
   lidT.hidden = lidB.hidden = false;
   startWake();
 }
-$('btnContinue').addEventListener('click', () => beginGame($('sMode').value));
+$('btnContinue').addEventListener('click', () => beginGame(modeSel.value));
 const DESC = {
-  easy: ['Easy', ['You: 0.75x   Dread: 0.65x', 'Dread smells less. The flashlight lasts twice as long.', 'Survive 3 days.']],
-  medium: ['Medium', ['You: 1x   Dread: 0.95x', 'Survive 7 days.']],
-  hard: ['Hard', ['You: 1.15x   Dread: 1.15x', 'Dread smells fear from farther. Only a short quiet at the start.', 'The flashlight drains faster.']],
-  extreme: ['Extreme', ['You: 1.2x   Dread: 1.35x', 'Dread smells everything. No quiet at the start.', 'The flashlight barely lasts.']],
-  practice: ['Practice', ['You: 0.85x   Dread: none', 'Look around and find the ways out.']],
+  easy: ['Easy', ['Dread Is Faster Than You']],
+  medium: ['Medium', ['Dread Is Faster Than You']],
+  hard: ['Hard', ['Dread Is Faster Than You']],
+  extreme: ['Extreme', ['Dread Is Faster Than You']],
+  practice: ['Practice', ['No Dread. Look around and find the ways out.']],
 };
+// our own drop-down chooser (the phone's system one looks out of place)
+function chooser(id, options, onPick) {
+  const root = $(id);
+  root.className = 'dd';
+  root.innerHTML = '<button type="button" class="dd-btn"></button><ul class="dd-list" hidden></ul>';
+  const btn = root.firstChild, list = root.lastChild;
+  let value = options[0][0];
+  const items = options.map(([v, label]) => {
+    const li = document.createElement('li');
+    li.textContent = label;
+    li.addEventListener('click', e => { e.stopPropagation(); set(v); list.hidden = true; onPick(v); });
+    list.append(li);
+    return [v, li, label];
+  });
+  function set(v) {
+    value = v;
+    for (const [val, li, label] of items) { li.classList.toggle('on', val === v); if (val === v) btn.textContent = label; }
+  }
+  btn.addEventListener('click', e => { e.stopPropagation(); const open = list.hidden; document.querySelectorAll('.dd-list').forEach(l => { l.hidden = true; }); list.hidden = !open; });
+  set(value);
+  return { get value() { return value; }, set value(v) { set(v); } };
+}
+addEventListener('pointerdown', e => { if (!e.target.closest?.('.dd')) document.querySelectorAll('.dd-list').forEach(l => { l.hidden = true; }); });
+const modeSel = chooser('sMode', [['easy', 'Easy'], ['medium', 'Medium'], ['hard', 'Hard'], ['extreme', 'Extreme'], ['practice', 'Practice']], v => { settings.mode = v; saveSettings(); showDesc(); });
+const qualSel = chooser('sQuality', [['low', 'Low'], ['medium', 'Medium'], ['high', 'High']], v => { settings.quality = v; saveSettings(); applyLook(); });
 function showDesc() {
-  const [name, lines] = DESC[$('sMode').value];
+  const [name, lines] = DESC[modeSel.value];
   $('sDesc').innerHTML = `<b>Difficulty: ${name}</b>` + lines.map(l => '*' + l).join('<br>');
 }
-$('sMode').addEventListener('change', () => { settings.mode = $('sMode').value; saveSettings(); showDesc(); });
+
 function applyLook() {
   ambient.intensity = settings.dark ? 1.0 : 2.1;
   const q = { low: 0.6, medium: 0.85, high: Math.min(devicePixelRatio, 2) }[settings.quality] ?? 1;
   renderer.setPixelRatio(q); renderer.setSize(innerWidth, innerHeight);
 }
-$('sQuality').addEventListener('change', () => { settings.quality = $('sQuality').value; saveSettings(); applyLook(); });
+
 for (const id of ['sDark', 'sLimp']) $(id).addEventListener('change', () => { applyLook(); applyHollowSettings(); });
-// Dread's face for the corner badge, drawn once by a small second renderer
-let faceDone = false;
-function drawFace() {
-  if (faceDone) return;
-  faceDone = true;
-  try {
-    const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    r.setSize(160, 160);
-    const sc = new THREE.Scene(); sc.background = new THREE.Color(0x07070a);
-    const h = buildHollow(); sc.add(h.root);
-    h.head.rotation.z = 0.2;
-    sc.add(new THREE.AmbientLight(0x8890c0, 1.6));
-    const key = new THREE.PointLight(0xffd0a0, 7, 6); key.position.set(-0.6, 2.7, 1.0); sc.add(key);
-    const cam = new THREE.PerspectiveCamera(24, 1, 0.1, 10);
-    cam.position.set(0.1, 2.3, 1.75); cam.lookAt(0, 2.26, 0);
-    r.render(sc, cam);
-    $('dreadFace').src = r.domElement.toDataURL('image/png');
-    r.dispose();
-  } catch { /* the badge is only decoration */ }
-}
-function refreshSetup() { $('sMode').value = settings.mode in MODES ? settings.mode : 'medium'; $('sQuality').value = settings.quality; showDesc(); drawFace(); }
+function refreshSetup() { modeSel.value = settings.mode in MODES ? settings.mode : 'medium'; qualSel.value = settings.quality; showDesc(); }
 let titleLight = null;
 if (titleMode) {
   title.active = true;
