@@ -407,8 +407,8 @@ export function createHollow(house, opts = {}) {
     return false;
   };
 
-  const speedOf = () => (me.speedMul ?? 1) * (me.state === 'hunt' ? 1.9 + 0.55 * me.fear / 100
-    : me.state === 'search' ? 1.3 : 0.95);
+  const speedOf = () => (me.speedMul ?? 1) * (me.state === 'hunt' ? 2.2 * (0.92 + 0.16 * me.fear / 100)   // 1x is the player's own walking speed
+    : me.state === 'search' ? 1.4 : 1.0);
 
   function follow(dt) {
     if (!path || idx >= path.length) return false;

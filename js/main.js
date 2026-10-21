@@ -116,7 +116,7 @@ function endWake() {
   showToast('Where am I?', 2600);
 }
 // ---- settings (kept in the browser) -----------------------------------------------------------------
-const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 7, dread: true, dark: false, limp: false, quality: 'high', mode: 'medium' };
+const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 7, dread: true, pspeed: 100, dark: false, limp: false, quality: 'high', mode: 'medium' };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('dread.settings') || '{}')); } catch { /* storage may be blocked */ }
 const saveSettings = () => { try { localStorage.setItem('dread.settings', JSON.stringify(settings)); } catch { /* ignore */ } };
@@ -964,12 +964,12 @@ for (const [id, key] of CHECKS) $(id).addEventListener('change', () => {
   if (key === 'sound' && audio) (settings.sound ? audio.resume() : audio.suspend()).catch?.(() => {});
 });
 // the modes, Granny-style: you pick one on the floor and the game begins
-const MODES = {
-  easy:     { speed: 75,  sense: 60,  grace: 50, batt: 200, days: 3, dread: true },
-  medium:   { speed: 100, sense: 100, grace: 25, batt: 100, days: 7, dread: true },
-  hard:     { speed: 120, sense: 140, grace: 10, batt: 70,  days: 7, dread: true },
-  extreme:  { speed: 140, sense: 200, grace: 0,  batt: 50,  days: 7, dread: true },
-  practice: { speed: 100, sense: 100, grace: 25, batt: 100, days: 1, dread: false },   // no Dread, nothing to fear
+const MODES = {   // speed: Dread's, pspeed: yours, both as a percentage of the normal walking pace
+  easy:     { pspeed: 75,  speed: 65,  sense: 60,  grace: 50, batt: 200, days: 3, dread: true },
+  medium:   { pspeed: 100, speed: 95,  sense: 100, grace: 25, batt: 100, days: 7, dread: true },
+  hard:     { pspeed: 115, speed: 115, sense: 140, grace: 10, batt: 70,  days: 7, dread: true },
+  extreme:  { pspeed: 120, speed: 135, sense: 200, grace: 0,  batt: 50,  days: 7, dread: true },
+  practice: { pspeed: 85,  speed: 100, sense: 100, grace: 25, batt: 100, days: 1, dread: false },   // no Dread, nothing to fear
 };
 refreshMenu();
 applyLook();
@@ -991,11 +991,11 @@ function beginGame(mode) {
 }
 $('btnContinue').addEventListener('click', () => beginGame($('sMode').value));
 const DESC = {
-  easy: ['Easy', ['Dread is slower and smells less.', 'Flashlight battery lasts twice as long.', 'Survive 3 days.']],
-  medium: ['Medium', ['Dread is the way she was meant to be.', 'Survive 7 days.']],
-  hard: ['Hard', ['Dread is faster and smells fear from farther.', 'A short quiet at the start.', 'Flashlight battery drains faster.']],
-  extreme: ['Extreme', ['Dread is much faster and smells everything.', 'No quiet at the start.', 'The flashlight barely lasts.']],
-  practice: ['Practice', ['No Dread. Look around and find the ways out.']],
+  easy: ['Easy', ['You: 0.75x   Dread: 0.65x', 'Dread smells less. The flashlight lasts twice as long.', 'Survive 3 days.']],
+  medium: ['Medium', ['You: 1x   Dread: 0.95x', 'Survive 7 days.']],
+  hard: ['Hard', ['You: 1.15x   Dread: 1.15x', 'Dread smells fear from farther. Only a short quiet at the start.', 'The flashlight drains faster.']],
+  extreme: ['Extreme', ['You: 1.2x   Dread: 1.35x', 'Dread smells everything. No quiet at the start.', 'The flashlight barely lasts.']],
+  practice: ['Practice', ['You: 0.85x   Dread: none', 'Look around and find the ways out.']],
 };
 function showDesc() {
   const [name, lines] = DESC[$('sMode').value];
@@ -1111,8 +1111,8 @@ function frame() {
     fx /= n; fz /= n;
     const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
     // forward vector is (-sin, -cos); right is (cos, -sin)
-    const vx = (-sin * -fx + cos * fz) * WALK * mag * dt;
-    const vz = (-cos * -fx - sin * fz) * WALK * mag * dt;
+    const vx = (-sin * -fx + cos * fz) * WALK * (settings.pspeed / 100) * mag * dt;
+    const vz = (-cos * -fx - sin * fz) * WALK * (settings.pspeed / 100) * mag * dt;
     let [x, z] = collide(player.pos.x + vx, player.pos.z);
     [x, z] = collide(x, player.pos.z + vz);
     player.pos.x = x; player.pos.z = z;
