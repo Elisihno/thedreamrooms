@@ -950,8 +950,8 @@ window.__hollow = hollow;
 
 // ---- the menu --------------------------------------------------------------------------------------
 const $ = id => document.getElementById(id);
-const FIELDS = [['oSens', 'sens', v => v + '%'], ['mSpeed', 'speed', v => v + '%'], ['mSense', 'sense', v => v + '%'], ['mGrace', 'grace', v => v + ' s'], ['mBatt', 'batt', v => v + '%'], ['mDays', 'days', v => String(v)]];
-const CHECKS = [['oSound', 'sound'], ['oFear', 'fear'], ['mDread', 'dread']];
+const FIELDS = [['oSens', 'sens', v => v + '%']];
+const CHECKS = [['oSound', 'sound'], ['oFear', 'fear']];
 function refreshMenu() {
   for (const [id, key, fmt] of FIELDS) { $(id).value = settings[key]; $(id + 'V').textContent = fmt(settings[key]); }
   for (const [id, key] of CHECKS) $(id).checked = !!settings[key];
@@ -961,19 +961,22 @@ for (const [id, key] of CHECKS) $(id).addEventListener('change', () => {
   settings[key] = $(id).checked; saveSettings();
   if (key === 'sound' && audio) (settings.sound ? audio.resume() : audio.suspend()).catch?.(() => {});
 });
-const PRESETS = {
-  easy: { speed: 75, sense: 60, grace: 50, batt: 200, days: 3 },
-  normal: { speed: 100, sense: 100, grace: 25, batt: 100, days: 7 },
-  nightmare: { speed: 130, sense: 160, grace: 5, batt: 60, days: 7 },
+// the modes, Granny-style: you pick one on the floor and the game begins
+const MODES = {
+  easy:     { speed: 75,  sense: 60,  grace: 50, batt: 200, days: 3, dread: true },
+  medium:   { speed: 100, sense: 100, grace: 25, batt: 100, days: 7, dread: true },
+  hard:     { speed: 120, sense: 140, grace: 10, batt: 70,  days: 7, dread: true },
+  extreme:  { speed: 140, sense: 200, grace: 0,  batt: 50,  days: 7, dread: true },
+  practice: { speed: 100, sense: 100, grace: 25, batt: 100, days: 1, dread: false },   // no Dread, nothing to fear
 };
-document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { Object.assign(settings, PRESETS[b.dataset.preset]); saveSettings(); refreshMenu(); }));
 refreshMenu();
 $('btnOptions').addEventListener('click', () => { $('opts').hidden = false; $('menuMain').hidden = true; });
 $('optBack').addEventListener('click', () => { $('opts').hidden = true; $('menuMain').hidden = false; });
 $('btnPlay').addEventListener('click', () => { initAudio(); title.phase = 'down'; $('menuMain').hidden = true; $('gameTitle').classList.add('gone'); });
 $('modBack').addEventListener('click', () => { title.phase = 'up'; $('mods').hidden = true; $('gameTitle').classList.remove('gone'); });
-$('btnBegin').addEventListener('click', () => {
+function beginGame(mode) {
   initAudio();
+  Object.assign(settings, MODES[mode]); settings.mode = mode; saveSettings();
   $('mods').hidden = true;
   title.active = false;
   hollowOn = !!hollow && settings.dread;
@@ -982,7 +985,8 @@ $('btnBegin').addEventListener('click', () => {
   player.pitch = 0;
   lidT.hidden = lidB.hidden = false;
   startWake();
-});
+}
+document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => beginGame(b.dataset.mode)));
 let titleLight = null;
 if (titleMode) {
   title.active = true;
@@ -1149,7 +1153,7 @@ function frame() {
       if (k > 3.1) {
         driving = null; escaped = true;
         dayEl.style.opacity = '1'; dayEl.hidden = false;
-        if (day >= LAST_DAY) {       // the seventh day is the end
+        if (day >= settings.days) {       // the seventh day is the end
           dayEl.innerHTML = 'The End<small>Tap to start over</small>';
           setTimeout(() => { dayEl.style.pointerEvents = 'auto'; dayEl.addEventListener('pointerdown', () => { location.hash = ''; location.reload(); }); }, 3000);
         } else {

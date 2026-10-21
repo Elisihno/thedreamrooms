@@ -64,6 +64,9 @@
   .chip, .pbtn { padding: 10px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.07); color: #fff; font: 600 13px system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
   .pbtn.go { background: #8f1b12; border-color: #c8392d; }
   .btns { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
+  .modes { position: absolute; left: max(26px, env(safe-area-inset-left, 0px)); bottom: max(26px, env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 2px; }
+  .modes[hidden] { display: none; }
+  .mbtn.back { font-size: 20px; margin-top: 10px; opacity: .6; }
   .panel[hidden], #menuMain[hidden] { display: none; }
   #lidT, #lidB { position: fixed; left: 0; right: 0; height: 50%; z-index: 7; background: #000; pointer-events: none; }
   #lidT { top: 0; box-shadow: 0 6px 40px 18px #000; }
@@ -133,16 +136,13 @@
     <label class="row"><span>Fear meter</span><input type="checkbox" id="oFear"><span></span></label>
     <div class="btns"><button class="pbtn" id="optBack" type="button">Back</button></div>
   </section>
-  <section class="panel" id="mods" hidden>
-    <h2>The nightmare</h2>
-    <div class="chips"><button class="chip" data-preset="easy" type="button">Easy</button><button class="chip" data-preset="normal" type="button">Normal</button><button class="chip" data-preset="nightmare" type="button">Nightmare</button></div>
-    <label class="row"><span>Dread's speed</span><input type="range" id="mSpeed" min="50" max="160" step="5"><output id="mSpeedV"></output></label>
-    <label class="row"><span>Smell for fear</span><input type="range" id="mSense" min="0" max="200" step="10"><output id="mSenseV"></output></label>
-    <label class="row"><span>Quiet at the start</span><input type="range" id="mGrace" min="0" max="60" step="5"><output id="mGraceV"></output></label>
-    <label class="row"><span>Flashlight battery</span><input type="range" id="mBatt" min="50" max="300" step="10"><output id="mBattV"></output></label>
-    <label class="row"><span>Days</span><input type="range" id="mDays" min="1" max="7" step="1"><output id="mDaysV"></output></label>
-    <label class="row"><span>Dread is here</span><input type="checkbox" id="mDread"><span></span></label>
-    <div class="btns"><button class="pbtn" id="modBack" type="button">Back</button><button class="pbtn go" id="btnBegin" type="button">Begin</button></div>
+  <section class="modes" id="mods" hidden>
+    <button class="mbtn" data-mode="easy" type="button">Easy</button>
+    <button class="mbtn" data-mode="medium" type="button">Medium</button>
+    <button class="mbtn" data-mode="hard" type="button">Hard</button>
+    <button class="mbtn" data-mode="extreme" type="button">Extreme</button>
+    <button class="mbtn" data-mode="practice" type="button">Practice</button>
+    <button class="mbtn back" id="modBack" type="button">Back</button>
   </section>
 </div>
 <div id="lidT" hidden></div>
