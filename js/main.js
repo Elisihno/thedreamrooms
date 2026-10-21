@@ -991,10 +991,10 @@ function beginGame(mode) {
 }
 $('btnContinue').addEventListener('click', () => beginGame(modeSel.value));
 const DESC = {
-  easy: ['Easy', ['Dread is slower than you.', 'The flashlight lasts twice as long.', 'Survive 3 days.']],
-  medium: ['Medium', ['Dread is a little slower than you.', 'Survive 7 days.', 'A quiet start: 25 seconds before she hunts.']],
-  hard: ['Hard', ['Dread is as fast as you.', 'She smells your fear from far away.', 'Only 10 quiet seconds at the start.']],
-  extreme: ['Extreme', ['Dread Is Faster Than You.', 'She smells your fear from everywhere.', 'No quiet start, and the flashlight barely lasts.']],
+  easy: ['Easy', ['Dread is slower than you.', 'The flashlight lasts twice as long.', 'You have 3 days to escape.']],
+  medium: ['Medium', ['Dread is a little slower than you.', 'You have 7 days to escape.', 'A quiet start: 25 seconds before she hunts.']],
+  hard: ['Hard', ['Dread is as fast as you.', 'She smells your fear from far away.', 'You have 7 days to escape.']],
+  extreme: ['Extreme', ['Dread Is Faster Than You.', 'She smells your fear from everywhere.', 'You have 7 days to escape.']],
   practice: ['Practice', ['No Dread.', 'Nothing is hunting you.', 'Take your time and find the ways out.']],
 };
 // our own drop-down chooser (the phone's system one looks out of place)
