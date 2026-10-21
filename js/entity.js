@@ -584,6 +584,7 @@ export function createHollow(house, opts = {}) {
     m.body.rotation.x = -fallA * 1.5;
     group.position.y = me.y + fallA * 0.12;
     m.torso.rotation.x = lean + Math.sin(t * 1.3) * 0.02;
+    m.body.rotation.z = me.limp && speed > 0 && me.state !== 'stun' ? Math.sin(walkPhase) * 0.09 : 0;   // she drags one leg
     for (const l of m.legs) {
       const ph = Math.sin(walkPhase + (l.s > 0 ? 0 : Math.PI));
       l.hip.rotation.x = ph * 0.55 * amp;

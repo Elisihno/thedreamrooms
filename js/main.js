@@ -2,7 +2,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import { buildHouse, levelY } from './house.js';
 import { createHeld } from './held.js';
 import { icons } from './icons.js';
-import { createHollow, ENTITY_NAME } from './entity.js';
+import { createHollow, buildHollow, ENTITY_NAME } from './entity.js';
 
 // Every run is different: the house layout, doors and hiding places come from a random seed.
 // Page flags (after the #, joined with . or &): fast = skip the title, test = fast plus a loaded
@@ -20,7 +20,8 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0a0e);
 scene.fog = new THREE.FogExp2(0x0a0a0e, 0.05);
-scene.add(new THREE.AmbientLight(0x7a7a92, 2.1));
+const ambient = new THREE.AmbientLight(0x7a7a92, 2.1);
+scene.add(ambient);
 
 const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.1, 45);
 scene.add(camera);
@@ -115,7 +116,7 @@ function endWake() {
   showToast('Where am I?', 2600);
 }
 // ---- settings (kept in the browser) -----------------------------------------------------------------
-const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 7, dread: true };
+const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 7, dread: true, dark: false, limp: false, quality: 'high', mode: 'medium' };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('dread.settings') || '{}')); } catch { /* storage may be blocked */ }
 const saveSettings = () => { try { localStorage.setItem('dread.settings', JSON.stringify(settings)); } catch { /* ignore */ } };
@@ -881,7 +882,7 @@ function updateLights(t, dt) {
     const room = l.userData.room;
     if (!room) continue;
     l.position.lerp(room.pos, Math.min(1, dt * 4));
-    l.intensity = 2.4 * room.base * (0.85 + 0.15 * Math.sin(t * (2 + room.base * 3) + room.pos.x));
+    l.intensity = 2.4 * (settings.dark ? 0.6 : 1) * room.base * (0.85 + 0.15 * Math.sin(t * (2 + room.base * 3) + room.pos.x));
   }
 }
 
@@ -941,7 +942,8 @@ if (hollow) {
 let hollowOn = !!hollow && settings.dread;
 function applyHollowSettings() {
   if (!hollow) return;
-  hollow.speedMul = settings.speed / 100;
+  hollow.speedMul = settings.speed / 100 * (settings.limp ? 0.8 : 1);
+  hollow.limp = !!settings.limp;
   hollow.senseMul = settings.sense / 100;
   if (!hashFlags.has('hollow')) hollow.setGrace(settings.grace);
 }
@@ -951,7 +953,7 @@ window.__hollow = hollow;
 // ---- the menu --------------------------------------------------------------------------------------
 const $ = id => document.getElementById(id);
 const FIELDS = [['oSens', 'sens', v => v + '%']];
-const CHECKS = [['oSound', 'sound'], ['oFear', 'fear']];
+const CHECKS = [['oSound', 'sound'], ['oFear', 'fear'], ['sSound', 'sound'], ['sFear', 'fear'], ['sDark', 'dark'], ['sLimp', 'limp']];
 function refreshMenu() {
   for (const [id, key, fmt] of FIELDS) { $(id).value = settings[key]; $(id + 'V').textContent = fmt(settings[key]); }
   for (const [id, key] of CHECKS) $(id).checked = !!settings[key];
@@ -970,9 +972,10 @@ const MODES = {
   practice: { speed: 100, sense: 100, grace: 25, batt: 100, days: 1, dread: false },   // no Dread, nothing to fear
 };
 refreshMenu();
+applyLook();
 $('btnOptions').addEventListener('click', () => { $('opts').hidden = false; $('menuMain').hidden = true; });
 $('optBack').addEventListener('click', () => { $('opts').hidden = true; $('menuMain').hidden = false; });
-$('btnPlay').addEventListener('click', () => { initAudio(); title.phase = 'down'; $('menuMain').hidden = true; $('gameTitle').classList.add('gone'); });
+$('btnPlay').addEventListener('click', () => { initAudio(); refreshSetup(); title.phase = 'down'; $('menuMain').hidden = true; $('gameTitle').classList.add('gone'); });
 $('modBack').addEventListener('click', () => { title.phase = 'up'; $('mods').hidden = true; $('gameTitle').classList.remove('gone'); });
 function beginGame(mode) {
   initAudio();
@@ -986,7 +989,47 @@ function beginGame(mode) {
   lidT.hidden = lidB.hidden = false;
   startWake();
 }
-document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => beginGame(b.dataset.mode)));
+$('btnContinue').addEventListener('click', () => beginGame($('sMode').value));
+const DESC = {
+  easy: ['Easy', ['Dread is slower and smells less.', 'Flashlight battery lasts twice as long.', 'Survive 3 days.']],
+  medium: ['Medium', ['Dread is the way she was meant to be.', 'Survive 7 days.']],
+  hard: ['Hard', ['Dread is faster and smells fear from farther.', 'A short quiet at the start.', 'Flashlight battery drains faster.']],
+  extreme: ['Extreme', ['Dread is much faster and smells everything.', 'No quiet at the start.', 'The flashlight barely lasts.']],
+  practice: ['Practice', ['No Dread. Look around and find the ways out.']],
+};
+function showDesc() {
+  const [name, lines] = DESC[$('sMode').value];
+  $('sDesc').innerHTML = `<b>Difficulty: ${name}</b>` + lines.map(l => '*' + l).join('<br>');
+}
+$('sMode').addEventListener('change', () => { settings.mode = $('sMode').value; saveSettings(); showDesc(); });
+function applyLook() {
+  ambient.intensity = settings.dark ? 1.0 : 2.1;
+  const q = { low: 0.6, medium: 0.85, high: Math.min(devicePixelRatio, 2) }[settings.quality] ?? 1;
+  renderer.setPixelRatio(q); renderer.setSize(innerWidth, innerHeight);
+}
+$('sQuality').addEventListener('change', () => { settings.quality = $('sQuality').value; saveSettings(); applyLook(); });
+for (const id of ['sDark', 'sLimp']) $(id).addEventListener('change', () => { applyLook(); applyHollowSettings(); });
+// Dread's face for the corner badge, drawn once by a small second renderer
+let faceDone = false;
+function drawFace() {
+  if (faceDone) return;
+  faceDone = true;
+  try {
+    const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    r.setSize(160, 160);
+    const sc = new THREE.Scene(); sc.background = new THREE.Color(0x07070a);
+    const h = buildHollow(); sc.add(h.root);
+    h.head.rotation.z = 0.2;
+    sc.add(new THREE.AmbientLight(0x8890c0, 1.6));
+    const key = new THREE.PointLight(0xffd0a0, 7, 6); key.position.set(-0.6, 2.7, 1.0); sc.add(key);
+    const cam = new THREE.PerspectiveCamera(24, 1, 0.1, 10);
+    cam.position.set(0.1, 2.3, 1.75); cam.lookAt(0, 2.26, 0);
+    r.render(sc, cam);
+    $('dreadFace').src = r.domElement.toDataURL('image/png');
+    r.dispose();
+  } catch { /* the badge is only decoration */ }
+}
+function refreshSetup() { $('sMode').value = settings.mode in MODES ? settings.mode : 'medium'; $('sQuality').value = settings.quality; showDesc(); drawFace(); }
 let titleLight = null;
 if (titleMode) {
   title.active = true;
