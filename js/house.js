@@ -66,7 +66,7 @@ const LEVELS = [
     ],
   },
   {
-    name: 'Upper Floor', windows: 0.7,
+    name: 'Upper Floor', windows: 0.7, traps: 1,
     roles: { P: 'bedroom', Q: 'bedroom', R: 'study', T: 'bedroom', U: 'hall', V: 'bedroom' },
     // the player starts in room P: [col, row] of the spawn cell, plus pieces fixed to a cell
     spawn: [1, 1],
@@ -87,6 +87,7 @@ const LEVELS = [
     name: 'Attic', windows: 0.45,
     roles: { A: 'attic', B: 'attic', C: 'attic', D: 'attic' },
     mannequins: [[2, 1], [1, 4], [6, 4]], // [col, row] of each mannequin's cell
+    traps: 2,                             // cracked boards that give way under you
     fixed: [{ item: 'lockbox', cell: [8, 0], side: 'N' }], // holds the shotgun
     walls: [2, 5, 7, 9], floors: [0, 2, 3, 4, 7, 9],
     map: [
@@ -292,6 +293,7 @@ export function buildHouse(renderer, seed = 1) {
   const outside = mat(tex.wall[4], 0x555555);
   const pick = arr => arr[Math.floor(rand() * arr.length)];
   const mannequins = [];
+  const traps = [];      // cracked floor patches that collapse
   const parts = [];      // movable furniture parts (drawers, doors, lids)
   const partMeshes = [];
   const pickables = []; // everything the crosshair can land on
@@ -398,7 +400,7 @@ export function buildHouse(renderer, seed = 1) {
     mesh.position.set(x, y + (LIFT[type] ?? 0.02), z);
     if (type === 'vase' && fall) {            // let go of it: it drops from hand height, lands and wobbles
       mesh.position.y = y + 1.0;
-      wobbles.push({ mesh, floorY: y, vy: 0, landed: false, t: 0 });
+      wobbles.push({ mesh, floorY: y, vy: 0, landed: false, t: 0, level });
     }
     group.add(mesh);
     const item = { kind: 'item', type, part: null, mesh, floor: true, level, board };
@@ -842,7 +844,42 @@ export function buildHouse(renderer, seed = 1) {
         colliders.push(col);
         mannequins.push({ pivot, x, z, y: Y, level, col, fell: false, landed: false, t: 0, axis: new THREE.Vector3() });
       }
+      // cracked boards in an empty cell: stepping on them breaks the floor
+      const emptyCells = [];
+      for (const cells of Object.values(cellsByRoom)) for (const [c, r] of cells) if (!used.has(`${c},${r}`) && !hasDoor(c, r)) emptyCells.push([c, r]);
+      for (let n = 0; n < (cfg.traps ?? 0) && emptyCells.length; n++) {
+        const [c, r] = emptyCells.splice(Math.floor(rand() * emptyCells.length), 1)[0];
+        used.add(`${c},${r}`);
+        makeTrap(level, (c + 0.5) * CELL, (r + 0.5) * CELL, Y);
+      }
       fb.flush(group);
+    }
+
+    let trapTex = null;
+    function makeTrap(level, x, z, Y) {
+      if (!trapTex) {
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = 256;
+        const g = cv.getContext('2d');
+        for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#54422f' : '#3e301f'; g.fillRect(0, i * 32, 256, 32); }
+        g.strokeStyle = '#120c06'; g.lineWidth = 3;
+        for (let k = 0; k < 8; k++) {
+          let px = 16 + Math.random() * 224, py = Math.random() * 120;
+          g.beginPath(); g.moveTo(px, py);
+          for (let s = 0; s < 5; s++) { px += (Math.random() - 0.5) * 60; py += 24 + Math.random() * 20; g.lineTo(px, py); }
+          g.stroke();
+        }
+        trapTex = new THREE.CanvasTexture(cv);
+        trapTex.colorSpace = THREE.SRGBColorSpace;
+      }
+      const cover = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.04, 1.8), new THREE.MeshLambertMaterial({ map: trapTex }));
+      cover.position.set(x, Y + 0.02, z);
+      const hole = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.7), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+      hole.rotation.x = -Math.PI / 2;
+      hole.position.set(x, Y + 0.012, z);
+      hole.visible = false;
+      group.add(cover, hole);
+      traps.push({ level, x, z, Y, half: 0.8, cover, hole, state: 'armed', t: 0, creaked: false });
     }
 
     // side: the wall the item backs onto ('N','S','W','E'), or null for a free-standing item
@@ -1194,7 +1231,7 @@ export function buildHouse(renderer, seed = 1) {
   // A mannequin topples away from the player once they walk up to it.
   const FALL = 0.8, BOUNCE = 0.3;
   const api = {
-    group, colliders, rooms, size, stairs, mannequins,
+    group, colliders, rooms, size, stairs, mannequins, traps,
     levels: LEVELS.map(l => l.name),
     spawn: new THREE.Vector3((spawnCell[0] + 0.5) * CELL, levelY(spawnLevel), (spawnCell[1] + 0.5) * CELL),
     spawnLevel,
@@ -1207,6 +1244,7 @@ export function buildHouse(renderer, seed = 1) {
     onSound: null,     // ('unlock' | 'cut' | 'creak')
     onConsume: null,   // (type) an item was used up
     onEscape: null,    // (exit) the player walked out
+    onTrap: null,      // (trap) the player stepped on cracked boards and is falling
     onAlert: null,     // ({x, z, level, kind}) something loud happened here: the entity should come
     shoot(camera, player) {
       raycaster.setFromCamera(centre, camera);
@@ -1298,7 +1336,7 @@ export function buildHouse(renderer, seed = 1) {
         if (!w.mesh.parent) { wobbles.splice(i, 1); continue; }   // picked up again
         if (!w.landed) {
           w.vy -= 11 * dt; w.mesh.position.y += w.vy * dt;
-          if (w.mesh.position.y <= w.floorY) { w.mesh.position.y = w.floorY; w.landed = true; w.t = 0; api.onSound?.('vase'); }
+          if (w.mesh.position.y <= w.floorY) { w.mesh.position.y = w.floorY; w.landed = true; w.t = 0; api.onSound?.('vase'); api.onAlert?.({ x: w.mesh.position.x, z: w.mesh.position.z, level: w.level, kind: 'vase' }); }
         } else {
           w.t += dt;
           const k = Math.exp(-w.t * 3.0);
@@ -1361,6 +1399,23 @@ export function buildHouse(renderer, seed = 1) {
         sp.mesh.scale.setScalar(1 + sp.t * 8);
         sp.mesh.material.opacity = Math.max(0, 1 - sp.t * 4);
         if (sp.t > 0.3) { sp.mesh.removeFromParent(); sparks.splice(i, 1); }
+      }
+      for (const tr of traps) {
+        if (tr.state === 'armed') {
+          if (player.level !== tr.level) continue;
+          const dx = Math.abs(player.pos.x - tr.x), dz = Math.abs(player.pos.z - tr.z);
+          if (!tr.creaked && dx < tr.half + 0.9 && dz < tr.half + 0.9 && !player.hidden) { tr.creaked = true; api.onSound?.('doorOpen'); }
+          else if (tr.creaked && (dx > tr.half + 2 || dz > tr.half + 2)) tr.creaked = false;
+          if (!player.hidden && dx < tr.half - 0.05 && dz < tr.half - 0.05 && Math.abs(player.y - tr.Y) < 0.5) {
+            tr.state = 'falling'; tr.t = 0; tr.hole.visible = true;
+            api.onTrap?.(tr);
+          }
+        } else if (tr.state === 'falling') {
+          tr.t += dt;
+          tr.cover.position.y = tr.Y + 0.02 - 7 * tr.t * tr.t;
+          tr.cover.rotation.x = tr.t * 2.2; tr.cover.rotation.z = tr.t * 1.4;
+          if (tr.t > 1.4) { tr.cover.visible = false; tr.state = 'open'; }
+        }
       }
       for (const m of mannequins) {
         if (!m.fell) {

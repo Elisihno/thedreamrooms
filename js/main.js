@@ -116,10 +116,11 @@ function endWake() {
   showToast('Where am I?', 2600);
 }
 // ---- settings (kept in the browser) -----------------------------------------------------------------
-const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 5, dread: true, pspeed: 100, dark: false, limp: false, quality: 'high', mode: 'medium' };
+const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 5, dread: true, pspeed: 100, dark: false, limp: false, quality: 'high', mode: 'medium', volume: 100 };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('dread.settings') || '{}')); } catch { /* storage may be blocked */ }
 const saveSettings = () => { try { localStorage.setItem('dread.settings', JSON.stringify(settings)); } catch { /* ignore */ } };
+let paused = false;
 const title = { active: false, phase: 'idle', k: 0 };   // k: 0 looking at the room, 1 looking at the floor
 
 // after being caught the next day begins: a black card, then waking up again in a new house
@@ -167,7 +168,7 @@ addEventListener('mousemove', e => {
 });
 
 function look(dx, dy) {
-  if (wake.active || driving || title.active) return;
+  if (wake.active || driving || title.active || paused) return;
   dx *= settings.sens / 100; dy *= settings.sens / 100;
   player.yaw -= dx;
   player.pitch = Math.max(-1.3, Math.min(1.3, player.pitch - dy));
@@ -245,7 +246,7 @@ let target = null;
 const NAMES = { key: 'key', pliers: 'cutting pliers', note: 'sticky note', apple: 'apple', knife: 'kitchen knife', shotgun: 'shotgun', shells: 'shotgun shells', battery: 'car battery', fuel: 'fuel can', paper: 'paper', flashlight: 'flashlight', vase: 'vase' };
 const label = t => (t.kind === 'item' ? (t.type === 'shells' && selected === 'shotgun' ? 'Load shells' : t.type === 'note' ? 'Read note' : `Take ${NAMES[t.type]}`) : t.kind === 'roomdoor' ? (t.door.open ? 'Close' : 'Open') : t.kind === 'trash' ? 'Trash can' : t.kind === 'wire' ? 'Cut' : t.kind === 'carhood' ? 'Car hood' : t.kind === 'carfuel' ? 'Fuel tank' : t.kind === 'cardoor' ? 'Car door' : t.kind === 'board' ? 'Cutting board' : t.locked ? 'Locked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? 'Door' : t.open ? 'Close' : 'Open');
 function useTarget() {
-  if (wake.active || driving) return;
+  if (wake.active || driving || paused) return;
   if (hide.spot) { leaveHide(); return; }
   if (target) house.use(target, selected);
 }
@@ -377,7 +378,7 @@ function renderLight() {
   battEl.classList.toggle('low', gear.charge < 20);
 }
 function toggleLight() {
-  if (!gear.flashlight || wake.active || driving) return;
+  if (!gear.flashlight || wake.active || driving || paused) return;
   if (!gear.on && gear.charge <= 0) { showToast('The flashlight is dead.', 1600); return; }
   gear.on = !gear.on;
   house.onSound('click');
@@ -402,7 +403,15 @@ house.onMessage = showToast;
 let lastAlert = null;
 house.onAlert = a => {
   lastAlert = { ...a, at: performance.now() };
+  if (a.kind === 'vase') { setTimeout(() => hollow?.investigate(a.x, a.z, a.level), 400); return; }   // a crash close by: she is on her way
   setTimeout(() => { house.onSound('alert'); showToast('Something in the house heard that...', 3200); hollow?.investigate(a.x, a.z, a.level); }, 1600);
+};
+house.onTrap = tr => {
+  if (driving || escaped) return;
+  driving = { kind: 'fall', t: 0, H: tr.level * 3 + 1.3 };
+  setHand(null);
+  entitySound('crack', 1);
+  entitySound('wind', 1);
 };
 window.__alert = () => lastAlert;
 Object.defineProperty(window, '__gear', { get: () => gear });
@@ -496,6 +505,18 @@ function showWin(title, verb, kind = 'front') {
   fxEl.hidden = true;
   heldView.show(null);
   if (kind !== 'dead') chime();
+}
+// a day is over (Dread got you, or you fell): the next one begins, or it was the last
+function endDay() {
+  escaped = true;
+  dayEl.style.opacity = '1'; dayEl.hidden = false;
+  if (day >= settings.days) {
+    dayEl.innerHTML = 'The End<small>Tap to start over</small>';
+    setTimeout(() => { dayEl.style.pointerEvents = 'auto'; dayEl.addEventListener('pointerdown', () => { location.hash = ''; location.reload(); }); }, 3000);
+  } else {
+    dayEl.textContent = `Day ${day + 1}`;
+    setTimeout(() => { location.hash = `#day${day + 1}`; location.reload(); }, 2800);
+  }
 }
 // ---- the three endings ------------------------------------------------------------------------
 // Each escape has its own short film: the front door walks out into warm daylight, the hatch climbs
@@ -605,6 +626,13 @@ let audio = null;
 function initAudio() {
   if (audio) return;
   try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch { audio = null; }
+  if (audio) {                      // everything plays through one master volume
+    const real = audio.destination, master = audio.createGain();
+    master.connect(real);
+    Object.defineProperty(audio, 'destination', { value: master });
+    audio.master = master;
+    applyVolume();
+  }
   if (audio && !settings.sound) audio.suspend?.();
 }
 addEventListener('touchstart', initAudio, { passive: true });
@@ -911,7 +939,20 @@ function entitySound(name, vol = 1) {
     else if (name === 'growl') { osc('sawtooth', 78, 40, 1.4, 0.3, 260); osc('sawtooth', 83, 44, 1.4, 0.22, 260); }
     else if (name === 'sting') { osc('square', 880, 860, 0.9, 0.12, 2400); osc('square', 932, 900, 0.9, 0.12, 2400); osc('sawtooth', 120, 60, 0.9, 0.3, 400); }
     else if (name === 'hurt') osc('sawtooth', 420, 70, 0.7, 0.3, 900);
-    else if (name === 'swing') {                       // air torn by the bat
+    else if (name === 'crack') {                        // wood splitting
+      const len = 0.5, buf = audio.createBuffer(1, audio.sampleRate * len, audio.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audio.sampleRate * 0.09));
+      const src = audio.createBufferSource(), lp = audio.createBiquadFilter();
+      src.buffer = buf; lp.type = 'lowpass'; lp.frequency.value = 1800; g.gain.value = 1; src.connect(lp).connect(g); src.start(now);
+      osc('sine', 110, 40, 0.4, 0.8);
+    } else if (name === 'wind') {                       // air rushing past while you fall
+      const len = 1.8, buf = audio.createBuffer(1, audio.sampleRate * len, audio.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.min(1, i / (audio.sampleRate * 0.5));
+      const src = audio.createBufferSource(), bp = audio.createBiquadFilter();
+      src.buffer = buf; bp.type = 'bandpass'; bp.Q.value = 0.8;
+      bp.frequency.setValueAtTime(300, now); bp.frequency.exponentialRampToValueAtTime(2200, now + len);
+      g.gain.value = 0.55; src.connect(bp).connect(g); src.start(now);
+    } else if (name === 'swing') {                       // air torn by the bat
       const len = 0.35, buf = audio.createBuffer(1, audio.sampleRate * len, audio.sampleRate), d = buf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / d.length);
       const src = audio.createBufferSource(), bp = audio.createBiquadFilter();
@@ -952,13 +993,17 @@ window.__hollow = hollow;
 
 // ---- the menu --------------------------------------------------------------------------------------
 const $ = id => document.getElementById(id);
-const FIELDS = [['oSens', 'sens', v => v + '%']];
+const FIELDS = [['oSens', 'sens', v => v + '%'], ['oVol', 'volume', v => v + '%'], ['pVol', 'volume', v => v + '%']];
 const CHECKS = [['oSound', 'sound'], ['oFear', 'fear'], ['sSound', 'sound'], ['sFear', 'fear'], ['sDark', 'dark'], ['sLimp', 'limp']];
 function refreshMenu() {
   for (const [id, key, fmt] of FIELDS) { $(id).value = settings[key]; $(id + 'V').textContent = fmt(settings[key]); }
   for (const [id, key] of CHECKS) $(id).checked = !!settings[key];
 }
-for (const [id, key, fmt] of FIELDS) $(id).addEventListener('input', () => { settings[key] = +$(id).value; $(id + 'V').textContent = fmt(settings[key]); saveSettings(); });
+function applyVolume() { if (audio?.master) audio.master.gain.value = settings.volume / 100; }
+for (const [id, key, fmt] of FIELDS) $(id).addEventListener('input', () => {
+  settings[key] = +$(id).value; $(id + 'V').textContent = fmt(settings[key]); saveSettings();
+  if (key === 'volume') { refreshMenu(); applyVolume(); house.onSound('click'); }
+});
 for (const [id, key] of CHECKS) $(id).addEventListener('change', () => {
   settings[key] = $(id).checked; saveSettings();
   if (key === 'sound' && audio) (settings.sound ? audio.resume() : audio.suspend()).catch?.(() => {});
@@ -1035,6 +1080,22 @@ function applyLook() {
 
 for (const id of ['sDark', 'sLimp']) $(id).addEventListener('change', () => { applyLook(); applyHollowSettings(); });
 function refreshSetup() { modeSel.value = settings.mode in MODES ? settings.mode : 'medium'; qualSel.value = settings.quality; showDesc(); }
+// ---- pause: the wrench button (or Escape) stops the game and shows the volume ----------------------
+const pauseBtn = $('pauseBtn'), pauseEl = $('pause');
+const canPause = () => startEl.hidden && !title.active && !wake.active && !driving && !escaped && !uiOpen;
+function setPaused(on) {
+  if (on === paused) return;
+  if (on && !canPause()) return;
+  paused = on; uiOpen = on;
+  pauseEl.hidden = !on;
+  if (on) { refreshMenu(); document.exitPointerLock?.(); }
+}
+pauseBtn.addEventListener('click', () => setPaused(true));
+pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); setPaused(true); }, { passive: false });
+$('pResume').addEventListener('click', () => setPaused(false));
+$('pQuit').addEventListener('click', () => { location.hash = ''; location.reload(); });
+addEventListener('keydown', e => { if (e.code === 'Escape') setPaused(!paused); });
+document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && canPause()) setPaused(true); });
 let titleLight = null;
 if (titleMode) {
   title.active = true;
@@ -1084,8 +1145,9 @@ let beatT = 0;
 const clock = new THREE.Clock();
 let lastYaw = player.yaw, lastPitch = player.pitch, lastShown = -1;
 function frame() {
-  const dt = Math.min(clock.getDelta(), 0.05) * (window.__slow ?? 1);
+  const dt = paused ? (clock.getDelta(), 0) : Math.min(clock.getDelta(), 0.05) * (window.__slow ?? 1);
   const t = clock.elapsedTime;
+  pauseBtn.hidden = paused || !canPause();
   if (escaped) { // the game is over: keep drawing the scene behind the message
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
@@ -1179,7 +1241,17 @@ function frame() {
     const f = driving;
     f.t += dt;
     const k = f.t;
-    if (f.kind === 'caught') {
+    if (f.kind === 'fall') {
+      // the boards give way: you drop through the floors, tumbling, and hit the bottom
+      const g = 16, T = Math.sqrt(2 * f.H / g), y = Math.min(f.H, 0.5 * g * k * k);
+      eye = EYE - y;
+      pitchAdd = -0.5 * smooth(0, T, k);
+      rollAdd = Math.sin(k * 6) * 0.3 * smooth(0, 0.5, k);
+      fov = 72 + 26 * smooth(0, T, k);
+      if (!f.hit && k >= T) { f.hit = true; entitySound('hit', 1); bloodHit(0); }
+      fadeEl.style.opacity = String(smooth(T + 0.05, T + 0.8, k));
+      if (k > T + 1.8) { driving = null; endDay(); }
+    } else if (f.kind === 'caught') {
       // Dread raises her spiked bat and brings it down on you twice; blood runs down the screen
       const tx = hollow.x - player.pos.x, tz = hollow.z - player.pos.z;
       const hits = [0.74, 1.55];
@@ -1198,17 +1270,7 @@ function frame() {
       glowEl.style.background = 'radial-gradient(ellipse at center, rgba(150,0,0,0), rgba(150,0,0,.8))';
       glowEl.style.opacity = String(Math.min(1, 0.9 * smooth(0.7, 1.0, k)) * (1 - smooth(2.2, 2.7, k)));
       fadeEl.style.opacity = String(smooth(2.2, 2.9, k));
-      if (k > 3.1) {
-        driving = null; escaped = true;
-        dayEl.style.opacity = '1'; dayEl.hidden = false;
-        if (day >= settings.days) {       // the seventh day is the end
-          dayEl.innerHTML = 'The End<small>Tap to start over</small>';
-          setTimeout(() => { dayEl.style.pointerEvents = 'auto'; dayEl.addEventListener('pointerdown', () => { location.hash = ''; location.reload(); }); }, 3000);
-        } else {
-          dayEl.textContent = `Day ${day + 1}`;
-          setTimeout(() => { location.hash = `#day${day + 1}`; location.reload(); }, 2800);
-        }
-      }
+      if (k > 3.1) { driving = null; endDay(); }
     } else if (f.kind === 'car') {
       // slide into the driver's seat, then the car pulls out through the garage door
       const seat = { x: 16.1, z: 13.4 };
@@ -1241,8 +1303,8 @@ function frame() {
       fadeEl.style.opacity = String(smooth(hatch ? 3.9 : 3.6, hatch ? 4.8 : 4.5, k));
       if (k > (hatch ? 5.2 : 5.0)) { driving = null; showWin(hatch ? 'You escaped' : 'You escaped', 'got out', f.kind); }
     }
-    if (driving && driving.kind !== 'caught') drawFx(driving);
-    if (driving && driving.kind === 'caught') bloodDrips(dt);
+    if (driving && driving.kind !== 'caught' && driving.kind !== 'fall') drawFx(driving);
+    if (driving && (driving.kind === 'caught' || driving.kind === 'fall')) bloodDrips(dt);
   }
   if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
   vignette.style.opacity = wake.active ? vignette.style.opacity : (hideE * 0.95).toFixed(3);
