@@ -116,7 +116,7 @@ function endWake() {
   showToast('Where am I?', 2600);
 }
 // ---- settings (kept in the browser) -----------------------------------------------------------------
-const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 7, dread: true, pspeed: 100, dark: false, limp: false, quality: 'high', mode: 'medium' };
+const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 5, dread: true, pspeed: 100, dark: false, limp: false, quality: 'high', mode: 'medium' };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('dread.settings') || '{}')); } catch { /* storage may be blocked */ }
 const saveSettings = () => { try { localStorage.setItem('dread.settings', JSON.stringify(settings)); } catch { /* ignore */ } };
@@ -965,10 +965,10 @@ for (const [id, key] of CHECKS) $(id).addEventListener('change', () => {
 });
 // the modes, Granny-style: you pick one on the floor and the game begins
 const MODES = {   // speed: Dread's, pspeed: yours, both as a percentage of the normal walking pace
-  easy:     { pspeed: 75,  speed: 65,  sense: 60,  grace: 50, batt: 200, days: 3, dread: true },
-  medium:   { pspeed: 100, speed: 95,  sense: 100, grace: 25, batt: 100, days: 7, dread: true },
-  hard:     { pspeed: 115, speed: 115, sense: 140, grace: 10, batt: 70,  days: 7, dread: true },
-  extreme:  { pspeed: 120, speed: 135, sense: 200, grace: 0,  batt: 50,  days: 7, dread: true },
+  easy:     { pspeed: 75,  speed: 65,  sense: 60,  grace: 50, batt: 200, days: 7, dread: true },
+  medium:   { pspeed: 100, speed: 95,  sense: 100, grace: 25, batt: 100, days: 5, dread: true },
+  hard:     { pspeed: 115, speed: 115, sense: 140, grace: 10, batt: 70,  days: 4, dread: true },
+  extreme:  { pspeed: 120, speed: 135, sense: 200, grace: 0,  batt: 50,  days: 3, dread: true },
   practice: { pspeed: 85,  speed: 100, sense: 100, grace: 25, batt: 100, days: 1, dread: false },   // no Dread, nothing to fear
 };
 refreshMenu();
@@ -991,10 +991,10 @@ function beginGame(mode) {
 }
 $('btnContinue').addEventListener('click', () => beginGame(modeSel.value));
 const DESC = {
-  easy: ['Easy', ['Dread is slower than you.', 'The flashlight lasts twice as long.', 'You have 3 days to escape.']],
-  medium: ['Medium', ['Dread is a little slower than you.', 'You have 7 days to escape.', 'A quiet start: 25 seconds before she hunts.']],
-  hard: ['Hard', ['Dread is as fast as you.', 'She smells your fear from far away.', 'You have 7 days to escape.']],
-  extreme: ['Extreme', ['Dread Is Faster Than You.', 'She smells your fear from everywhere.', 'You have 7 days to escape.']],
+  easy: ['Easy', ['Dread is slower than you.', 'The flashlight lasts twice as long.', 'You have 7 days to escape.']],
+  medium: ['Medium', ['Dread is a little slower than you.', 'You have 5 days to escape.', 'A quiet start: 25 seconds before she hunts.']],
+  hard: ['Hard', ['Dread is as fast as you.', 'She smells your fear from far away.', 'You have 4 days to escape.']],
+  extreme: ['Extreme', ['Dread Is Faster Than You.', 'She smells your fear from everywhere.', 'You have 3 days to escape.']],
   practice: ['Practice', ['No Dread.', 'Nothing is hunting you.', 'Take your time and find the ways out.']],
 };
 // our own drop-down chooser (the phone's system one looks out of place)
