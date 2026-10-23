@@ -935,47 +935,6 @@ export function buildHouse(renderer, seed = 1, props = {}) {
           wires.push(wire);
         },
       };
-      // The sideboard's three drawers are separate meshes, but solid blocks in the model. Each is made hollow: the block loses its
-      // top face and a slightly smaller copy of it, seen from the inside, forms the lining. A closed
-      // drawer is exactly the model; one that slides out shows a proper box, and what lies in it.
-      function rigSideboard(host) {
-        const meshes = [];
-        host.traverse(o => { if (o.isMesh) meshes.push(o); });
-        for (const m of meshes.slice(3, 6)) {
-          const full = m.geometry;
-          full.computeBoundingBox();
-          const bb = full.boundingBox, ctr = bb.getCenter(new THREE.Vector3()), size = bb.getSize(new THREE.Vector3());
-          const flat = full.index ? full.toNonIndexed() : full.clone();
-          const pos = flat.attributes.position, nor = flat.attributes.normal, uv = flat.attributes.uv;
-          const keep = [];
-          for (let i = 0; i < pos.count; i += 3) if ((nor.getY(i) + nor.getY(i + 1) + nor.getY(i + 2)) / 3 < 0.55) keep.push(i, i + 1, i + 2);
-          const cut = new THREE.BufferGeometry();
-          for (const [name, attr, n] of [['position', pos, 3], ['normal', nor, 3], ['uv', uv, 2]]) {
-            const arr = new Float32Array(keep.length * n);
-            keep.forEach((v, k) => { for (let c = 0; c < n; c++) arr[k * n + c] = attr.array[v * n + c]; });
-            cut.setAttribute(name, new THREE.BufferAttribute(arr, n));
-          }
-          m.geometry = cut;
-          const t = 0.018, lining = new THREE.Mesh(full, new THREE.MeshLambertMaterial({ map: m.material.map, color: 0xffffff, emissive: 0x3a2814, side: THREE.BackSide }));
-          lining.scale.set((size.x - 2 * t) / size.x, (size.y - 2 * t) / size.y, (size.z - 2 * t) / size.z);
-          lining.position.set(ctr.x * (1 - lining.scale.x), ctr.y * (1 - lining.scale.y), ctr.z * (1 - lining.scale.z));
-          const pg = new THREE.Group();
-          m.parent.add(pg);
-          pg.add(m, lining);
-          const floorY = bb.min.y + t + 0.006;
-          const part = { pg, pivot: [0, 0, 0], level, open: false, t: 0, kind: 'drawer', dist: 0.36, role: cfg.roles?.[at(c, r)], loot: { parent: pg, pos: [ctr.x, floorY, ctr.z + size.z * 0.04] } };
-          pg.traverse(o => { if (o.isMesh) { o.userData.part = part; partMeshes.push(o); } });
-          // a larger invisible target on the fixed body, so the drawer is easy to aim at, open or shut
-          const top = bb.max.y >= Math.max(...meshes.slice(3, 6).map(q => (q.geometry.boundingBox ?? bb).max.y)) - 1e-3;
-          const hgt = size.y + 0.06 + (top ? 0.1 : 0);
-          const proxy = new THREE.Mesh(new THREE.BoxGeometry(size.x + 0.04, hgt, 0.5), new THREE.MeshBasicMaterial({ visible: false }));
-          proxy.position.set(ctr.x, ctr.y + (top ? 0.05 : 0), bb.max.z - 0.15);
-          host.add(proxy);
-          proxy.userData.part = part;
-          partMeshes.push(proxy);
-          parts.push(part);
-        }
-      }
       const ctx = { has: n => !!props[n] };
       item.build(b, pal, mv, ctx);
       // real 3D models belonging to this piece of furniture, placed in its own frame
@@ -986,8 +945,6 @@ export function buildHouse(renderer, seed = 1, props = {}) {
         inst.rotation.y = m.ry ?? 0;
         ensureGroup().add(inst);
       }
-
-      if (item.rig === 'sideboard' && props.sideboard) rigSideboard(ensureGroup());
 
       if (item.jarSpot && withJar) {   // the spiral vase stands on the start bedroom's table
         const [vx, vz] = xf(item.jarSpot.x, item.jarSpot.z);

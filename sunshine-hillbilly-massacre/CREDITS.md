@@ -28,8 +28,6 @@ in this repository.
 | The armadillo skeleton | Armadillo (Dasypodidae Dasypus) | *(author and license to be filled in)* |
 | The bird skull | Bird Skull | *(author and license to be filled in)* |
 | The old iron bed | Hospital Bed | *(author and license to be filled in)* |
-| The chests of drawers (austere and ornate finishes) | Long Wooden Drawer Tables Type A | *(author and license to be filled in)* |
-| The sideboard with sliding drawers | Stylized Wooden Sideboard | *(author and license to be filled in)* |
 | *(optional, not included)* a bentwood chair | Chair | shuvalov.di, Sketchfab Standard license |
 
 The Hillbilly is Grandpa with a stitched leather mask, glowing eyes, a bloody apron and a new chainsaw added in

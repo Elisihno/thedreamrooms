@@ -30,11 +30,6 @@ const chairAt = (b, p, cx, cz, dx, dz) => {
 
 const handle = (p, x, y, z, w = .16) => [w, .03, .03, x, y, z, p.dark];
 
-// The chests of drawers are models with no moving parts, so two trays slide out of their faces to be searched.
-const trays = (mv, p) => {
-  for (const y of [.52, .3]) mv.drawer([[1.0, .03, .38, 0, y, .24, p.dark2], [1.04, .14, .03, 0, y, .43, p.dark2]], .42);
-};
-
 export const ITEMS = {
   // the frame stands on legs, leaving 40 cm underneath to hide in
   bed: { w: 1.5, d: 1.95, tall: false, hide: { x: 0, z: .975, w: 1.5, d: 1.95, h: .85, eye: .26 }, build(b, p) {
@@ -391,15 +386,16 @@ export const ITEMS = {
   morris: { w: .96, d: 1.94, tall: false, model: 'morris_chair', modelZ: .98, colliders: [[.96, 1.9, 0, .98]], build() {} },
   // the bird cage with what was in it, and a dead bird on the floor
   birdcage: { w: .6, d: .6, tall: false, models: [{ name: 'bird_cage', x: 0, y: 0, z: .35 }, { name: 'dead_bird', x: .35, y: 0, z: .55, ry: 1 }], colliders: [[.4, .4, 0, .35]], build() {} },
-  // the sideboard (user's model); a kettle or the copper pots can stand on it
-  dresser: { w: 1.3, d: .87, tall: false, rig: 'sideboard', model: 'sideboard', colliders: [[1.3, .87, 0, .435]], build() {} },
-  dresser2: { w: 1.3, d: .87, tall: false, rig: 'sideboard', model: 'sideboard', colliders: [[1.3, .87, 0, .435]], build() {} },
-  dresserkettle: { w: 1.3, d: .87, tall: false, rig: 'sideboard', model: 'sideboard', models: [{ name: 'kettle', x: -.4, y: .669, z: .45, ry: .4 }], colliders: [[1.3, .87, 0, .435]], build() {} },
-  dresserpots: { w: 1.3, d: .87, tall: false, rig: 'sideboard', model: 'sideboard', models: [{ name: 'copper_pots', x: -.3, y: .669, z: .45, ry: 0 }], colliders: [[1.3, .87, 0, .435]], build() {} },
   // an old iron bed: you can hide under it
   oldbed: { w: 1.3, d: 2.0, tall: false, hide: { x: 0, z: 1.0, w: 1.3, d: 2.0, h: .6, eye: .26 }, models: [{ name: 'old_bed', x: 0, y: 0, z: 1.0, ry: Math.PI / 2 }], colliders: [[1.3, 2.0, 0, 1.0]], build() {} },
   chair: { w: .5, d: .55, tall: false, model: 'chair', modelZ: .3, build(b, p, mv, ctx) { if (!ctx.has('chair')) chairAt(b, p, 0, .33, 0, 1); } },
 };
+
+// Dread's chests of drawers (three sliding drawers), used everywhere; a kettle or the copper pots can stand on top
+ITEMS.dresser = ITEMS.drawers;
+ITEMS.dresser2 = ITEMS.drawers;
+ITEMS.dresserkettle = { ...ITEMS.drawers, models: [{ name: 'kettle', x: -.3, y: .91, z: .27, ry: .4 }] };
+ITEMS.dresserpots = { ...ITEMS.drawers, models: [{ name: 'copper_pots', x: -.1, y: .91, z: .27, ry: 0 }] };
 
 // only furniture made from the user's own models is placed
 export const ROLE_ITEMS = {
