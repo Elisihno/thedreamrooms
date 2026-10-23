@@ -305,8 +305,13 @@ export function buildHouse(renderer, seed = 1, props = {}) {
   const sunWindows = [];  // every outer window, for the sunbeams
   const sunMeshes = [];   // beams and patches, shown only on the storey you are on
   const sunPatches = [];  // where the sun lies on the floor
-  const partMat = new THREE.MeshLambertMaterial({ map: tex.wood, vertexColors: true });
-  const fm = tint => mat(tex.wood, tint);
+  const partMat = new THREE.MeshLambertMaterial({ map: tex.floor[0], vertexColors: true, emissive: 0x3a2a1c });
+  const fmCache = new Map();
+  const fm = tint => {   // the plank texture, lifted a little so furniture is not swallowed by the dark boards
+    if (!fmCache.has(tint)) fmCache.set(tint, new THREE.MeshLambertMaterial({ map: tex.floor[0], color: tint, emissive: 0x3a2a1c }));
+    return fmCache.get(tint);
+  };
+  const ceilMats = [0x888888, 0xffffff].map(c => new THREE.MeshLambertMaterial({ map: tex.floor[0], color: c, emissive: 0x4a3825 }));
   const plainCache = new Map();
   const plain = color => {
     if (!plainCache.has(color)) plainCache.set(color, new THREE.MeshLambertMaterial({ color }));
@@ -486,7 +491,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       const id = at(c, r), lk = look[id], k = `${c},${r}`;
       const x = (c + 0.5) * CELL, z = (r + 0.5) * CELL;
       if (!floorHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(CELL, CELL), x, Y, z, -Math.PI / 2), mat(lk.floor));
-      if (!ceilHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(CELL, CELL), x, Y + WALL_H, z, Math.PI / 2), mat(tex.ceiling, level === 0 ? 0x888888 : 0xc8c0aa));
+      if (!ceilHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(CELL, CELL), x, Y + WALL_H, z, Math.PI / 2), ceilMats[level === 0 ? 0 : 1]);
       lk.sx += x; lk.sz += z; lk.n++;
     }
 
