@@ -250,14 +250,16 @@ function burlap(seed) {
   return t;
 }
 
-// a soft vertical fade used by the sunbeams
+// a soft fade used by the sunbeams: strongest at the window and in the middle of the beam, fading to nothing along
+// both edges and toward the floor, so a beam has no hard edge to show up against the ceiling and walls
 function beamTex() {
-  const cv = canvas(16, 128), g = cv.getContext('2d');
-  const grd = g.createLinearGradient(0, 0, 0, 128);
-  grd.addColorStop(0, 'rgba(255,240,190,1)'); grd.addColorStop(0.55, 'rgba(255,236,170,.55)'); grd.addColorStop(1, 'rgba(255,232,160,0)');
-  g.fillStyle = grd; g.fillRect(0, 0, 16, 128);
-  const side = g.createLinearGradient(0, 0, 16, 0);
-  side.addColorStop(0, 'rgba(0,0,0,.0)'); side.addColorStop(0.5, 'rgba(0,0,0,0)'); side.addColorStop(1, 'rgba(0,0,0,0)');
+  const W = 64, H = 128, cv = canvas(W, H), g = cv.getContext('2d'), img = g.createImageData(W, H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const side = Math.pow(Math.sin(Math.PI * (x + 0.5) / W), 1.6), along = Math.pow(1 - y / H, 1.3) * Math.min(1, y / 6 + 0.35);
+    const k = (y * W + x) * 4;
+    img.data[k] = 255; img.data[k + 1] = 238; img.data[k + 2] = 178; img.data[k + 3] = Math.round(255 * side * along);
+  }
+  g.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
@@ -366,7 +368,7 @@ export function makeTextures() {
       photo(9),                                                // 9 dark wood boards
     ],
     floor: [planks, planks, planks, planks, planks, planks, planks],   // the same boards in every room, so the room looks (a little) different only by its walls
-    ceiling: boards(31, ['#d9cfb4', '#cfc4a6'], { count: 3, grain: 0.08, wear: 0.6 }),
+    ceiling: boards(31, ['#d9cfb4', '#cfc4a6'], { count: 3, grain: 0.08, wear: 0.08 }),   // barely stained: hard-edged stains on a ceiling shimmer as you move
     outside: clapboard(41),
     wood: wood(51),
     dirt: dirt(61),

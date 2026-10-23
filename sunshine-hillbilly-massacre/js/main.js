@@ -44,7 +44,7 @@ scene.fog = new THREE.FogExp2(HAZE, 0.026);
 const hemi = new THREE.HemisphereLight(0xfff0d0, 0x8a6a48, 2.2);
 scene.add(hemi);
 
-const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.1, 60);
+const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.15, 48);
 scene.add(camera);
 
 // flashlight
@@ -860,8 +860,8 @@ if (titleMode) {
   player.yaw = (yaw ?? 0) + (innerWidth > innerHeight ? 0.28 : 0.1);       // he stands off to the right of the screen
   player.pitch = 0.14;
   if (hill) {
-    titleLight = new THREE.PointLight(0xffe2a8, 6, 9);
-    titleLight.position.set(hill.x + Math.sin(hill.yaw + Math.PI) * 1.4, hill.y + 2.3, hill.z + Math.cos(hill.yaw + Math.PI) * 1.4);
+    titleLight = new THREE.PointLight(0xffe2a8, 3.5, 7);   // in front of him, well below the ceiling so it makes no hot spot up there
+    titleLight.position.set(hill.x + Math.sin(hill.yaw + Math.PI) * 1.6, hill.y + 1.5, hill.z + Math.cos(hill.yaw + Math.PI) * 1.6);
     scene.add(titleLight);
   }
 }

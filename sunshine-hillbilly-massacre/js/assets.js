@@ -76,8 +76,8 @@ export async function loadAssets(onProgress) {
   for (const m of meshes) {
     const glass = m.material?.name === 'chainsaw_glass';
     m.material = glass
-      ? new THREE.MeshStandardMaterial({ map: glassDiffuse, transparent: true, opacity: 0.55, roughness: 0.2, metalness: 0.1, side: THREE.DoubleSide })
-      : new THREE.MeshStandardMaterial({ map: diffuse, normalMap: normal, metalness: 0.55, roughness: 0.5, side: THREE.DoubleSide });
+      ? new THREE.MeshStandardMaterial({ map: glassDiffuse, transparent: true, opacity: 0.55, roughness: 0.2, metalness: 0.1, side: THREE.FrontSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })
+      : new THREE.MeshStandardMaterial({ map: diffuse, normalMap: normal, metalness: 0.55, roughness: 0.5, side: THREE.FrontSide });   // front faces only: the double-sided original made thin parts fight their own backs
   }
   return { grandpa, saw, props };
 }

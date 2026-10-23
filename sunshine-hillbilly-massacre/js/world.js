@@ -235,7 +235,7 @@ function buildScarecrow(tex) {
   const burlap = new THREE.MeshLambertMaterial({ map: tex.burlap });
   const straw = new THREE.MeshLambertMaterial({ color: 0xd2b25a });
   const dark = new THREE.MeshBasicMaterial({ color: 0x100c08 });
-  add(new THREE.CylinderGeometry(0.28, 0.3, 0.04, 12), wood, 0, 0.02, 0);                 // base
+  add(new THREE.CylinderGeometry(0.28, 0.3, 0.04, 12), wood, 0, 0.026, 0);                 // base
   add(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), wood, 0, 1.1, 0);                   // post
   add(new THREE.BoxGeometry(1.5, 0.06, 0.06), wood, 0, 1.55, 0);                          // arms
   add(new THREE.CylinderGeometry(0.2, 0.17, 0.75, 10), shirt, 0, 1.4, 0);                 // body
@@ -560,7 +560,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       const rail = mat(tex.floor[1], 0x777777);
       const t = 0.08, w = down.x1 - down.x0, d = down.z1 - down.z0;
       const add = (x, z, sx, sz) => {
-        batch.box(sx, 1, sz, x, Y + 0.5, z, Array(6).fill(rail));
+        batch.box(sx, 1, sz, x, Y + 0.5, z, [rail, rail, rail, null, rail, rail]);
         colliders.push({ minX: x - sx / 2, maxX: x + sx / 2, minZ: z - sz / 2, maxZ: z + sz / 2, level });
       };
       add(down.x0 + t / 2, down.z0 + d / 2, t, d);
@@ -582,7 +582,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
         const f = (dir === 'h' ? r : c) * CELL, mid = (dir === 'h' ? c : r) * CELL + CELL / 2;
         const dw = DOOR_W;
         const hinge = new THREE.Group();
-        hinge.position.set(axis === 'x' ? mid - dw / 2 : f, Y, axis === 'x' ? f : mid - dw / 2);
+        hinge.position.set(axis === 'x' ? mid - dw / 2 : f, Y + 0.004, axis === 'x' ? f : mid - dw / 2);
         group.add(hinge);
         const dims = axis === 'x' ? [dw, DOOR_H, T] : [T, DOOR_H, dw];
         const mats = axis === 'x' ? [edgeMat, edgeMat, edgeMat, edgeMat, faceMat, faceMat] : [faceMat, faceMat, edgeMat, edgeMat, edgeMat, edgeMat];
@@ -616,7 +616,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
         : ex.style === 'barn' ? new THREE.MeshLambertMaterial({ map: tex.wall[4], color: 0xd8c8c0 })
         : new THREE.MeshLambertMaterial({ map: tex.door, color: 0xd8c8b0 });
       const hinge = new THREE.Group();
-      hinge.position.set(axis === 'x' ? mid - DW / 2 : f, Y, axis === 'x' ? f : mid - DW / 2);
+      hinge.position.set(axis === 'x' ? mid - DW / 2 : f, Y + 0.004, axis === 'x' ? f : mid - DW / 2);
       group.add(hinge);
       // local frame of the hinge group: u along the door, v out of the inner face
       const at3 = (u, y, v) => (axis === 'x' ? [u, y, inn[1] * v] : [inn[0] * v, y, u]);
@@ -768,7 +768,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       for (let n = 0; n < (cfg.bones ?? 0) && emptyCells.length && props.bone_pile; n++) {
         const [c, r] = emptyCells.splice(Math.floor(rand() * emptyCells.length), 1)[0];
         const pile = props.bone_pile.clone(true);
-        pile.position.set((c + 0.5) * CELL + (rand() - 0.5) * 1.4, Y, (r + 0.5) * CELL + (rand() - 0.5) * 1.4);
+        pile.position.set((c + 0.5) * CELL + (rand() - 0.5) * 1.4, Y + 0.004, (r + 0.5) * CELL + (rand() - 0.5) * 1.4);
         pile.rotation.y = rand() * Math.PI * 2;
         pile.scale.setScalar(0.8 + rand() * 0.5);
         group.add(pile);
@@ -819,13 +819,17 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       // item-local (x across, z out) -> world; the rotation is a multiple of 90 degrees
       const xf = (lx, lz) => [base[0] + lx * cs + lz * sn, base[1] - lx * sn + lz * cs];
       const swap = sn !== 0;
+      // Nothing may have a face exactly in the plane of a floor: from the storey below that face would fight the
+      // ceiling and flicker through it. So a box standing on the floor gets no bottom, and a cylinder is lifted a hair.
       const b = (w, h, d, x, y0, zc, material) => {
         const [wx, wz] = xf(x, zc);
-        fb.box(swap ? d : w, h, swap ? w : d, wx, Y + y0 + h / 2, wz, Array(6).fill(material));
+        const mats = Array(6).fill(material);
+        if (y0 <= 0.001) mats[3] = null;
+        fb.box(swap ? d : w, h, swap ? w : d, wx, Y + y0 + h / 2, wz, mats);
       };
       b.cyl = (rad, h, x, y0, zc, material) => {
         const [wx, wz] = xf(x, zc);
-        fb.cyl(rad, h, wx, Y + y0 + h / 2, wz, material);
+        fb.cyl(rad, h, wx, Y + y0 + h / 2 + (y0 <= 0.001 ? 0.004 : 0), wz, material);
       };
 
       let itemGroup = null, lastPart = null;
@@ -902,7 +906,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       const modelList = [...(item.model && props[item.model] ? [{ name: item.model, z: item.modelZ ?? 0 }] : []), ...(item.models ?? []).filter(m => props[m.name])];
       for (const m of modelList) {
         const inst = props[m.name].clone(true);
-        inst.position.set(m.x ?? 0, m.y ?? 0, m.z ?? 0);
+        inst.position.set(m.x ?? 0, (m.y ?? 0) + 0.004, m.z ?? 0);   // a hair off the floor, so its feet cannot fight the ceiling below
         inst.rotation.y = m.ry ?? 0;
         ensureGroup().add(inst);
       }
@@ -960,7 +964,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
   // floor, with the shadow of the window frame in it. Standing in a patch of sun calms you down.
   function buildSunlight() {
     const L = SUN.clone().negate();   // the way the light travels
-    const beamMat = new THREE.MeshBasicMaterial({ map: tex.beam, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, opacity: 0.2, color: 0xffe9b0 });
+    const beamMat = new THREE.MeshBasicMaterial({ map: tex.beam, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, opacity: 0.3, color: 0xffe9b0 });
     const patchMat = new THREE.MeshBasicMaterial({ map: tex.patch, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.7, color: 0xffe3a0 });
     const quad = (a, b, c, d, uvs, material, level) => {
       const geo = new THREE.BufferGeometry();
@@ -1366,6 +1370,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       }
       for (const tr of traps) {
         if (tr.state === 'armed') {
+          tr.cover.visible = player.level === tr.level;   // seen only from its own floor: from below it would show through the ceiling
           if (player.level !== tr.level) continue;
           const dx = Math.abs(player.pos.x - tr.x), dz = Math.abs(player.pos.z - tr.z);
           if (!tr.creaked && dx < tr.half + 0.9 && dz < tr.half + 0.9 && !player.hidden) { tr.creaked = true; api.onSound?.('doorOpen'); }

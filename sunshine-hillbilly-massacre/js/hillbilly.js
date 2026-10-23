@@ -226,17 +226,39 @@ export function buildHillbilly(assets) {
   mask.add(neckRope);
   attach(bones.head, mask, P(hc.x, cy, cz));
 
-  // ---- the butcher's apron, hanging from his chest to his knees ----------------------------------
+  // ---- the butcher's apron, hanging from his chest to his groin -----------------------------------
+  // Built from the measured shape of his front (chest about 12 cm forward of the spine, belly drawing back, a gap
+  // between the legs), a hand's width off the body so it never sinks into it. It is two pieces: the chest half
+  // follows the spine and the lower half the hips, so it keeps clear when he leans and when his legs swing.
   const chest = wp(bones.spine2), hipP = wp(bones.hips);
-  const apronH = chest.y - (hipP.y - 0.45);
-  const apron = new THREE.Mesh(
-    new THREE.CylinderGeometry(1, 1, apronH, 28, 6, true, -0.9, 1.8),
-    new THREE.MeshStandardMaterial({ map: apronTexture(), side: THREE.DoubleSide, roughness: 0.9 }));
-  attach(bones.spine2, apron, P(chest.x, chest.y - apronH / 2 - 0.05, chest.z + 0.02));
-  apron.scale.multiply(new THREE.Vector3(0.2, 1, 0.16));
-  const apronStrap = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.01, 6, 24, Math.PI), new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 0.9 }));
-  attach(bones.spine2, apronStrap, P(chest.x, chest.y + 0.07, chest.z + 0.02), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI)));
-  apronStrap.scale.z *= 0.8;
+  const apronMat = new THREE.MeshLambertMaterial({ map: apronTexture(), side: THREE.DoubleSide, emissive: 0x1a1612 });
+  const FRONT = [[1.5, 0.150], [1.4, 0.165], [1.3, 0.175], [1.2, 0.175], [1.1, 0.155], [1.0, 0.135], [0.9, 0.125], [0.8, 0.12]];   // [height, how far forward]
+  const frontAt = y => {
+    for (let i = 1; i < FRONT.length; i++) if (y >= FRONT[i][0]) { const [y0, z0] = FRONT[i - 1], [y1, z1] = FRONT[i], k = (y0 - y) / (y0 - y1); return z0 + (z1 - z0) * k; }
+    return FRONT[FRONT.length - 1][1];
+  };
+  const apronPiece = (yTop, yBottom, bone) => {
+    const cols = 8, rows = Math.max(2, Math.round((yTop - yBottom) / 0.07)), pos = [], uv = [], idx = [];
+    for (let r = 0; r <= rows; r++) {
+      const y = yTop + (yBottom - yTop) * r / rows, halfW = 0.19 + (yTop - y) * 0.03;
+      for (let c = 0; c <= cols; c++) {
+        const u = c / cols, x = (u - 0.5) * 2 * halfW;
+        pos.push(x, y, frontAt(y) - 0.06 * Math.pow(Math.abs(u - 0.5) * 2, 2));   // the edges curve back round the body
+        uv.push(u, (yTop - y) / (1.5 - 0.8) * 0.9 + (1.5 - yTop) / (1.5 - 0.8) * 0.9);
+      }
+    }
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const i = r * (cols + 1) + c; idx.push(i, i + 1, i + cols + 1, i + 1, i + cols + 2, i + cols + 1); }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv.map((v, i) => (i % 2 ? 1 - v : v)), 2));
+    geo.setIndex(idx); geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, apronMat);
+    m.frustumCulled = false;
+    attach(bone, m, P(0, 0, 0));
+    return m;
+  };
+  apronPiece(1.5, 1.14, bones.spine2);
+  apronPiece(1.15, 0.8, bones.hips);
 
   // ---- the chainsaw in his right hand --------------------------------------------------------------
   const saw = assets.saw.scene;
@@ -757,7 +779,7 @@ export function createHillbilly(house, assets, opts = {}) {
     revKick = Math.max(0, revKick - dt);
     const target = me.state === 'stun' ? 0 : (me.state === 'hunt' || me.state === 'kill') ? 1 : me.state === 'search' ? 0.5 : 0.25;
     me.rpm += (Math.max(target, revKick > 0 ? 1 : 0) - me.rpm) * Math.min(1, dt * 5);
-    const shake = me.rpm * 0.006;
+    const shake = me.rpm * 0.003;
     model.saw.position.set(model.sawBase.x + Math.sin(t * 61) * shake, model.sawBase.y + Math.sin(t * 53) * shake, model.sawBase.z + Math.sin(t * 47) * shake);
   }
 
