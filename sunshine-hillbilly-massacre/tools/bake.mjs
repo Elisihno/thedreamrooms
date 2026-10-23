@@ -11,6 +11,21 @@ const JOBS = [
   { name: 'butcher_hooks', src: R + 'butcher_hook.glb', fit: 'y', size: 2.3, anchor: 'center', maxTex: 512 },
   { name: 'bone_pile', src: R + 'bone_pile.glb', fit: 'max', size: 0.62, anchor: 'center', maxTex: 512 },
   { name: 'chair', src: R + 'chair.glb', fit: 'y', size: 0.95, anchor: 'center', maxTex: 512, out: 'optional/' },
+  { name: 'kettle', src: R + 'kettle_s.glb', fit: 'max', size: 0.3, anchor: 'center', maxTex: 256 },
+  { name: 'candelabra', src: R + 'candelabra_s.glb', fit: 'y', size: 0.5, anchor: 'center', maxTex: 256 },
+  { name: 'cleaver', src: R + 'cleaver.glb', fit: 'max', size: 0.34, anchor: 'center', maxTex: 256 },
+  { name: 'old_fridge', src: R + 'old_fridge.glb', fit: 'y', size: 1.75, anchor: 'center', maxTex: 512 },
+  { name: 'copper_pots', src: R + 'copper_pots_s.glb', fit: 'max', size: 0.7, anchor: 'center', maxTex: 512 },
+  { name: 'wood_stove', src: R + 'wood_stove_s.glb', fit: 'y', size: 1.3, anchor: 'center', maxTex: 512 },
+  { name: 'dish_rack', src: R + 'dish_rack_s.glb', fit: 'max', size: 0.6, anchor: 'center', maxTex: 512 },
+  { name: 'bird_cage', src: R + 'bird_cage_s.glb', fit: 'y', size: 0.55, anchor: 'center', maxTex: 256 },
+  { name: 'kitchen_knife', src: R + 'kitchen_knife_s.glb', fit: 'max', size: 0.32, anchor: 'center', maxTex: 256 },
+  { name: 'dead_bird', src: R + 'dead_bird_s.glb', fit: 'max', size: 0.22, anchor: 'center', maxTex: 256 },
+  { name: 'wall_clock', src: R + 'wall_clock.glb', fit: 'y', size: 1.5, anchor: 'center', maxTex: 512 },
+  { name: 'morris_chair', src: R + 'morris_chair.glb', fit: 'y', size: 1.05, anchor: 'center', maxTex: 512 },
+  { name: 'chest_freezer', src: R + 'chest_freezer.glb', fit: 'x', size: 1.4, anchor: 'center', maxTex: 512 },
+  { name: 'armadillo', src: R + 'armadillo_s.glb', fit: 'max', size: 0.75, anchor: 'center', maxTex: 512 },
+  { name: 'bird_skull', src: R + 'bird_skull_s.glb', fit: 'max', size: 0.12, anchor: 'center', maxTex: 256 },
 ];
 const only = process.argv.slice(2);
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });

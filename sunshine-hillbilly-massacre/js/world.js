@@ -32,26 +32,29 @@ const LEVELS = [
     slideDoors: [['v', 6, 4]],
     fixed: [
       { item: 'tablechairs', cell: [4, 1] },
+      { item: 'clock', cell: [3, 5], side: 'W' },
       { item: 'livingset', cell: [0, 0] },
       { item: 'truck', cell: [1, 4] },
       // the kitchen: the long run of cabinets with the sink fills the north wall to the east corner; the
       // icebox stands on the east wall; the stove, the butcher block and the drawers that hold the knife
       // stand along the rest of the north wall, and two counters along the west wall
       { item: 'kitchenrun', cell: [8, 0], side: 'N', shift: -0.83 },
-      { item: 'fridge', cell: [8, 0], side: 'E', shift: 1.5 },
-      { item: 'counter', cell: [6, 0], side: 'W', shift: -0.5 },
-      { item: 'counter', cell: [6, 0], side: 'W', shift: -1.62 },
+      { item: 'kitchenstuff', cell: [8, 0], side: 'N', shift: -0.83 },
+      { item: 'oldfridge', cell: [8, 0], side: 'E', shift: 1.5 },
+      { item: 'counterkettle', cell: [6, 0], side: 'W', shift: -0.5 },
+      { item: 'counterpots', cell: [6, 0], side: 'W', shift: -1.62 },
       { item: 'butcherblock', cell: [6, 0], side: 'N', shift: -0.9 },
       { item: 'kitchendrawers', cell: [6, 0], side: 'N', shift: 0.2 },
       { item: 'stove', cell: [6, 0], side: 'N', shift: 1.1 },
       { item: 'counter', cell: [7, 0], side: 'N', shift: -0.75 },
       // the freezer room: the big chest freezer and the hooks over the stone floor
-      { item: 'freezer', cell: [8, 2], side: 'E' },
+      { item: 'chestfreezer', cell: [8, 2], side: 'E' },
       { item: 'meathooks', cell: [6, 2], side: 'N' },
       // the room of bones
       { item: 'bonechair', cell: [8, 3], side: 'E', shift: -0.4 },
       { item: 'bonechair', cell: [7, 5], side: 'S', shift: 0.9 },
       { item: 'bonetable', cell: [7, 4] },
+      { item: 'birdcage', cell: [6, 3], side: 'N', shift: 0.8 },
     ],
     // the front door, in the south wall of the hall: a keypad and two padlocks. The big garage door
     // opens only once the truck is started.
@@ -373,9 +376,9 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       part.hasItem = true;
     };
     const holders = parts.filter(p => p.loot);
-    // the apple always lies in the icebox, the shotgun in the padlocked metal box
-    const icebox = holders.find(p => p.tag === 'fridge');
-    if (icebox) place('peach', icebox);
+    // the apple always lies in a kitchen drawer, the shotgun in the padlocked metal box
+    const appleDrawers = holders.filter(p => p.kind === 'drawer' && p.role === 'kitchen' && !p.hasItem);
+    if (appleDrawers.length) place('peach', pick(appleDrawers));
     const gunBox = holders.find(p => p.tag === 'gunbox');
     if (gunBox) place('shotgun', gunBox);
     // the spiral vase stands on the start bedroom's table

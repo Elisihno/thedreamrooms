@@ -56,7 +56,7 @@ export const ITEMS = {
     }
   } },
   // a long dining table with six chairs pulled up round it
-  tablechairs: { w: 2.7, d: 2.1, tall: false, center: true, model: 'dining_set', hide: { x: 0, z: 0, w: 1.16, d: 2.1, h: .75, eye: .5 },
+  tablechairs: { w: 2.7, d: 2.1, tall: false, center: true, model: 'dining_set', models: [{ name: 'candelabra', x: 0, y: .78, z: 0 }], hide: { x: 0, z: 0, w: 1.16, d: 2.1, h: .75, eye: .5 },
     colliders: ctx => (ctx.has('dining_set') ? [[2.6, 2.05, 0, 0]] : [[1.4, .85, 0, 0], [.5, .5, -.35, -.55], [.5, .5, .35, -.55], [.5, .5, -.35, .55], [.5, .5, .35, .55]]),
     build(b, p, mv, ctx) {
       if (ctx.has('dining_set')) return;
@@ -122,12 +122,10 @@ export const ITEMS = {
     for (const dx of [-.34, .34]) { b(.05, .3, .05, dx, .48, .4, bone); b(.1, .05, .5, dx, .76, .4, bone); }
     b(.2, .17, .18, 0, 1.1, .12, bone); b(.04, .05, .02, -.05, 1.17, .22, p.dark); b(.04, .05, .02, .05, 1.17, .22, p.dark);   // a skull on top
   } },
-  bonetable: { w: 1.5, d: 1.0, tall: false, center: true, colliders: [[1.5, 1.0, 0, 0]], build(b, p) {
+  bonetable: { w: 1.5, d: 1.0, tall: false, center: true, models: [{ name: 'armadillo', x: -.25, y: .79, z: .05, ry: .3 }, { name: 'bird_skull', x: .5, y: .79, z: -.15, ry: 2.2 }], colliders: [[1.5, 1.0, 0, 0]], build(b, p) {
     const bone = p.light;
     b(1.5, .07, 1.0, 0, .72, 0, p.dark2);
     for (const dx of [-.62, .62]) for (const dz of [-.38, .38]) { b(.09, .72, .09, dx, 0, dz, bone); b(.14, .07, .14, dx, .0, dz, bone); }
-    b(.16, .12, .14, .2, .79, .1, bone); b(.04, .04, .02, .16, .85, .18, p.dark); b(.04, .04, .02, .24, .85, .18, p.dark);
-    b(.5, .04, .06, -.3, .79, -.1, bone); b(.4, .04, .06, -.35, .79, .15, bone);
   } },
   counter: { w: 1.1, d: .6, tall: false, build(b, p, mv) {
     b(1.1, .86, .6, 0, 0, .3, p.body);
@@ -160,13 +158,12 @@ export const ITEMS = {
     }
   } },
   // a black iron wood stove with a pipe up through the ceiling
-  stove: { w: 1.0, d: .7, tall: true, build(b, p, mv) {
+  stove: { w: .75, d: .95, tall: true, model: 'wood_stove', modelZ: .48, colliders: [[.7, .92, 0, .48]], build(b, p, mv, ctx) {
+    if (ctx.has('wood_stove')) return;
     b(.9, .85, .62, 0, 0, .35, p.dark);
     b(.96, .04, .66, 0, .85, .35, p.steel);
-    b(.9, .1, .62, 0, .89, .35, p.dark);
     for (const dx of [-.28, .28]) b(.2, .02, .2, dx, .93, .3, p.steel);
     b(.12, 2.1, .12, .0, .9, .62, p.dark);
-    mv.flap([[.5, .4, .02, 0, .1, .66, p.dark], handle(p, 0, .5, .68, .3)], .1, .66, 1.55);
   } },
   // you can hide inside it: the doors are shut, and you watch through the slats
   wardrobe: { w: 1.2, d: .6, tall: true, hide: { x: 0, z: .3, w: 1.2, d: .6, h: 2.0, eye: 1.5, closet: true }, build(b, p) {
@@ -311,7 +308,7 @@ export const ITEMS = {
     mv.lock(0, .22, .5);
   } },
   // a chunky butcher block, deeply scored; hold a knife and use it to chop something on it
-  butcherblock: { w: .9, d: .7, tall: false, build(b, p, mv) {
+  butcherblock: { w: .9, d: .7, tall: false, models: [{ name: 'cleaver', x: -.28, y: .94, z: .25, ry: .5 }], build(b, p, mv) {
     b(.9, .86, .7, 0, 0, .4, p.body);
     b(.96, .08, .76, 0, .86, .4, p.paper);
     b(.3, .004, .02, -.1, .945, .4, p.dark2); b(.02, .004, .3, .15, .945, .45, p.dark2); b(.4, .004, .02, .0, .945, .55, p.dark2);
@@ -373,11 +370,30 @@ export const ITEMS = {
     b(4.46, .05, .64, 0, .86, .32, p.dark);
     b(4.4, .9, .32, 0, 1.4, .16, p.dark2);
   } },
+  // a counter with a copper kettle / with the copper pots on it
+  counterkettle: { w: 1.1, d: .6, tall: false, models: [{ name: 'kettle', x: -.2, y: .91, z: .32, ry: .4 }], colliders: [[1.1, .6, 0, .3]], build(b, p, mv, ctx) { ITEMS.counter.build(b, p, mv, ctx); } },
+  counterpots: { w: 1.1, d: .6, tall: false, models: [{ name: 'copper_pots', x: 0, y: .91, z: .32, ry: 0 }], colliders: [[1.1, .6, 0, .3]], build(b, p, mv, ctx) { ITEMS.counter.build(b, p, mv, ctx); } },
+  // things standing on the long run of kitchen cabinets: a dish rack with dishes
+  kitchenstuff: { w: 4.4, d: .6, tall: false, models: [{ name: 'dish_rack', x: -1.55, y: .9, z: .32, ry: 0 }], colliders: [], build() {} },
+  // the old fridge in the kitchen: just a fridge now
+  oldfridge: { w: .85, d: .85, tall: true, model: 'old_fridge', modelZ: .43, colliders: [[.84, .82, 0, .43]], build(b, p, mv, ctx) {
+    if (ctx.has('old_fridge')) return;
+    ITEMS.fridge.build(b, p, mv, ctx);
+  } },
+  chestfreezer: { w: 1.4, d: .7, tall: false, model: 'chest_freezer', modelZ: .34, colliders: [[1.4, .66, 0, .34]], build(b, p, mv, ctx) {
+    if (ctx.has('chest_freezer')) return;
+    ITEMS.freezer.build(b, p, mv, ctx);
+  } },
+  // a tall pendulum clock
+  clock: { w: .82, d: .55, tall: true, model: 'wall_clock', modelZ: .3, colliders: [[.8, .5, 0, .3]], build() {} },
+  morris: { w: .96, d: 1.94, tall: false, model: 'morris_chair', modelZ: .98, colliders: [[.96, 1.9, 0, .98]], build() {} },
+  // the bird cage with what was in it, and a dead bird on the floor
+  birdcage: { w: .6, d: .6, tall: false, models: [{ name: 'bird_cage', x: 0, y: 0, z: .35 }, { name: 'dead_bird', x: .35, y: 0, z: .55, ry: 1 }], colliders: [[.4, .4, 0, .35]], build() {} },
   chair: { w: .5, d: .55, tall: false, model: 'chair', modelZ: .3, build(b, p, mv, ctx) { if (!ctx.has('chair')) chairAt(b, p, 0, .33, 0, 1); } },
 };
 
 export const ROLE_ITEMS = {
-  living: ['sofa', 'radio', 'bookshelf', 'armchair', 'drawers', 'fireplace', 'rocker', 'antlers'],
+  living: ['morris', 'sofa', 'radio', 'bookshelf', 'armchair', 'drawers', 'fireplace', 'rocker', 'antlers'],
   dining: ['tablechairs', 'drawers', 'chair', 'antlers'],
   kitchen: [],   // laid out by hand in world.js
   study: ['desk', 'bookshelf', 'antlers', 'drawers', 'shelves'],

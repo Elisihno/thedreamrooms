@@ -14,6 +14,19 @@ in this repository.
 | The trestle table | Vintage Wooden Table | Poring |
 | The meat hooks in the cellar | Butcher Hook_18MB | Mehdi Shahsavan |
 | The piles of bones | Low Poly Bone Pile (Downloadable) | 3dsauce |
+| The copper tea kettle | Polished Tea Kettle | *(author and license to be filled in)* |
+| The candelabra on the dining table | Candelabra | *(author and license to be filled in)* |
+| The cleaver on the butcher block | Cleaver - Butcher's Best Friend | *(author and license to be filled in)* |
+| The kitchen fridge | Old Fridge | *(author and license to be filled in)* |
+| The copper pots and pans | 3DDecember 2021 - Copper Pots and Pans | *(author and license to be filled in)* |
+| The wood stove | Wood Stove | *(author and license to be filled in)* |
+| The dish rack | Dish Rack with Dishes | *(author and license to be filled in)* |
+| The bird cage and the dead bird | Low Poly Bird Cage, Dead Bird | *(author and license to be filled in)* |
+| The pendulum clock | Old Wall Clock | *(author and license to be filled in)* |
+| The armchair | Morris Chair | *(author and license to be filled in)* |
+| The chest freezer | Fridgadaire Chest Freezer | *(author and license to be filled in)* |
+| The armadillo skeleton | Armadillo (Dasypodidae Dasypus) | *(author and license to be filled in)* |
+| The bird skull | Bird Skull | *(author and license to be filled in)* |
 | *(optional, not included)* a bentwood chair | Chair | shuvalov.di, Sketchfab Standard license |
 
 The Hillbilly is Grandpa with a stitched leather mask, glowing eyes, a bloody apron and a new chainsaw added in
