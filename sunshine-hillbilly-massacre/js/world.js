@@ -369,12 +369,11 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       const item = { kind: 'item', type, part, mesh };
       mesh.userData.proxy.userData.item = item;
       items.push(item);
-      if (part.kind === 'search') { mesh.visible = false; part.item = item; }   // found by searching the drawer, not by sight
-      else itemMeshes.push(mesh.userData.proxy);
+      itemMeshes.push(mesh.userData.proxy);
       part.hasItem = true;
     };
     const holders = parts.filter(p => p.loot);
-    const isDrawer = p => p.kind === 'drawer' || p.kind === 'search';
+    const isDrawer = p => p.kind === 'drawer';
     // the apple always lies in a kitchen drawer, the shotgun in the padlocked metal box
     const appleDrawers = holders.filter(p => isDrawer(p) && p.role === 'kitchen' && !p.hasItem);
     if (appleDrawers.length) place('peach', pick(appleDrawers));
@@ -936,21 +935,42 @@ export function buildHouse(renderer, seed = 1, props = {}) {
           wires.push(wire);
         },
       };
-      // The sideboard's three drawers cannot move (they are solid blocks in the model), so each gets an invisible target over its
-      // front: using it opens a view into the drawer (see main.js), where whatever is hidden in it can be found and taken.
+      // The sideboard's three drawers are separate meshes, but solid blocks in the model. Each is made hollow: the block loses its
+      // top face and a slightly smaller copy of it, seen from the inside, forms the lining. A closed
+      // drawer is exactly the model; one that slides out shows a proper box, and what lies in it.
       function rigSideboard(host) {
         const meshes = [];
         host.traverse(o => { if (o.isMesh) meshes.push(o); });
         for (const m of meshes.slice(3, 6)) {
-          m.geometry.computeBoundingBox();
-          const bb = m.geometry.boundingBox, ctr = bb.getCenter(new THREE.Vector3()), size = bb.getSize(new THREE.Vector3());
-          // a little larger than the drawer front, and the top one reaches up to the lid, so it is easy to aim at from standing height
-          const top = Math.abs(bb.max.y - Math.max(...meshes.slice(3, 6).map(q => q.geometry.boundingBox?.max.y ?? 0))) < 1e-3;
-          const hgt = size.y + 0.06 + (top ? 0.08 : 0);
+          const full = m.geometry;
+          full.computeBoundingBox();
+          const bb = full.boundingBox, ctr = bb.getCenter(new THREE.Vector3()), size = bb.getSize(new THREE.Vector3());
+          const flat = full.index ? full.toNonIndexed() : full.clone();
+          const pos = flat.attributes.position, nor = flat.attributes.normal, uv = flat.attributes.uv;
+          const keep = [];
+          for (let i = 0; i < pos.count; i += 3) if ((nor.getY(i) + nor.getY(i + 1) + nor.getY(i + 2)) / 3 < 0.55) keep.push(i, i + 1, i + 2);
+          const cut = new THREE.BufferGeometry();
+          for (const [name, attr, n] of [['position', pos, 3], ['normal', nor, 3], ['uv', uv, 2]]) {
+            const arr = new Float32Array(keep.length * n);
+            keep.forEach((v, k) => { for (let c = 0; c < n; c++) arr[k * n + c] = attr.array[v * n + c]; });
+            cut.setAttribute(name, new THREE.BufferAttribute(arr, n));
+          }
+          m.geometry = cut;
+          const t = 0.018, lining = new THREE.Mesh(full, new THREE.MeshLambertMaterial({ map: m.material.map, color: 0xffffff, emissive: 0x3a2814, side: THREE.BackSide }));
+          lining.scale.set((size.x - 2 * t) / size.x, (size.y - 2 * t) / size.y, (size.z - 2 * t) / size.z);
+          lining.position.set(ctr.x * (1 - lining.scale.x), ctr.y * (1 - lining.scale.y), ctr.z * (1 - lining.scale.z));
+          const pg = new THREE.Group();
+          m.parent.add(pg);
+          pg.add(m, lining);
+          const floorY = bb.min.y + t + 0.006;
+          const part = { pg, pivot: [0, 0, 0], level, open: false, t: 0, kind: 'drawer', dist: 0.36, role: cfg.roles?.[at(c, r)], loot: { parent: pg, pos: [ctr.x, floorY, ctr.z + size.z * 0.04] } };
+          pg.traverse(o => { if (o.isMesh) { o.userData.part = part; partMeshes.push(o); } });
+          // a larger invisible target on the fixed body, so the drawer is easy to aim at, open or shut
+          const top = bb.max.y >= Math.max(...meshes.slice(3, 6).map(q => (q.geometry.boundingBox ?? bb).max.y)) - 1e-3;
+          const hgt = size.y + 0.06 + (top ? 0.1 : 0);
           const proxy = new THREE.Mesh(new THREE.BoxGeometry(size.x + 0.04, hgt, 0.5), new THREE.MeshBasicMaterial({ visible: false }));
-          proxy.position.set(ctr.x, ctr.y + 0.004 + (top ? 0.04 : 0), bb.max.z - 0.15);
+          proxy.position.set(ctr.x, ctr.y + (top ? 0.05 : 0), bb.max.z - 0.15);
           host.add(proxy);
-          const part = { kind: 'search', level, open: false, t: 0, role: cfg.roles?.[at(c, r)], searched: false, item: null, seed: parts.length + 1, loot: { parent: host, pos: [ctr.x, ctr.y, ctr.z] } };
           proxy.userData.part = part;
           partMeshes.push(proxy);
           parts.push(part);
@@ -1337,19 +1357,6 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       }
       return found;
     },
-    // what lies in a searched drawer: its item type, or null
-    searchInfo(part) { return part.item?.type ?? null; },
-    // take what was found in a drawer; returns what happened ('read' for the postcard, which stays where it is)
-    takeFromDrawer(part) {
-      const it = part.item;
-      if (!it) return null;
-      if (it.type === 'postcard') { api.onRead?.(); return 'read'; }
-      if (it.type !== 'flashlight' && api.canTake && !api.canTake()) { say('Your hand is full. Drop what you are holding first.'); return 'full'; }
-      removeItem(it);
-      part.item = null;
-      api.onPickup?.(it.type);
-      return 'taken';
-    },
     // `held` is the type of the item in the player's hand ('key', 'cutters') or null
     use(target, held) {
       if (target.kind === 'hide') { api.onHide?.(target.spot); return; }
@@ -1358,7 +1365,6 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       if (target.kind === 'keypad') { api.onKeypad?.(target); return; }
       if (target.kind === 'board') { useBoard(target, held); return; }
       if (target.kind === 'carhood' || target.kind === 'carfuel' || target.kind === 'cardoor') { useTruck(target, held); return; }
-      if (target.kind === 'search') { target.searched = true; api.onSearch?.(target); return; }
       if (target.locked) { cutLock(target, held); return; }
       if (target.kind === 'wire') { cutWire(target.wire, held); return; }
       if (target.kind === 'item') {

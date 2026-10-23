@@ -42,18 +42,6 @@
   #kpGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   #kpGrid button { padding: 0; height: 46px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: #2a2e33; color: #fff; font: 600 20px system-ui, sans-serif; cursor: pointer; }
   @keyframes shake { 20% { transform: translateX(-6px); } 60% { transform: translateX(6px); } }
-  #drawer { position: fixed; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.72); font-family: system-ui, sans-serif; color: #fff; }
-  #drawer[hidden] { display: none; }
-  .drawerBox { position: relative; width: min(560px, 92vw); text-align: center; }
-  #drawer.in .drawerBox { animation: drawerIn .28s ease-out; }
-  @keyframes drawerIn { from { transform: translateY(40px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
-  .drawerFrame { position: relative; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.7); line-height: 0; }
-  #drawerCv { width: 100%; height: auto; display: block; }
-  #drawerItem { position: absolute; width: 22%; max-width: 110px; cursor: pointer; filter: drop-shadow(0 4px 5px rgba(0,0,0,.7)); animation: glint 1.6s ease-in-out infinite alternate; }
-  #drawerItem[hidden] { display: none; }
-  @keyframes glint { from { filter: drop-shadow(0 4px 5px rgba(0,0,0,.7)) brightness(1); } to { filter: drop-shadow(0 0 10px rgba(255,230,150,.9)) brightness(1.25); } }
-  #drawerMsg { margin: 12px 0 10px; font-size: 14px; opacity: .85; min-height: 18px; }
-  #drawerClose { padding: 10px 28px; border-radius: 10px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.12); color: #fff; font: 600 15px system-ui, sans-serif; cursor: pointer; }
   .noteCard { text-align: center; }
   .noteCard img { width: min(300px, 70vh); max-width: 80vw; transform: rotate(-2deg); box-shadow: 0 8px 30px rgba(0,0,0,.6); }
   .noteCard p { margin: 14px 0 0; opacity: .7; font-size: 13px; }
@@ -218,9 +206,6 @@
     #kpDisplay { font-size: 22px; }
     #kpMsg { font-size: 11px; }
     #kpGrid button { height: 38px; font-size: 16px; }
-    #drawerMsg { font-size: 12px; margin: 6px 0; }
-    #drawerClose { padding: 7px 20px; font-size: 13px; }
-    .drawerBox { width: min(420px, 78vh * 1.6, 92vw); }
     .noteCard p { font-size: 11px; }
     #loading { font-size: 14px; }
   }
@@ -245,7 +230,6 @@
 <button id="fire" type="button" hidden>FIRE</button>
 <button id="drop" type="button" hidden>DROP</button>
 <div id="win" hidden><div><h1 id="winTitle">You escaped</h1><p id="winTime"></p><button id="again" type="button">Play again</button></div></div>
-<div id="drawer" hidden><div class="drawerBox"><div class="drawerFrame"><canvas id="drawerCv" width="640" height="360"></canvas><img id="drawerItem" hidden alt=""></div><div id="drawerMsg"></div><button id="drawerClose" type="button">Close</button></div></div>
 <div id="keypad" hidden><div class="kp"><div id="kpDisplay">_ _ _ _</div><div id="kpMsg"></div><div id="kpGrid"></div></div></div>
 <div id="note" hidden><div class="noteCard"><img id="noteImg" alt="Sticky note"><p>Tap to put it away</p></div></div>
 <div id="start">

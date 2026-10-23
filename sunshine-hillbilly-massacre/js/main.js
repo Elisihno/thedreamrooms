@@ -292,7 +292,7 @@ const dotEl = $('dot');
 useBtn.querySelector('img').src = 'assets/ui_hand.png';
 let target = null;
 const NAMES = ITEM_NAMES;
-const label = t => (t.kind === 'item' ? (t.type === 'shells' && selected === 'shotgun' ? 'Load shells' : t.type === 'postcard' ? 'Read postcard' : `Take ${NAMES[t.type]}`) : t.kind === 'roomdoor' ? (t.door.open ? 'Close' : 'Open') : t.kind === 'wire' ? 'Cut' : t.kind === 'carhood' ? 'Truck hood' : t.kind === 'carfuel' ? 'Gas tank' : t.kind === 'cardoor' ? 'Truck door' : t.kind === 'board' ? 'Butcher block' : t.kind === 'search' ? 'Search' : t.locked ? 'Padlocked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? (t.exit.name ?? 'Door') : t.open ? 'Close' : 'Open');
+const label = t => (t.kind === 'item' ? (t.type === 'shells' && selected === 'shotgun' ? 'Load shells' : t.type === 'postcard' ? 'Read postcard' : `Take ${NAMES[t.type]}`) : t.kind === 'roomdoor' ? (t.door.open ? 'Close' : 'Open') : t.kind === 'wire' ? 'Cut' : t.kind === 'carhood' ? 'Truck hood' : t.kind === 'carfuel' ? 'Gas tank' : t.kind === 'cardoor' ? 'Truck door' : t.kind === 'board' ? 'Butcher block' : t.locked ? 'Padlocked' : t.kind === 'keypad' ? 'Keypad' : t.kind === 'exit' ? (t.exit.name ?? 'Door') : t.open ? 'Close' : 'Open');
 function useTarget() {
   if (wake.active || driving || paused) return;
   if (hide.spot) { leaveHide(); return; }
@@ -313,7 +313,7 @@ function updateTarget() {
   useBtn.hidden = !t;
   dotEl.hidden = !!t;
   placeHand(t);
-  useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : t?.kind === 'board' || t?.kind === 'search' || t?.kind?.startsWith('car') || t?.kind === 'exit' ? label(t) : t?.locked ? 'Padlocked' : '';
+  useBtn.dataset.label = t?.kind === 'hide' ? 'Hide' : t?.kind === 'board' || t?.kind?.startsWith('car') || t?.kind === 'exit' ? label(t) : t?.locked ? 'Padlocked' : '';
   if (t) useBtn.setAttribute('aria-label', t.kind === 'hide' ? 'Hide' : label(t));
 }
 house.onHide = enterHide;
@@ -503,79 +503,7 @@ function openNote() {
   move.x = move.y = 0;
   document.exitPointerLock?.();
 }
-// ---- searching a drawer ---------------------------------------------------------
-// A view from above into the open drawer: worn wood, dividers and the odds and ends that collect in a drawer. What is hidden
-// there lies among them; tap it to take it.
-const drawerEl = $('drawer'), drawerCv = $('drawerCv'), drawerItem = $('drawerItem'), drawerMsg = $('drawerMsg');
-let drawerPart = null;
-function paintDrawer(seed) {
-  let sd = seed * 7919 + 13; const rnd = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
-  const W = drawerCv.width, H = drawerCv.height, g = drawerCv.getContext('2d');
-  g.clearRect(0, 0, W, H);
-  const wood = (x, y, w, h, base) => {   // planks with a little grain
-    g.fillStyle = base; g.fillRect(x, y, w, h);
-    for (let i = 0; i < 70; i++) { g.strokeStyle = `rgba(${20 + rnd() * 30},${10 + rnd() * 14},5,${0.12 + rnd() * 0.18})`; g.lineWidth = 1 + rnd() * 1.5; const yy = y + rnd() * h; g.beginPath(); g.moveTo(x, yy); g.bezierCurveTo(x + w * 0.3, yy + (rnd() - 0.5) * 8, x + w * 0.6, yy + (rnd() - 0.5) * 8, x + w, yy + (rnd() - 0.5) * 6); g.stroke(); }
-  };
-  g.fillStyle = '#1a110a'; g.fillRect(0, 0, W, H);
-  wood(0, 0, W, H, '#4a3322');                                   // the rim
-  g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(14, 14, W - 28, H - 28);
-  wood(20, 20, W - 40, H - 40, '#6b4c30');                       // the floor of the drawer
-  g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(20, 20, W - 40, 10); g.fillRect(20, 20, 10, H - 40);   // shade under the rim
-  for (let i = 0; i < 2; i++) {                                  // dividers
-    const horiz = i === 0 || rnd() < 0.4;
-    if (horiz) { const x = W * (0.3 + 0.4 * rnd()); g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(x + 4, 20, 14, H - 40); wood(x, 20, 12, H - 40, '#573b25'); }
-    else { const y = H * (0.35 + 0.3 * rnd()); g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(20, y + 4, W - 40, 14); wood(20, y, W - 40, 12, '#573b25'); }
-  }
-  const shadow = (fn) => { g.save(); g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 6; g.shadowOffsetY = 3; fn(); g.restore(); };
-  for (let n = 0; n < 11; n++) {
-    const x = 50 + rnd() * (W - 100), y = 45 + rnd() * (H - 90), a = rnd() * Math.PI, k = Math.floor(rnd() * 6);
-    g.save(); g.translate(x, y); g.rotate(a);
-    shadow(() => {
-      if (k === 0) { g.fillStyle = '#c9b27a'; g.fillRect(-30, -4, 50, 8); g.fillStyle = '#d9c9a0'; g.beginPath(); g.moveTo(20, -4); g.lineTo(32, 0); g.lineTo(20, 4); g.fill(); g.fillStyle = '#7a2a22'; g.fillRect(-34, -4, 6, 8); }   // a pencil stub
-      else if (k === 1) { g.fillStyle = '#d6cdb4'; g.beginPath(); g.arc(0, 0, 9, 0, 7); g.fill(); g.fillStyle = '#4a3a2a'; for (const [dx, dy] of [[-2.5, -2.5], [2.5, -2.5], [-2.5, 2.5], [2.5, 2.5]]) { g.beginPath(); g.arc(dx, dy, 1.2, 0, 7); g.fill(); } }   // a button
-      else if (k === 2) { g.fillStyle = '#e4dcc6'; g.fillRect(-24, -18, 48, 36); g.strokeStyle = 'rgba(60,50,40,.5)'; g.lineWidth = 1; for (let l = -12; l < 14; l += 6) { g.beginPath(); g.moveTo(-18, l); g.lineTo(18, l); g.stroke(); } }   // a folded letter
-      else if (k === 3) { g.fillStyle = '#b8935a'; g.fillRect(-14, -9, 28, 18); g.fillStyle = '#7a1c14'; g.fillRect(-14, -9, 28, 5); g.fillStyle = '#d8cfa8'; g.fillRect(-9, -2, 18, 6); }   // a box of matches
-      else if (k === 4) { g.strokeStyle = '#a88d5a'; g.lineWidth = 2; for (let r = 4; r < 14; r += 3) { g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); } }                          // a coil of twine
-      else { g.fillStyle = '#7a4a2a'; g.fillRect(-3, -22, 6, 44); g.fillStyle = '#5a3a20'; g.fillRect(-8, -22, 16, 4); }   // a rusty nail
-    });
-    g.restore();
-  }
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(14, H - 24, W - 28, 10);   // lip of the drawer, nearest you
-}
-function openDrawer(part) {
-  drawerPart = part;
-  paintDrawer(part.seed ?? 1);
-  const type = house.searchInfo(part);
-  drawerItem.hidden = !type;
-  if (type) {
-    drawerItem.src = iconSrc(type);
-    drawerItem.alt = NAMES[type];
-    drawerItem.style.left = (18 + Math.random() * 52) + '%';
-    drawerItem.style.top = (22 + Math.random() * 46) + '%';
-    drawerItem.style.transform = `rotate(${Math.round(Math.random() * 50 - 25)}deg)`;
-  }
-  drawerMsg.textContent = type ? 'Something is in here.' : 'Nothing but odds and ends.';
-  drawerEl.hidden = false;
-  drawerEl.classList.remove('in'); void drawerEl.offsetWidth; drawerEl.classList.add('in');
-  uiOpen = true;
-  move.x = move.y = 0;
-  document.exitPointerLock?.();
-  audio.use('drawer', true);
-}
-drawerItem.addEventListener('click', e => {
-  e.stopPropagation();
-  const part = drawerPart;
-  const r = house.takeFromDrawer(part);
-  if (r === 'taken') { drawerItem.hidden = true; drawerMsg.textContent = 'Nothing else in here.'; setTimeout(closeUi, 350); }
-  else if (r === 'read') { closeUi(); house.takeFromDrawer(part); }
-});
-$('drawerClose').addEventListener('click', e => { e.stopPropagation(); closeUi(); });
-drawerEl.addEventListener('click', e => { if (e.target === drawerEl) closeUi(); });
-house.onSearch = openDrawer;
-
 function closeUi() {
-  if (!drawerEl.hidden) audio.use('drawer', false);
-  drawerEl.hidden = true;
   keypadEl.hidden = true; noteEl.hidden = true;
   uiOpen = false;
 }
