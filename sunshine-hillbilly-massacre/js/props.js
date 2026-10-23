@@ -122,11 +122,8 @@ export const ITEMS = {
     for (const dx of [-.34, .34]) { b(.05, .3, .05, dx, .48, .4, bone); b(.1, .05, .5, dx, .76, .4, bone); }
     b(.2, .17, .18, 0, 1.1, .12, bone); b(.04, .05, .02, -.05, 1.17, .22, p.dark); b(.04, .05, .02, .05, 1.17, .22, p.dark);   // a skull on top
   } },
-  bonetable: { w: 1.5, d: 1.0, tall: false, center: true, models: [{ name: 'armadillo', x: -.25, y: .79, z: .05, ry: .3 }, { name: 'bird_skull', x: .5, y: .79, z: -.15, ry: 2.2 }], colliders: [[1.5, 1.0, 0, 0]], build(b, p) {
-    const bone = p.light;
-    b(1.5, .07, 1.0, 0, .72, 0, p.dark2);
-    for (const dx of [-.62, .62]) for (const dz of [-.38, .38]) { b(.09, .72, .09, dx, 0, dz, bone); b(.14, .07, .14, dx, .0, dz, bone); }
-  } },
+  // the table in the room of bones: an armadillo's skeleton and a bird's skull on the trestle table
+  bonetable: { w: .97, d: 1.9, tall: false, center: true, model: 'trestle_table', models: [{ name: 'armadillo', x: 0, y: .74, z: -.2, ry: Math.PI / 2 }, { name: 'bird_skull', x: .15, y: .74, z: .5, ry: 2.2 }], colliders: [[.97, 1.9, 0, 0]], build() {} },
   counter: { w: 1.1, d: .6, tall: false, build(b, p, mv) {
     b(1.1, .86, .6, 0, 0, .3, p.body);
     b(1.14, .05, .64, 0, .86, .32, p.dark2);
@@ -389,21 +386,29 @@ export const ITEMS = {
   morris: { w: .96, d: 1.94, tall: false, model: 'morris_chair', modelZ: .98, colliders: [[.96, 1.9, 0, .98]], build() {} },
   // the bird cage with what was in it, and a dead bird on the floor
   birdcage: { w: .6, d: .6, tall: false, models: [{ name: 'bird_cage', x: 0, y: 0, z: .35 }, { name: 'dead_bird', x: .35, y: 0, z: .55, ry: 1 }], colliders: [[.4, .4, 0, .35]], build() {} },
+  // chests of drawers (user's models): what is hidden in one lies on top of it
+  dresser: { w: 1.3, d: .46, tall: false, models: [{ name: 'drawers_austere', x: 0, y: 0, z: 0 }], colliders: [[1.3, .46, 0, .23]], build(b, p, mv) { mv.surface(.15, .806, .23); } },
+  dresser2: { w: 1.3, d: .46, tall: false, models: [{ name: 'drawers_ornate', x: 0, y: 0, z: 0 }], colliders: [[1.3, .46, 0, .23]], build(b, p, mv) { mv.surface(.15, .806, .23); } },
+  dresserkettle: { w: 1.3, d: .46, tall: false, models: [{ name: 'drawers_austere', x: 0, y: 0, z: 0 }, { name: 'kettle', x: -.4, y: .806, z: .23, ry: .4 }], colliders: [[1.3, .46, 0, .23]], build(b, p, mv) { mv.surface(.3, .806, .23); } },
+  dresserpots: { w: 1.3, d: .46, tall: false, models: [{ name: 'drawers_ornate', x: 0, y: 0, z: 0 }, { name: 'copper_pots', x: -.25, y: .806, z: .23, ry: 0 }], colliders: [[1.3, .46, 0, .23]], build(b, p, mv) { mv.surface(.45, .806, .23); } },
+  // an old iron bed: you can hide under it
+  oldbed: { w: 1.3, d: 2.0, tall: false, hide: { x: 0, z: 1.0, w: 1.3, d: 2.0, h: .6, eye: .26 }, models: [{ name: 'old_bed', x: 0, y: 0, z: 1.0, ry: Math.PI / 2 }], colliders: [[1.3, 2.0, 0, 1.0]], build() {} },
   chair: { w: .5, d: .55, tall: false, model: 'chair', modelZ: .3, build(b, p, mv, ctx) { if (!ctx.has('chair')) chairAt(b, p, 0, .33, 0, 1); } },
 };
 
+// only furniture made from the user's own models is placed
 export const ROLE_ITEMS = {
-  living: ['morris', 'sofa', 'radio', 'bookshelf', 'armchair', 'drawers', 'fireplace', 'rocker', 'antlers'],
-  dining: ['tablechairs', 'drawers', 'chair', 'antlers'],
+  living: ['morris', 'dresser2', 'dresser'],
+  dining: ['tablechairs', 'dresser2'],
   kitchen: [],   // laid out by hand in world.js
-  study: ['desk', 'bookshelf', 'antlers', 'drawers', 'shelves'],
-  hall: ['drawers', 'chair', 'antlers'],
+  study: ['dresser', 'dresser2'],
+  hall: ['dresser2'],
   freezer: [],   // laid out by hand in world.js
   bone: [],
-  pantry: ['shelves', 'shelves', 'crates', 'barrels'],
-  bedroom: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'roundtable', 'bookshelf', 'rocker'],
-  storage: ['shelves', 'crates', 'still', 'chest', 'drawers', 'barrels', 'workbench'],
-  meat: ['meathooks', 'meathooks', 'barrels', 'chest', 'crates'],
-  attic: ['haybale', 'chest', 'crates', 'wardrobe', 'drawers', 'chair', 'covered', 'haybale'],
-  barn: ['workbench', 'haybale', 'barrels', 'crates', 'haybale', 'drawers'],
+  pantry: [],
+  bedroom: ['oldbed', 'dresser', 'roundtable', 'dresser2', 'oldbed'],
+  storage: ['dresser', 'dresser2'],
+  meat: ['meathooks', 'meathooks'],
+  attic: ['dresser', 'morris', 'dresser2'],
+  barn: [],
 };

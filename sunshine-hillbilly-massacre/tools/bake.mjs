@@ -26,6 +26,10 @@ const JOBS = [
   { name: 'chest_freezer', src: R + 'chest_freezer.glb', fit: 'x', size: 1.4, anchor: 'center', maxTex: 512 },
   { name: 'armadillo', src: R + 'armadillo_s.glb', fit: 'max', size: 0.75, anchor: 'center', maxTex: 512 },
   { name: 'bird_skull', src: R + 'bird_skull_s.glb', fit: 'max', size: 0.12, anchor: 'center', maxTex: 256 },
+  { name: 'old_bed', src: R + 'hospital_bed.glb', fit: 'max', size: 2.0, anchor: 'center', maxTex: 512 },
+  // three finishes stand side by side in the download: austere (left), ornate (middle), painted blue (right, not used)
+  { name: 'drawers_austere', src: R + 'drawer_table.glb', topOf: 'GLTF_SceneRootNode', select: 'c.x < -0.7', fit: 'x', size: 1.3, anchor: 'back', maxTex: 512 },
+  { name: 'drawers_ornate', src: R + 'drawer_table.glb', topOf: 'GLTF_SceneRootNode', select: 'c.x > -0.7 && c.x < 0.7', fit: 'x', size: 1.3, anchor: 'back', maxTex: 512 },
 ];
 const only = process.argv.slice(2);
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });

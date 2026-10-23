@@ -25,7 +25,7 @@ const LEVELS = [
   {
     // The classic farmhouse. Front (south): the garage, the entrance hall with the stairs, and the room of bones
     // behind its sliding steel door. Back (north): the parlour, the dining room, the kitchen and the freezer room.
-    name: 'Ground Floor', windows: 0.7, bones: 3,
+    name: 'Ground Floor', windows: 0.7, bones: 6,
     roles: { P: 'living', Q: 'dining', R: 'kitchen', W: 'freezer', T: 'bone', U: 'hall', G: 'barn' },
     // every doorway on this storey is placed by hand ('h' = on top of cell, 'v' = on its left)
     doorsFixed: [['h', 4, 3], ['v', 3, 1], ['h', 3, 3], ['v', 3, 4], ['v', 6, 4], ['v', 6, 1], ['v', 6, 2], ['h', 7, 2], ['h', 7, 3], ['h', 1, 3]],
@@ -33,7 +33,6 @@ const LEVELS = [
     fixed: [
       { item: 'tablechairs', cell: [4, 1] },
       { item: 'clock', cell: [3, 5], side: 'W' },
-      { item: 'livingset', cell: [0, 0] },
       { item: 'truck', cell: [1, 4] },
       // the kitchen: the long run of cabinets with the sink fills the north wall to the east corner; the
       // icebox stands on the east wall; the stove, the butcher block and the drawers that hold the knife
@@ -41,18 +40,16 @@ const LEVELS = [
       { item: 'kitchenrun', cell: [8, 0], side: 'N', shift: -0.83 },
       { item: 'kitchenstuff', cell: [8, 0], side: 'N', shift: -0.83 },
       { item: 'oldfridge', cell: [8, 0], side: 'E', shift: 1.5 },
-      { item: 'counterkettle', cell: [6, 0], side: 'W', shift: -0.5 },
-      { item: 'counterpots', cell: [6, 0], side: 'W', shift: -1.62 },
+      { item: 'dresserkettle', cell: [6, 0], side: 'W', shift: -0.2 },
+      { item: 'dresserpots', cell: [6, 0], side: 'W', shift: -1.7 },
       { item: 'butcherblock', cell: [6, 0], side: 'N', shift: -0.9 },
-      { item: 'kitchendrawers', cell: [6, 0], side: 'N', shift: 0.2 },
-      { item: 'stove', cell: [6, 0], side: 'N', shift: 1.1 },
-      { item: 'counter', cell: [7, 0], side: 'N', shift: -0.75 },
+      { item: 'dresser2', cell: [6, 0], side: 'N', shift: 0.15 },
+      { item: 'stove', cell: [6, 0], side: 'N', shift: 1.25 },
+      { item: 'dresser', cell: [7, 0], side: 'N', shift: -0.8 },
       // the freezer room: the big chest freezer and the hooks over the stone floor
       { item: 'chestfreezer', cell: [8, 2], side: 'E' },
       { item: 'meathooks', cell: [6, 2], side: 'N' },
       // the room of bones
-      { item: 'bonechair', cell: [8, 3], side: 'E', shift: -0.4 },
-      { item: 'bonechair', cell: [7, 5], side: 'S', shift: 0.9 },
       { item: 'bonetable', cell: [7, 4] },
       { item: 'birdcage', cell: [6, 3], side: 'N', shift: 0.8 },
     ],
@@ -898,6 +895,11 @@ export function buildHouse(renderer, seed = 1, props = {}) {
         drawer: (boxes, dist) => makePart(boxes, [0, 0, 0], { kind: 'drawer', dist }),
         door: (boxes, hx, hz, hinge, opts = {}) => makePart(boxes, [hx, 0, hz], { kind: 'door', angle: hinge > 0 ? -1.9 : 1.9, lootPos: opts.lootPos, tag: opts.tag }),
         flap: (boxes, hy, hz, angle, lootPos, opts = {}) => makePart(boxes, [0, hy, hz], { kind: 'flap', angle, lootPos, tag: opts.tag }),
+        // a model without moving parts: whatever is hidden in it lies on top, ready to take
+        surface: (x, y, z) => {
+          ensureGroup();
+          parts.push({ pg: itemGroup, pivot: [0, 0, 0], level, open: false, t: 0, kind: 'drawer', dist: 0, role: cfg.roles?.[at(c, r)], loot: { parent: itemGroup, pos: [x, y, z] } });
+        },
         // a padlock on the part built just before it: the part stays shut until it is cut off
         lock: (x, y0, z) => {
           const lg = new THREE.Group();
