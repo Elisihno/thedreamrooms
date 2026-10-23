@@ -1096,8 +1096,57 @@ $('pResume').addEventListener('click', () => setPaused(false));
 $('pQuit').addEventListener('click', () => { location.hash = ''; location.reload(); });
 addEventListener('keydown', e => { if (e.code === 'Escape') setPaused(!paused); });
 document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && canPause()) setPaused(true); });
+// ---- the opening: the developer's name in blood, with drips, before the title ------------------------
+function runSplash() {
+  const cv = $('splash'), g = cv.getContext('2d');
+  cv.hidden = false;
+  cv.width = innerWidth; cv.height = innerHeight;
+  const W = cv.width, H = cv.height, size = Math.min(W * 0.17, H * 0.32), text = 'Elisihno';
+  g.font = `italic 700 ${size}px Georgia, 'Times New Roman', serif`;
+  const tw = g.measureText(text).width, x0 = (W - tw) / 2, base = H * 0.55;
+  const drips = Array.from({ length: 16 }, () => ({
+    x: x0 + tw * (0.04 + Math.random() * 0.92), y: base - size * 0.05 - Math.random() * size * 0.18,
+    len: size * (0.25 + Math.random() * 0.9), w: 2 + Math.random() * 5, at: 1.6 + Math.random() * 1.6, speed: 0.5 + Math.random() * 0.8,
+  }));
+  let clock = 0, prevT = 0;   // advanced by capped steps, so a slow first frame (loading) does not eat the animation
+  let over = false;
+  const end = () => { if (over) return; over = true; cv.style.opacity = '0'; setTimeout(() => { cv.hidden = true; }, 1200); };
+  cv.addEventListener('pointerdown', end);
+  addEventListener('keydown', end, { once: true });
+  (function frame() {
+    if (cv.hidden) return;
+    const now = performance.now();
+    clock += Math.min(0.05, prevT ? (now - prevT) / 1000 : 0); prevT = now;
+    const t = clock;
+    if (t > 4.4) end();
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    // the name flickers in like a bad bulb
+    const flick = t < 1.9 ? (Math.sin(t * 61) > -0.3 ? 1 : 0.15) : 1;
+    const a = Math.min(1, Math.max(0, (t - 0.5) / 1.1)) * flick;
+    g.globalAlpha = a;
+    g.font = `italic 700 ${size}px Georgia, 'Times New Roman', serif`;
+    g.textBaseline = 'alphabetic';
+    const grad = g.createLinearGradient(0, base - size, 0, base);
+    grad.addColorStop(0, '#d01414'); grad.addColorStop(0.6, '#8a0808'); grad.addColorStop(1, '#4a0000');
+    g.shadowColor = 'rgba(190,0,0,.75)'; g.shadowBlur = size * 0.2;
+    g.fillStyle = grad; g.fillText(text, x0, base);
+    g.shadowBlur = 0; g.lineWidth = Math.max(2, size * 0.02); g.strokeStyle = 'rgba(30,0,0,.85)'; g.strokeText(text, x0, base);
+    // drips run down from the letters
+    for (const d of drips) {
+      const k = Math.max(0, t - d.at) * d.speed, len = Math.min(d.len, d.len * (1 - Math.exp(-k * 2.2)));
+      if (len <= 0) continue;
+      g.strokeStyle = '#7a0606'; g.lineWidth = d.w; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(d.x, d.y + len); g.stroke();
+      g.fillStyle = '#8e0a0a'; g.beginPath(); g.arc(d.x, d.y + len, d.w * 0.95, 0, 7); g.fill();
+    }
+    g.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  })();
+}
 let titleLight = null;
 if (titleMode) {
+  if (!hashFlags.has('nosplash')) runSplash();
   title.active = true;
   const yaw = hollow ? hollow.placeForTitle(player) : null;
   player.yaw = (yaw ?? 0) + (innerWidth > innerHeight ? 0.28 : 0.1);       // she stands off to the right of the screen
