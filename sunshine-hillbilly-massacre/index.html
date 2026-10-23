@@ -165,6 +165,50 @@
   .credit { margin: 12px 0 0; font: 12px/1.45 system-ui, sans-serif; opacity: .6; }
   .credit a { color: inherit; }
   .noteCard img { width: min(440px, 88vw) !important; }
+
+  /* small screens (a phone, either way up): most text and the on-screen buttons are made smaller */
+  @media (max-width: 900px), (max-height: 560px) {
+    #gameTitle { font-size: clamp(20px, 5.2vw, 34px); letter-spacing: .04em; }
+    .mbtn { font-size: clamp(16px, 3.6vw, 22px); letter-spacing: .14em; padding: 4px 0; }
+    .panel { padding: 10px 12px; }
+    .panel h2 { font-size: 15px; margin-bottom: 4px; }
+    .row { font-size: 11px; margin: 6px 0; gap: 8px; }
+    .chip, .pbtn { padding: 7px 11px; font-size: 10.5px; }
+    .credit { font-size: 9.5px; margin-top: 8px; }
+    .setup h2 { font-size: clamp(18px, 3.6vw, 24px); }
+    .setup .lab { font-size: clamp(12px, 2.2vw, 15px); margin-bottom: 3px; }
+    .dd-btn { font-size: 11px; width: clamp(88px, 16vw, 110px); padding: 4px 22px 4px 7px; }
+    .dd-list li { font-size: 11px; padding: 5px 8px; }
+    .setup .checks { font-size: clamp(10px, 1.9vw, 13px); gap: 4px 16px; }
+    .setup .checks input { width: 17px; height: 17px; }
+    .setup .desc { font-size: clamp(10px, 1.8vw, 12.5px); min-height: 52px; padding: 4px 9px; }
+    .setup .desc b { font-size: clamp(13px, 2.4vw, 17px); }
+    .setup .sbtn { font-size: clamp(13px, 2.6vw, 18px); padding: 0 10px; border-width: 1.5px; }
+    #floor { font-size: 9.5px; }
+    #fear { font-size: 8.5px; width: 90px; top: 10px; left: 12px; }
+    #toast { font-size: 11px; bottom: 60px; padding: 0 12px; }
+    #use::after { font-size: 10px; }
+    #drop { font-size: 26px; padding: 2px 18px; bottom: 6px; }
+    #fire { width: 62px; height: 62px; font-size: 11.5px; }
+    #pauseBtn { width: 28px; height: 28px; padding: 3px; }
+    #inv { top: 36px; right: 10px; }
+    .slot { width: 40px; height: 40px; }
+    .slot img { max-width: 32px; max-height: 32px; }
+    .slot span { font-size: 10px; }
+    #battery { width: 92px; height: 13px; bottom: 32px; left: 12px; }
+    #pause h2 { font-size: 19px; }
+    #pause .prow { font-size: 11px; }
+    #win h1 { font-size: 24px; }
+    #win p { font-size: 12px; margin-bottom: 14px; }
+    #win button { padding: 10px 20px; font-size: 13px; }
+    #day { font-size: clamp(22px, 6vw, 38px); }
+    #day small { font-size: 10.5px; margin-top: 10px; }
+    #kpDisplay { font-size: 22px; }
+    #kpMsg { font-size: 11px; }
+    #kpGrid button { height: 38px; font-size: 16px; }
+    .noteCard p { font-size: 11px; }
+    #loading { font-size: 14px; }
+  }
 </style>
 </head>
 <body>
