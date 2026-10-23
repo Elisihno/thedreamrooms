@@ -511,12 +511,24 @@ export function createHillbilly(house, assets, opts = {}) {
     rpm: 0.25,              // how hard the saw is running: 0 stalled, 0.25 idle, 1 flat out (the sound follows this)
     onCaught: null, onSound: null,
   };
-  let path = null, idx = 0, prev = null, segLen = 1;
+  let path = null, idx = 0, prev = null, segLen = 1, turning = false;
   let pause = 0, stunT = 0, searchT = 0, lose = 0, seenAgo = 99, foundT = 0, stepT = 0, losT = 0;
   let huntT = 0, sees = false, graceT = opts.grace ?? 25, walkPhase = 0, killT = 0, lean = 0, revKick = 0;
   const last = { x: 0, z: 0, level: 0 };
 
   function place(c) { me.x = c.x; me.z = c.z; me.level = c.level; me.y = levelY(c.level); path = null; }
+  // Of a few random places to go, take one that does not make him turn right round: wherever he wanders, he should not pivot on the spot.
+  function ahead(sample) {
+    let best = null, bestTurn = 99;
+    for (let i = 0; i < 6; i++) {
+      const c = sample();
+      if (!c) continue;
+      const turn = c.level === me.level && Math.hypot(c.x - me.x, c.z - me.z) > 1.2 ? Math.abs(angleTo(me.yaw, Math.atan2(c.x - me.x, c.z - me.z))) : 0.5;
+      if (turn < bestTurn) { best = c; bestTurn = turn; }
+      if (bestTurn < 0.9) break;
+    }
+    return best;
+  }
   function goTo(level, x, z) {
     const wps = nav.find(me.level, me.x, me.z, level, x, z);
     path = wps; idx = 0;
@@ -524,7 +536,7 @@ export function createHillbilly(house, assets, opts = {}) {
     if (wps && wps.length) segLen = Math.max(0.01, Math.hypot(wps[0].x - me.x, wps[0].z - me.z));
     return !!wps;
   }
-  me.model = model;
+  me.model = model; me.goTo = goTo;
   me.speedMul = 1; me.senseMul = 1;
   me.setGrace = n => { graceT = n; };
   // stand in view of the player for the title screen; returns the yaw that looks at him
@@ -606,8 +618,20 @@ export function createHillbilly(house, assets, opts = {}) {
   function follow(dt) {
     if (!path || idx >= path.length) return false;
     let step = speedOf() * dt;
+    turning = false;
     while (path && idx < path.length && step > 0) {
       const w = path[idx], dx = w.x - me.x, dz = w.z - me.z, d = Math.hypot(dx, dz);
+      // he does not walk sideways or backwards: if the way on lies well off the way he faces, he turns on the spot first
+      if (d > 0.3 && Math.abs(angleTo(me.yaw, Math.atan2(dx, dz))) > (me.state === 'hunt' ? 1.1 : 0.8)) {
+        if (d < 1.1 && idx + 1 < path.length) {   // a bend he has already walked past: skip it instead of turning back for it
+          idx++;
+          if (idx < path.length) segLen = Math.max(0.01, Math.hypot(path[idx].x - me.x, path[idx].z - me.z));
+          continue;
+        }
+        me._heading = Math.atan2(dx, dz);
+        turning = true;
+        return true;
+      }
       if (d <= step) {
         me.x = w.x; me.z = w.z; me.y = w.y; me.level = w.level;
         prev = { x: w.x, z: w.z, y: w.y, level: w.level };
@@ -689,7 +713,14 @@ export function createHillbilly(house, assets, opts = {}) {
           if (seenAgo > 5 && sees) { me.addFear(22); me.onSound?.('sting', 1); }
         }
         lose = 0; last.x = p.pos.x; last.z = p.pos.z; last.level = p.level;
-        if (!me._replan || me._replan <= 0) { goTo(last.level, last.x, last.z); me._replan = 0.45; }
+        if (!me._replan || me._replan <= 0) {
+          if (sees && same && d < 12) {   // in plain sight: straight at you, so he does not weave about
+            path = [{ x: p.pos.x, z: p.pos.z, y: p.y, level: p.level }]; idx = 0;
+            prev = { x: me.x, z: me.z, y: me.y, level: me.level };
+            segLen = Math.max(0.01, d);
+            me._replan = 0.15;
+          } else { goTo(last.level, last.x, last.z); me._replan = 0.45; }
+        }
       } else if (me.state === 'hunt') {
         lose += dt;
         if (lose > 2.5 + me.fear * 0.04) { me.state = 'search'; searchT = 6 + me.fear * 0.08; }
@@ -705,20 +736,21 @@ export function createHillbilly(house, assets, opts = {}) {
         else if (me.state === 'search') {
           searchT -= dt;
           if (searchT <= 0) me.state = 'roam';
-          else if (Math.random() < dt * 0.8) {
-            const c = nav.randomOn(last.level, last, 4);
+          else if ((me._lookT = (me._lookT ?? 0) - dt) <= 0) {   // stands and looks about for a while, then shuffles on
+            me._lookT = 2.6 + Math.random() * 2.4;
+            const c = ahead(() => nav.randomOn(last.level, last, 4));
             if (c) goTo(c.level, c.x, c.z);
           }
         } else if (me.state === 'roam' && graceT === 0 && (me._idle = (me._idle ?? 0) - dt) <= 0) {
           me._idle = 1.5 + Math.random() * 3;
           const nearFear = Math.random() < 0.05 + me.fear / 100 * 0.9;
           let c = null;
-          if (nearFear) c = nav.randomOn(p.level, p.pos, 7);
-          else c = nav.randomOn(Math.random() < 0.45 ? me.level : Math.floor(Math.random() * house.levels.length));
+          if (nearFear) c = ahead(() => nav.randomOn(p.level, p.pos, 7));
+          else c = ahead(() => nav.randomOn(Math.random() < 0.45 ? me.level : Math.floor(Math.random() * house.levels.length)));
           if (c) goTo(c.level, c.x, c.z);
         } else if (me.state === 'roam' && graceT > 0 && !path && (me._idle = (me._idle ?? 0) - dt) <= 0) {
           me._idle = 2 + Math.random() * 3;
-          const c = nav.randomOn(me.level);
+          const c = ahead(() => nav.randomOn(me.level));
           if (c) goTo(c.level, c.x, c.z);
         }
       }
@@ -735,7 +767,7 @@ export function createHillbilly(house, assets, opts = {}) {
     }
 
     // footsteps, heard by distance
-    const moving = path && idx < path.length && pause <= 0 && me.state !== 'stun' && me.state !== 'kill';
+    const moving = path && idx < path.length && pause <= 0 && !turning && me.state !== 'stun' && me.state !== 'kill';
     if (moving) {
       stepT -= dt * speedOf();
       if (stepT <= 0) {
