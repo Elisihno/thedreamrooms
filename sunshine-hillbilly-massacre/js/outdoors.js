@@ -109,8 +109,32 @@ export function buildOutdoors(tex, houseSize) {
     m.position.set(x, 0.2, z); group.add(m);
   }
 
+  // ---- the front porch of the old farmhouse: boards, posts, a porch swing and a screen door
+  const porchX = 13.5, porchZ = houseSize.d;
+  const board = lam(0x9a8466), post = lam(0xcfc6b0), chain = lam(0x2b2b2b);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.3, 2.6), board);
+  deck.position.set(porchX, 0.05, porchZ + 1.55);
+  const step = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.16, 0.6), board);
+  step.position.set(porchX, -0.08, porchZ + 3.1);
+  const roofP = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.14, 3.0), lam(0x5a4a3a));
+  roofP.position.set(porchX, 2.8, porchZ + 1.6);
+  group.add(deck, step, roofP);
+  for (const dx of [-3.1, 3.1]) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.8, 0.16), post);
+    p.position.set(porchX + dx, 1.45, porchZ + 2.7); group.add(p);
+  }
+  const swing = new THREE.Group();
+  const wood = lam(0x8a7658);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.06, 0.5), wood);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.05), wood); back.position.set(0, 0.3, -0.22); back.rotation.x = -0.15;
+  swing.add(seat, back);
+  for (const dx of [-0.72, 0.72]) { const c = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.7, 0.02), chain); c.position.set(dx, 0.85, 0); swing.add(c); }
+  swing.position.set(porchX - 2.0, 0.85, porchZ + 1.2);
+  group.add(swing);
+  const swingPhase = rnd() * 6;
+
   // ---- the fence around the yard
-  const wood = lam(0x8a7658), postGeo = new THREE.BoxGeometry(0.14, 1.2, 0.14), railGeo = new THREE.BoxGeometry(1, 0.08, 0.05);
+  const postGeo = new THREE.BoxGeometry(0.14, 1.2, 0.14), railGeo = new THREE.BoxGeometry(1, 0.08, 0.05);
   const posts = [], rails = [];
   const X0 = -14, X1 = houseSize.w + 14, Z0 = -14, Z1 = houseSize.d + 16;
   const addRun = (ax, az, bx, bz) => {
@@ -190,6 +214,7 @@ export function buildOutdoors(tex, houseSize) {
     update(dt, t, camPos) {
       dome.position.copy(camPos);
       wheel.rotation.z += dt * 0.7;
+      swing.rotation.x = Math.sin(t * 0.9 + swingPhase) * 0.08;
       for (const v of vultures) {
         v.a += dt * v.w;
         v.s.position.set(Math.cos(v.a) * v.r, v.h * 36 + Math.sin(t * 0.7 + v.r) * 0.4, Math.sin(v.a) * v.r);

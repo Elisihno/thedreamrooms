@@ -6,19 +6,24 @@ bones of *Dread* (the game one folder up).
 You wake up in a sunlit upstairs bedroom of a Texas farmhouse. Somewhere in the house a chainsaw is idling. You have a
 few days to escape from **The Hillbilly** — and you can hear him long before you see him.
 
+The house is laid out like the classic 1974 farmhouse: the entrance hall with the stairs and the room of bones behind its
+sliding steel door at the front; the parlour, the dining room, the kitchen and the freezer room with its hooks at the back;
+bedrooms upstairs, a cellar, an attic and a front porch with a swing.
+
 Open `index.html` through any web server (`npx http-server`, GitHub Pages, ...). It works on phones: left half of the
 screen moves, right half looks, a quick tap toggles the flashlight.
 
 ## How to play
 
-* **Escape** any of three ways:
+* **Escape** any of four ways:
   * **Front door** — two padlocks (keys) and a keypad. The code is on a postcard in a drawer in the parlor.
   * **Storm hatch** (cellar) — cut the three fuse-box wires with the cutting pliers, then unlock two padlocks.
-  * **The pickup truck** (barn) — a battery (hayloft), a can of gas (cellar) and a key; the barn door opens when it starts.
+  * **Sally's window** (upstairs, above the front door) — cut the two chains with keys and jump.
+  * **The pickup truck** (garage) — a battery (attic), a can of gas (cellar) and a key; the garage door opens when it starts.
 * **Hide** under beds and tables, or inside a wardrobe, by looking at it and tapping the hand.
 * **Fear** drives him: darkness, noise and the sight of him raise it; sunshine (stand in a patch of sun), the
   flashlight and hiding lower it. The more afraid you are, the farther he smells you.
-* **The shotgun** (padlocked in the hayloft; shells are inside an apple that you cut on the butcher block with the kitchen knife)
+* **The shotgun** (padlocked in the attic; shells are inside an apple that you cut on the butcher block with the kitchen knife)
   stalls his saw for a few seconds. A smashed vase or a broken window sends him to investigate.
 * If he catches you, a new day begins in a new house. Survive the days and the game ends.
 

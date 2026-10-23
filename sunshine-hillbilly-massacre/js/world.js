@@ -23,12 +23,17 @@ const LEVELS = [
     ],
   },
   {
-    name: 'Ground Floor', windows: 0.78, bones: 1,
-    roles: { P: 'living', Q: 'dining', R: 'kitchen', T: 'barn', U: 'hall', V: 'pantry' },
+    // The classic farmhouse. Front (south): the garage, the entrance hall with the stairs, and the room of bones
+    // behind its sliding steel door. Back (north): the parlour, the dining room, the kitchen and the freezer room.
+    name: 'Ground Floor', windows: 0.7, bones: 3,
+    roles: { P: 'living', Q: 'dining', R: 'kitchen', W: 'freezer', T: 'bone', U: 'hall', G: 'barn' },
+    // every doorway on this storey is placed by hand ('h' = on top of cell, 'v' = on its left)
+    doorsFixed: [['h', 4, 3], ['v', 3, 1], ['h', 3, 3], ['v', 3, 4], ['v', 6, 4], ['v', 6, 1], ['v', 6, 2], ['h', 7, 2], ['h', 7, 3], ['h', 1, 3]],
+    slideDoors: [['v', 6, 4]],
     fixed: [
       { item: 'tablechairs', cell: [4, 1] },
       { item: 'livingset', cell: [0, 0] },
-      { item: 'truck', cell: [7, 4] },
+      { item: 'truck', cell: [1, 4] },
       // the kitchen: the long run of cabinets with the sink fills the north wall to the east corner; the
       // icebox stands on the east wall; the stove, the butcher block and the drawers that hold the knife
       // stand along the rest of the north wall, and two counters along the west wall
@@ -40,24 +45,35 @@ const LEVELS = [
       { item: 'kitchendrawers', cell: [6, 0], side: 'N', shift: 0.2 },
       { item: 'stove', cell: [6, 0], side: 'N', shift: 1.1 },
       { item: 'counter', cell: [7, 0], side: 'N', shift: -0.75 },
+      // the freezer room: the big chest freezer and the hooks over the stone floor
+      { item: 'freezer', cell: [8, 2], side: 'E' },
+      { item: 'meathooks', cell: [6, 2], side: 'N' },
+      // the room of bones
+      { item: 'bonechair', cell: [8, 3], side: 'E', shift: -0.4 },
+      { item: 'bonechair', cell: [7, 5], side: 'S', shift: 0.9 },
+      { item: 'bonetable', cell: [7, 4] },
     ],
-    // the front door, in the south wall of the hall: a keypad and two padlocks. The big barn door
+    // the front door, in the south wall of the hall: a keypad and two padlocks. The big garage door
     // opens only once the truck is started.
     exits: [
       { id: 'front', edge: ['h', 4, 6], style: 'wood', name: 'Front door', locks: [['code', 1.85], ['padlock', 1.4], ['padlock', 0.95]] },
-      { id: 'barn', edge: ['h', 7, 6], style: 'barn', name: 'Barn door', width: 2.6, carOnly: true, locks: [] },
+      { id: 'barn', edge: ['h', 1, 6], style: 'barn', name: 'Garage door', width: 2.6, carOnly: true, locks: [] },
     ],
   },
   {
     name: 'Upper Floor', windows: 0.78, traps: 1,
     roles: { P: 'bedroom', Q: 'bedroom', R: 'study', T: 'bedroom', U: 'hall', V: 'bedroom' },
+    // Sally's window: boarded up, right above the front door. Cut the chains and jump.
+    exits: [
+      { id: 'window', edge: ['h', 4, 6], style: 'window', name: 'Boarded window', locks: [['padlock', 1.55], ['padlock', 0.95]] },
+    ],
     // the player starts in room P: [col, row] of the spawn cell, plus pieces fixed to a cell
     spawn: [1, 1],
     fixed: [{ item: 'roundtable', cell: [1, 0], jar: true }],
     floorItems: [{ item: 'flashlight', cell: [2, 1], at: [0.7, 0.3] }],
   },
   {
-    name: 'Hayloft', windows: 0.5, bones: 3,
+    name: 'Attic', windows: 0.5, bones: 3,
     roles: { A: 'attic', B: 'attic', C: 'attic', D: 'attic' },
     scarecrows: [[2, 1], [1, 4], [6, 4]],   // [col, row] of each scarecrow's cell
     traps: 2,                               // rotten boards that give way under you
@@ -67,7 +83,7 @@ const LEVELS = [
 ];
 const MAPS = [
   ['AAAABBBBB', 'ASAABBBBB', 'ASAABBBBB', 'CCCCDDDEE', 'CCCCDDDEE', 'CCCCDDDEE'],
-  ['PPPQQQRRR', 'PPPQQQRRR', 'PPPQQQTTT', 'PPPUSUTTT', 'VVVUSUTTT', 'VVVUUUTTT'],
+  ['PPPQQQRRR', 'PPPQQQRRR', 'PPPQQQWWW', 'GGGUSUTTT', 'GGGUSUTTT', 'GGGUUUTTT'],
   ['PPPQQQRRR', 'PPPQQQRSR', 'PPPQQQRSR', 'VVVUUUTTT', 'VVVUUUTTT', 'VVVUUUTTT'],
   ['AAAAABBBB', 'AAAAABBBB', 'AAAAABBBB', 'CCCCCBBBB', 'CCCCCDDDD', 'CCCCCDDDD'],
 ];
@@ -77,6 +93,7 @@ export const GROUND = 1; // index of the Ground Floor
 // what each kind of room looks like: indexes into the wall and floor textures
 const LOOK = {
   living: { wall: [0, 2], floor: [0, 6] }, dining: { wall: [2, 0], floor: [1, 0] }, kitchen: { wall: [1, 7], floor: [2] },
+  freezer: { wall: [5, 6], floor: [3] }, bone: { wall: [8, 4], floor: [4, 6] },
   hall: { wall: [1, 3, 9], floor: [1] }, pantry: { wall: [8, 3], floor: [6] }, bedroom: { wall: [0, 2, 1], floor: [0, 1, 6] },
   study: { wall: [2, 9], floor: [1] }, barn: { wall: [4], floor: [4] }, attic: { wall: [4, 8], floor: [6, 4] },
   storage: { wall: [5, 7], floor: [3] }, meat: { wall: [5, 6], floor: [3] }, stairs: { wall: [3, 1], floor: [1] },
@@ -441,7 +458,8 @@ export function buildHouse(renderer, seed = 1, props = {}) {
     const find = x => (parent[x] === x ? x : (parent[x] = find(parent[x])));
     const doors = new Set();
     const winEdges = new Set();
-    for (const p of pairs) {
+    for (const e of cfg.doorsFixed ?? []) doors.add(key(...e));
+    for (const p of cfg.doorsFixed ? [] : pairs) {
       const [a, b] = p.split('|');
       const list = edgesByPair.get(p);
       if (find(a) !== find(b)) {
@@ -453,7 +471,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
     }
 
     // safety: if the reserved edges left a room cut off, give it a doorway there after all
-    for (const [p, list] of lastResort) {
+    for (const [p, list] of cfg.doorsFixed ? [] : lastResort) {
       const [a, b] = p.split('|');
       if (!edgesByPair.has(p) && find(a) !== find(b)) { parent[find(a)] = find(b); doors.add(list[0]); doorLog.warn = (doorLog.warn ?? 0) + 1; }
     }
@@ -572,6 +590,8 @@ export function buildHouse(renderer, seed = 1, props = {}) {
     // way while closed, and opens or closes with the hand cursor.
     function buildRoomDoors() {
       const exitKeys = new Set((cfg.exits ?? []).map(e => key(...e.edge)));
+      const slideKeys = new Set((cfg.slideDoors ?? []).map(e => key(...e)));
+      const steelMat = new THREE.MeshLambertMaterial({ color: 0x7b8185 });
       const faceMat = new THREE.MeshLambertMaterial({ map: tex.door });
       const edgeMat = new THREE.MeshLambertMaterial({ color: 0x2a1c12 });
       const T = 0.06;
@@ -584,16 +604,25 @@ export function buildHouse(renderer, seed = 1, props = {}) {
         const hinge = new THREE.Group();
         hinge.position.set(axis === 'x' ? mid - dw / 2 : f, Y + 0.004, axis === 'x' ? f : mid - dw / 2);
         group.add(hinge);
+        const slide = slideKeys.has(k);
+        const face = slide ? steelMat : faceMat;
         const dims = axis === 'x' ? [dw, DOOR_H, T] : [T, DOOR_H, dw];
-        const mats = axis === 'x' ? [edgeMat, edgeMat, edgeMat, edgeMat, faceMat, faceMat] : [faceMat, faceMat, edgeMat, edgeMat, edgeMat, edgeMat];
+        const mats = axis === 'x' ? [edgeMat, edgeMat, edgeMat, edgeMat, face, face] : [face, face, edgeMat, edgeMat, edgeMat, edgeMat];
         const slab = new THREE.Mesh(new THREE.BoxGeometry(...dims), mats);
         slab.position.set(axis === 'x' ? dw / 2 : 0, DOOR_H / 2, axis === 'x' ? 0 : dw / 2);
+        if (slide) {   // it hangs just in front of the wall on a rail, and slides along it
+          slab.position[axis === 'x' ? 'z' : 'x'] += 0.14;
+          const rail = new THREE.Mesh(new THREE.BoxGeometry(...(axis === 'x' ? [dw * 2.2, 0.06, 0.05] : [0.05, 0.06, dw * 2.2])), edgeMat);
+          rail.position.set(axis === 'x' ? mid : f + 0.14, DOOR_H + 0.05, axis === 'x' ? f + 0.14 : mid);
+          group.add(rail);
+          rail.position.y += Y;
+        }
         hinge.add(slab);
         const hw = dw / 2, t = 0.07;
         const col = axis === 'x'
           ? { minX: mid - hw, maxX: mid + hw, minZ: f - t, maxZ: f + t, level }
           : { minX: f - t, maxX: f + t, minZ: mid - hw, maxZ: mid + hw, level };
-        const door = { kind: 'roomdoor', level, axis, f, mid, dw, hinge, col, open: false, t: 0, sign: 1 };
+        const door = { kind: 'roomdoor', level, axis, f, mid, dw, hinge, col, open: false, t: 0, sign: 1, slide, base: hinge.position.clone() };
         colliders.push(col);   // every door starts closed
         door.target = { kind: 'roomdoor', door };
         slab.userData.roomDoor = door;
@@ -613,7 +642,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       const out = dir === 'h' ? [0, er === rows ? 1 : -1] : [ec === cols ? 1 : -1, 0]; // outward (x, z)
       const inn = [-out[0], -out[1]];
       const doorMat = ex.style === 'metal' ? new THREE.MeshLambertMaterial({ color: 0x6a7073 })
-        : ex.style === 'barn' ? new THREE.MeshLambertMaterial({ map: tex.wall[4], color: 0xd8c8c0 })
+        : ex.style === 'barn' || ex.style === 'window' ? new THREE.MeshLambertMaterial({ map: tex.wall[4], color: 0xd8c8c0 })
         : new THREE.MeshLambertMaterial({ map: tex.door, color: 0xd8c8b0 });
       const hinge = new THREE.Group();
       hinge.position.set(axis === 'x' ? mid - DW / 2 : f, Y + 0.004, axis === 'x' ? f : mid - DW / 2);
@@ -1025,7 +1054,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
   // Padlocks take a key from the hand; the keypad takes the code; an electric lock only
   // gives way once the power is cut.
   function useExit(exit, held) {
-    if (exit.carOnly && !exit.open) { say('The barn door is chained from the outside. Maybe the truck could go straight through it.'); return; }
+    if (exit.carOnly && !exit.open) { say('The garage door is chained from the outside. Maybe the truck could go straight through it.'); return; }
     const pending = remaining(exit);
     if (!pending.length) { openExit(exit); return; }
     const padlock = pending.find(l => l.type === 'padlock');
@@ -1251,6 +1280,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
     exits,
     wires,
     truck,
+    truckSeat: (() => { const f = LEVELS[GROUND].fixed.find(f => f.item === 'truck'); return { x: (f.cell[0] + 0.5) * CELL + 0.4, z: (f.cell[1] + 0.5) * CELL + 0.1 }; })(),
     textures: tex,
     // what the camera is looking at within reach: an item lying in an opened drawer or
     // chest (preferred), otherwise a movable part, a hiding spot, an exit door or a wire
@@ -1337,7 +1367,9 @@ export function buildHouse(renderer, seed = 1, props = {}) {
         const goal = d.open ? 1 : 0;
         if (d.t === goal) continue;
         d.t += Math.sign(goal - d.t) * Math.min(Math.abs(goal - d.t), dt * 2.2);
-        d.hinge.rotation.y = d.sign * 1.65 * (d.t * d.t * (3 - 2 * d.t));
+        const e = d.t * d.t * (3 - 2 * d.t);
+        if (d.slide) d.hinge.position[d.axis === 'x' ? 'x' : 'z'] = d.base[d.axis === 'x' ? 'x' : 'z'] + d.dw * 0.95 * e;
+        else d.hinge.rotation.y = d.sign * 1.65 * e;
         if (d.t === 0 && !colliders.includes(d.col)) colliders.push(d.col);
       }
       for (const part of parts) {

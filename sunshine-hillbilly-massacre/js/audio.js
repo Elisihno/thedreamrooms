@@ -238,7 +238,7 @@ export function createAudio(getSettings) {
   // sounds for the three endings
   api.finale = kind => {
     if (!ctx) return;
-    if (kind === 'front') {         // a warm chord swelling in, and birds
+    if (kind === 'front' || kind === 'window') {         // a warm chord swelling in, and birds
       [220, 277.2, 329.6, 440].forEach((f, i) => tone('sine', f, 0.2 + i * 0.25, 4.2, 0.07));
       for (let i = 0; i < 9; i++) { const t0 = 1.0 + i * 0.32 + Math.random() * 0.2, f = 3000 + Math.random() * 1600; tone('sine', f, t0, 0.09, 0.05, f * (1.3 + Math.random() * 0.4)); tone('sine', f * 1.2, t0 + 0.11, 0.08, 0.04, f * 0.9); }
     } else if (kind === 'hatch') {  // the hot wind of the open field, and cicadas

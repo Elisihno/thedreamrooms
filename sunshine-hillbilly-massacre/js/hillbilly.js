@@ -27,13 +27,13 @@ export const FACE_RAD = { x: 0.115, y: 0.17, z: 0.13 };   // the mask is an egg 
 
 // Stitched, patched, filthy leather, with holes cut out for the eyes and a zipper mouth.
 // The front of the face is at u = 0.25 of the picture. eyes: [{x, y}] in pixels.
-function leatherTexture(eyes) {
+export function leatherTexture(eyes, opts = {}) {
   const W = 1024, H = 512, cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
-  let s = 21; const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-  g.fillStyle = '#5a3c27'; g.fillRect(0, 0, W, H);
-  const browns = ['#5e3f29', '#6b4a31', '#523524', '#74533a', '#4a2f1f'];
+  let s = opts.seed ?? 21; const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  g.fillStyle = opts.base ?? '#5a3c27'; g.fillRect(0, 0, W, H);
+  const browns = opts.palette ?? ['#5e3f29', '#6b4a31', '#523524', '#74533a', '#4a2f1f'];
   // patches of different hides, sewn together
   const cols = 10, rows = 5, cw = W / cols, ch = H / rows;
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {

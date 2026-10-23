@@ -576,9 +576,10 @@ let driving = null;   // the ending that is playing, if any
 const GLOW = {
   front: 'radial-gradient(ellipse at 50% 45%, rgba(255,250,225,1) 0%, rgba(255,232,170,.9) 38%, rgba(255,205,120,0) 78%)',
   hatch: 'radial-gradient(ellipse at 50% 15%, rgba(255,240,190,.95) 0%, rgba(255,205,120,.6) 42%, rgba(255,160,60,0) 82%)',
+  window: 'radial-gradient(ellipse at 50% 40%, rgba(255,250,225,1) 0%, rgba(255,226,160,.85) 40%, rgba(255,200,110,0) 80%)',
   car: 'linear-gradient(to top, rgba(255,140,70,.95), rgba(255,205,140,.65) 55%, rgba(255,240,200,0))',
 };
-const FADE = { front: '#fff7e6', hatch: '#ffe9b8', car: '#ffcf9a' };
+const FADE = { front: '#fff7e6', hatch: '#ffe9b8', window: '#fff1d0', car: '#ffcf9a' };
 function startFinale(kind, exit) {
   if (driving || escaped) return;
   setHand(null);
@@ -592,7 +593,7 @@ function startFinale(kind, exit) {
   resizeFx();
   audio.finale(kind);
 }
-house.onEscape = exit => startFinale(exit.id === 'hatch' ? 'hatch' : 'front', exit);
+house.onEscape = exit => startFinale(exit.id === 'hatch' ? 'hatch' : exit.id === 'window' ? 'window' : 'front', exit);
 house.onDrive = () => startFinale('car');   // the engine sound is started by the house
 
 // the overlay canvas: light rays at the front door, heat shimmer at the hatch, speed streaks in the truck
@@ -604,7 +605,7 @@ const streaks = Array.from({ length: 70 }, () => ({ a: fxRand() * Math.PI * 2, r
 function drawFx(f) {
   const g = fxEl.getContext('2d'), W = fxEl.width, H = fxEl.height, k = f.t;
   g.clearRect(0, 0, W, H);
-  if (f.kind === 'front') {          // soft light rays fanning out from the doorway
+  if (f.kind === 'front' || f.kind === 'window') {          // soft light rays fanning out from the doorway
     const a = smooth(0.4, 2.4, k) * (1 - smooth(3.8, 4.6, k));
     g.save(); g.translate(W / 2, H * 0.42); g.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 9; i++) {
@@ -1033,7 +1034,7 @@ function frame() {
       if (k > 3.8) { driving = null; endDay(); }
     } else if (f.kind === 'car') {
       // slide into the driver's seat, then the truck pulls out through the barn door
-      const seat = { x: 22.9, z: 13.6 };
+      const seat = house.truckSeat;
       const settle = smooth(0, 0.9, k), go = Math.max(0, k - 0.9);
       player.pos.x = f.from.x + (seat.x - f.from.x) * settle;
       player.pos.z = f.from.z + (seat.z - f.from.z) * settle + 0.5 * 2.6 * go * go;
@@ -1049,19 +1050,20 @@ function frame() {
       if (k > 4.4) { driving = null; showWin('You drove away', 'got out', 'car'); }
     } else {
       // walk out of the door: forward, toward the light (front) or up out of the hatch into the field (hatch)
-      const out = f.exit.out, hatch = f.kind === 'hatch';
+      const out = f.exit.out, hatch = f.kind === 'hatch', jump = f.kind === 'window';
       const heading = Math.atan2(-out[0], -out[1]);
       player.yaw += angleDiff(heading, player.yaw) * Math.min(1, dt * 3);
       player.pitch += ((hatch ? 0.9 * smooth(1.4, 3.8, k) : 0.04) - player.pitch) * Math.min(1, dt * 2.5);
       const speed = hatch ? 1.0 * (1 - smooth(1.0, 1.9, k)) : 0.6 + 1.0 * smooth(0, 2.6, k);
       player.pos.x += out[0] * speed * dt; player.pos.z += out[1] * speed * dt;
       if (hatch) eye = EYE + 1.5 * smooth(1.2, 4.2, k);                  // climbing up out of the hatch
+      if (jump) { eye = EYE - 1.1 * smooth(1.0, 2.2, k); player.pitch += (0.5 - player.pitch) * Math.min(1, dt * 2); }   // out of the window, and down
       pitchAdd = Math.sin(k * 5.5) * 0.006 * (hatch ? 0.5 : 1);        // steps
       rollAdd = Math.sin(k * 2.75) * 0.01 * (hatch ? 0.3 : 1);
       fov = 72 + (hatch ? 6 : 14) * smooth(0.3, 3.4, k);
       glowEl.style.opacity = String((hatch ? 0.8 : 1) * smooth(hatch ? 1.2 : 0.4, hatch ? 3.8 : 3.4, k));
       fadeEl.style.opacity = String(smooth(hatch ? 3.9 : 3.6, hatch ? 4.8 : 4.5, k));
-      if (k > (hatch ? 5.2 : 5.0)) { driving = null; showWin(hatch ? 'You crawled out' : 'You walked out into the sunshine', hatch ? 'crawled out' : 'got out', f.kind); }
+      if (k > (hatch ? 5.2 : 5.0)) { driving = null; showWin(hatch ? 'You crawled out' : jump ? 'You jumped out of the window' : 'You walked out into the sunshine', hatch ? 'crawled out' : jump ? 'jumped' : 'got out', jump ? 'front' : f.kind); }
     }
     if (driving && driving.kind !== 'caught' && driving.kind !== 'fall') drawFx(driving);
     if (driving && (driving.kind === 'caught' || driving.kind === 'fall')) bloodDrips(dt);

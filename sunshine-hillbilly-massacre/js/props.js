@@ -105,6 +105,30 @@ export const ITEMS = {
     mv.door([[.68, 1.07, .03, 0, .05, .715, p.light], [.03, .5, .04, .27, .5, .745, p.steel]], -.34, .715, 1,
       { lootPos: [0, .545, .36], tag: 'fridge' });
   } },
+  // the chest freezer in the back room: a key can lie under the lid
+  freezer: { w: 1.5, d: .8, tall: false, build(b, p, mv) {
+    b(1.5, .8, .74, 0, 0, .4, p.light);
+    b(.04, .5, .04, -.6, .25, .78, p.steel);
+    b(.12, .05, .03, 0, .62, .79, p.steel);
+    mv.flap([[1.54, .08, .78, 0, .8, .4, p.light], [.3, .05, .04, 0, .83, .78, p.steel]], .8, .02, -1.9, [0, .62, .4]);
+  } },
+  // furniture made of bones, as in the room behind the sliding door
+  bonechair: { w: .8, d: .8, tall: false, hide: null, build(b, p) {
+    const bone = p.light;
+    for (const dx of [-.3, .3]) for (const dz of [.2, .6]) b(.07, .42, .07, dx, 0, dz, bone);   // femur legs
+    b(.7, .06, .6, 0, .42, .4, bone);
+    for (const dx of [-.25, -.08, .08, .25]) b(.05, .62, .05, dx, .48, .12, bone);               // rib back
+    b(.7, .05, .06, 0, 1.08, .12, bone);
+    for (const dx of [-.34, .34]) { b(.05, .3, .05, dx, .48, .4, bone); b(.1, .05, .5, dx, .76, .4, bone); }
+    b(.2, .17, .18, 0, 1.1, .12, bone); b(.04, .05, .02, -.05, 1.17, .22, p.dark); b(.04, .05, .02, .05, 1.17, .22, p.dark);   // a skull on top
+  } },
+  bonetable: { w: 1.5, d: 1.0, tall: false, center: true, colliders: [[1.5, 1.0, 0, 0]], build(b, p) {
+    const bone = p.light;
+    b(1.5, .07, 1.0, 0, .72, 0, p.dark2);
+    for (const dx of [-.62, .62]) for (const dz of [-.38, .38]) { b(.09, .72, .09, dx, 0, dz, bone); b(.14, .07, .14, dx, .0, dz, bone); }
+    b(.16, .12, .14, .2, .79, .1, bone); b(.04, .04, .02, .16, .85, .18, p.dark); b(.04, .04, .02, .24, .85, .18, p.dark);
+    b(.5, .04, .06, -.3, .79, -.1, bone); b(.4, .04, .06, -.35, .79, .15, bone);
+  } },
   counter: { w: 1.1, d: .6, tall: false, build(b, p, mv) {
     b(1.1, .86, .6, 0, 0, .3, p.body);
     b(1.14, .05, .64, 0, .86, .32, p.dark2);
@@ -358,6 +382,8 @@ export const ROLE_ITEMS = {
   kitchen: [],   // laid out by hand in world.js
   study: ['desk', 'bookshelf', 'antlers', 'drawers', 'shelves'],
   hall: ['drawers', 'chair', 'antlers'],
+  freezer: [],   // laid out by hand in world.js
+  bone: [],
   pantry: ['shelves', 'shelves', 'crates', 'barrels'],
   bedroom: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'roundtable', 'bookshelf', 'rocker'],
   storage: ['shelves', 'crates', 'still', 'chest', 'drawers', 'barrels', 'workbench'],
