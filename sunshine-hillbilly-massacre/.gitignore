@@ -1,0 +1,5 @@
+# the original downloads (large; one of them cannot be shared publicly) and the optional chair
+assets/models/raw/
+assets/models/optional/
+# scratch pages used while building
+_*.html

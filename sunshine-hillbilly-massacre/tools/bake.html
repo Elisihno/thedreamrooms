@@ -1,0 +1,80 @@
+<!doctype html><html><body><script type="module">
+// Offline tool: turns a raw downloaded model into a lean game-ready GLB. It loads the model, flattens
+// it to metres, merges its meshes (one per material), shrinks the textures to JPEG and re-exports it.
+import * as THREE from '../vendor/three.module.min.js';
+import { GLTFLoader } from '../vendor/GLTFLoader.js';
+import { GLTFExporter } from './GLTFExporter.js';
+import { mergeGeometries } from '../vendor/BufferGeometryUtils.js';
+
+const b64 = buf => { let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+
+window.bake = async job => {
+  const gltf = await new GLTFLoader().loadAsync(job.src);
+  // old spec-gloss files lose their paint in current three.js: put the diffuse texture back
+  const json = gltf.parser.json;
+  for (const [i, m] of (json.materials ?? []).entries()) {
+    const sg = m.extensions?.KHR_materials_pbrSpecularGlossiness;
+    if (sg?.diffuseTexture) {
+      const tex = await gltf.parser.getDependency('texture', sg.diffuseTexture.index);
+      const mat = await gltf.parser.getDependency('material', i);
+      mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true;
+    }
+  }
+  const root = gltf.scene; root.updateMatrixWorld(true);
+  const keep = job.select ? new Function('c', 's', `return ${job.select}`) : () => true;   // c: centre (m), s: size (m)
+  const unit = job.unit ?? 1;
+  // pick the nodes to keep: for the kitchen, the top-level units whose centre and size pass the test
+  const nodes = [];
+  const top = job.topOf ? root.getObjectByName(job.topOf).children : [root];
+  for (const n of top) {
+    const bx = new THREE.Box3().setFromObject(n); if (bx.isEmpty()) continue;
+    const c = bx.getCenter(new THREE.Vector3()).multiplyScalar(unit), s = bx.getSize(new THREE.Vector3()).multiplyScalar(unit);
+    if (keep(c, s)) nodes.push(n);
+  }
+  const items = [];
+  for (const n of nodes) n.traverse(o => {
+    if (!o.isMesh) return;
+    const g = o.geometry.clone();
+    for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    if (!g.attributes.normal) g.computeVertexNormals();
+    if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
+    g.applyMatrix4(o.matrixWorld);
+    if (o.matrixWorld.determinant() < 0) {          // a mirrored instance: turn the triangles back the right way round
+      const ix = g.index.array;
+      for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; }
+    }
+    items.push({ g, mat: o.material });
+  });
+  // size and place it: metres, bottom on y = 0, centred (or its back against z = 0)
+  const all = new THREE.Box3();
+  for (const it of items) { it.g.computeBoundingBox(); all.union(it.g.boundingBox); }
+  let size = all.getSize(new THREE.Vector3());
+  let k = unit;
+  if (job.fit) {
+    const dim = job.fit === 'y' ? size.y : job.fit === 'x' ? size.x : job.fit === 'z' ? size.z : Math.max(size.x, size.z);
+    k = job.size / dim;
+  }
+  const mid = all.getCenter(new THREE.Vector3());
+  const off = new THREE.Vector3(-mid.x * k, -all.min.y * k, job.anchor === 'back' ? -all.min.z * k : -mid.z * k);
+  const m4 = new THREE.Matrix4().makeScale(k, k, k).premultiply(new THREE.Matrix4().makeTranslation(off.x, off.y, off.z));
+  // one mesh per material
+  const byMat = new Map();
+  for (const it of items) { it.g.applyMatrix4(m4); if (!byMat.has(it.mat)) byMat.set(it.mat, []); byMat.get(it.mat).push(it.g); }
+  const out = new THREE.Group(); out.name = job.name;
+  let tris = 0;
+  for (const [mat, list] of byMat) {
+    const merged = mergeGeometries(list, false);
+    tris += merged.index.count / 3;
+    let m = mat;
+    if (m.isMeshBasicMaterial) m = new THREE.MeshStandardMaterial({ map: m.map, color: 0xffffff, roughness: 1, metalness: 0 });   // unlit: lit like the house instead
+    for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap']) if (m[key]) m[key].userData.mimeType = key === 'map' && m.transparent ? 'image/png' : 'image/jpeg';
+    if (m.metalness > 0.5) m.metalness = 0.5;
+    const mesh = new THREE.Mesh(merged, m); mesh.name = (m.name || 'mat') ; out.add(mesh);
+  }
+  const final = new THREE.Box3().setFromObject(out), fs = final.getSize(new THREE.Vector3());
+  const glb = await new Promise((res, rej) => new GLTFExporter().parse(out, res, rej, { binary: true, maxTextureSize: job.maxTex ?? 512 }));
+  return { data: b64(glb), bytes: glb.byteLength, tris, materials: byMat.size, nodes: nodes.length, size: fs.toArray().map(v => +v.toFixed(3)), min: final.min.toArray().map(v => +v.toFixed(3)) };
+};
+window.__ready = true;
+</script></body></html>
