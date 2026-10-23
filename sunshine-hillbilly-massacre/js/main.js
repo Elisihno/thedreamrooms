@@ -12,7 +12,17 @@ import { loadAssets } from './assets.js';
 // Page flags (after the #, joined with . or &): fast = skip the title, test = fast plus a loaded
 // shotgun, s123 = use seed 123, nohill = no Hillbilly, hill = he starts close (for testing),
 // day3 = start on day 3, nosplash = skip the opening.
+// A reload carries the next day (and "play again") either in the #hash or, where a hosted page cannot change its
+// own address, in session storage. What is read at load is used up, so a manual refresh starts over.
+const store = {
+  get(k) { try { return sessionStorage.getItem('sunshine.' + k); } catch { return null; } },
+  set(k, v) { try { if (v == null) sessionStorage.removeItem('sunshine.' + k); else sessionStorage.setItem('sunshine.' + k, v); } catch { /* storage may be blocked */ } },
+};
+const storedDay = Number(store.get('day')) || 0, storedFast = store.get('fast') === '1';
+store.set('day', null); store.set('fast', null);
 const hashFlags = new Set(location.hash.slice(1).split(/[&.,]/).filter(Boolean));
+if (storedFast) hashFlags.add('fast');
+if (storedDay) hashFlags.add('day' + storedDay);
 const seedFlag = [...hashFlags].map(f => /^s(\d+)$/.exec(f)).find(Boolean);
 const seed = Number(new URLSearchParams(location.search).get('seed')) || (seedFlag ? Number(seedFlag[1]) : 0)
   || 1 + (crypto.getRandomValues(new Uint32Array(1))[0] % 999999);
@@ -556,7 +566,7 @@ function endDay() {
     setTimeout(() => { dayEl.style.pointerEvents = 'auto'; dayEl.addEventListener('pointerdown', () => { location.hash = ''; location.reload(); }); }, 3000);
   } else {
     dayEl.innerHTML = `Day ${day + 1}<small>${DAY_LINES[day] ?? ''}</small>`;
-    setTimeout(() => { location.hash = `#day${day + 1}`; location.reload(); }, 2800);
+    setTimeout(() => { store.set('day', day + 1); location.hash = `#day${day + 1}`; location.reload(); }, 2800);
   }
 }
 // ---- the three endings ------------------------------------------------------------------------
@@ -621,7 +631,7 @@ function drawFx(f) {
     g.restore();
   }
 }
-$('again').addEventListener('click', () => { location.hash = '#fast'; location.reload(); });
+$('again').addEventListener('click', () => { store.set('fast', '1'); location.hash = '#fast'; location.reload(); });
 renderInventory();
 
 useBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useTarget(); }, { passive: false });

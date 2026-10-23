@@ -7,6 +7,17 @@ import { GLTFLoader } from '../vendor/GLTFLoader.js';
 // Everything else in the game is built in code.
 
 const loader = new GLTFLoader();
+// Models are fetched as <name>.glb. A host that cannot serve binary files can publish them as base64 text
+// (<name>.glb.b64.txt) and set window.SUNSHINE_MODEL_B64 = true before the game starts.
+const B64 = globalThis.SUNSHINE_MODEL_B64 === true;
+const EXT = B64 ? '.glb.b64.txt' : '.glb';
+async function loadModel(url) {
+  if (!B64) return loader.loadAsync(url);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: ${res.status}`);
+  const bin = Uint8Array.from(atob((await res.text()).trim()), c => c.charCodeAt(0));
+  return loader.parseAsync(bin.buffer, '');
+}
 
 // Furniture and props: each was shrunk by tools/bake.mjs from the original download (see CREDITS.md).
 //   kitchen_run   "Kitchen Cabinets" by jimbogies, cut down to one long wall of the kitchen
@@ -32,7 +43,7 @@ function lambertOf(src) {
 
 async function loadProp(url, optional) {
   try {
-    const g = (await loader.loadAsync(url)).scene;
+    const g = (await loadModel(url)).scene;
     g.traverse(o => { if (o.isMesh) o.material = lambertOf(o.material); });
     return g;
   } catch (e) {
@@ -43,10 +54,10 @@ async function loadProp(url, optional) {
 
 export async function loadAssets(onProgress) {
   const jobs = [
-    loader.loadAsync('assets/models/grandpa.glb'),
-    loader.loadAsync('assets/models/chainsaw.glb'),
-    ...PROPS.map(n => loadProp(`assets/models/${n}.glb`, false)),
-    loadProp('assets/models/optional/chair.glb', true),
+    loadModel(`assets/models/grandpa${EXT}`),
+    loadModel(`assets/models/chainsaw${EXT}`),
+    ...PROPS.map(n => loadProp(`assets/models/${n}${EXT}`, false)),
+    loadProp(`assets/models/optional/chair${EXT}`, true),
   ];
   let done = 0;
   jobs.forEach(j => j.then(() => onProgress?.(++done / jobs.length)));
