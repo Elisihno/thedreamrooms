@@ -104,6 +104,21 @@ function attach(bone, obj, worldPos, worldQuat) {
 export const CLIPS = { idle: 'idle', walk: 'walk', search: 'search', attack: 'attack', stun: 'Stunned' };
 export const HEIGHT = 2.05;   // taller than the grandpa he started as
 
+// Pull the keyframes of the hip and spine rotations part of the way back toward the first frame (0 = no motion, 1 = as animated).
+function easeTorso(clip, amount) {
+  const q = new THREE.Quaternion(), base = new THREE.Quaternion();
+  for (const tr of clip.tracks) {
+    if (!/^(Bone_01|Spine1_02|Spine2_03)\.quaternion$/.test(tr.name)) continue;
+    base.fromArray(tr.values, 0);
+    for (let i = 0; i < tr.values.length; i += 4) {
+      q.fromArray(tr.values, i);
+      if (q.dot(base) < 0) q.set(-q.x, -q.y, -q.z, -q.w);   // the short way round
+      q.copy(base).slerp(q, amount).toArray(tr.values, i);
+    }
+  }
+  return clip;
+}
+
 export function buildHillbilly(assets) {
   const gltf = assets.grandpa;
   const model = gltf.scene;
@@ -141,8 +156,11 @@ export function buildHillbilly(assets) {
   const mixer = new THREE.AnimationMixer(model);
   const actions = {};
   for (const [key, name] of Object.entries(CLIPS)) {
-    const clip = THREE.AnimationClip.findByName(gltf.animations, name);
+    let clip = THREE.AnimationClip.findByName(gltf.animations, name);
     if (!clip) continue;
+    // Grandpa's swing twists his hips and spine through 60-100 degrees, which with a chainsaw in the hand reads as his whole
+    // body spinning round. Ease the torso toward its starting pose so the swing stays a lunge, not a pirouette.
+    if (key === 'attack') clip = easeTorso(clip.clone(), 0.38);
     // keep the body in place: only bones turn and bend, nothing walks away from the spot
     actions[key] = mixer.clipAction(clip);
   }
@@ -756,7 +774,10 @@ export function createHillbilly(house, assets, opts = {}) {
   function animate(dt, t, speed) {
     // turn toward where he is heading
     if (me._heading !== undefined) {
-      me.yaw += angleTo(me.yaw, me._heading) * Math.min(1, dt * (me.state === 'hunt' ? 7 : 3.2));
+      // eased, and never faster than a heavy man can turn: a snap through 180 degrees looks like a spin
+      const turn = angleTo(me.yaw, me._heading) * Math.min(1, dt * (me.state === 'hunt' ? 7 : 3.2));
+      const most = (me.state === 'hunt' || me.state === 'kill' ? 4.2 : 2.4) * dt;
+      me.yaw += Math.max(-most, Math.min(most, turn));
     }
     group.position.set(me.x, me.y, me.z);
     group.rotation.y = me.yaw;
