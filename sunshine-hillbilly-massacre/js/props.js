@@ -12,7 +12,7 @@
 //                                       spot where something can lie under the lid
 //   mv.lock(x, y0, z)                   a padlock on the part built just before it
 //   mv.target(kind, w, h, d, x, y0, zc) an invisible box to look at and use
-//   mv.wire(color, x, y0, h, z)         a wire that can be cut with bolt cutters
+//   mv.wire(color, x, y0, h, z)         a wire that can be cut with the pliers
 //
 //   item.model / item.models          real 3D models (see assets.js) placed with the item; build() gets ctx.has(name)
 //                                       so it can draw boxes instead when a model is missing
@@ -68,7 +68,7 @@ export const ITEMS = {
         chairAt(b, p, x, .55, 0, -1);
       }
     } },
-  // the start bedroom's table; a jar of preserves stands on it
+  // the start bedroom's table; the spiral vase stands on it
   roundtable: { w: .97, d: 2.0, tall: false, center: true, model: 'trestle_table', jarSpot: { x: 0, z: 0, y: .735 }, hide: { x: 0, z: 0, w: .97, d: 1.9, h: .72, eye: .45 },
     colliders: ctx => (ctx.has('trestle_table') ? [[.97, 1.9, 0, 0]] : [[1.1, 1.1, 0, 0], [.5, .5, 0, -.85], [.5, .5, 0, .85]]),
     build(b, p, mv, ctx) {
@@ -88,7 +88,7 @@ export const ITEMS = {
     mv.drawer([[.34, .16, .4, .4, .5, .27, p.body], [.34, .16, .02, .4, .5, .56, p.body], handle(p, .4, .58, .59, .1)], .3);
     chairAt(b, p, -.2, .85, 0, -1);
   } },
-  // an old icebox with a freezer on top and the main door below; the peach lies on the middle shelf
+  // an old icebox with a freezer on top and the main door below; the apple lies on the middle shelf
   fridge: { w: .7, d: .7, tall: true, build(b, p, mv) {
     b(.7, 1.8, .03, 0, 0, .015, p.light);
     for (const s of [-1, 1]) b(.03, 1.8, .7, s * .335, 0, .35, p.light);
@@ -286,7 +286,7 @@ export const ITEMS = {
       .3, .015, -1.9, [0, .062, .25], { tag: 'gunbox' });
     mv.lock(0, .22, .5);
   } },
-  // a chunky butcher block, deeply scored; hold a cleaver and use it to chop something on it
+  // a chunky butcher block, deeply scored; hold a knife and use it to chop something on it
   butcherblock: { w: .9, d: .7, tall: false, build(b, p, mv) {
     b(.9, .86, .7, 0, 0, .4, p.body);
     b(.96, .08, .76, 0, .86, .4, p.paper);
@@ -294,7 +294,7 @@ export const ITEMS = {
     b(.5, .004, .1, .1, .944, .3, p.red);                         // an old stain, going dark
     mv.target('board', .6, .1, .5, 0, .94, .4);
   } },
-  // the fuse box: open the lid, then cut the red, blue and yellow wires with the bolt cutters
+  // the fuse box: open the lid, then cut the red, blue and yellow wires with the pliers
   fusebox: { w: .5, d: .2, tall: true, build(b, p, mv) {
     b(.5, .66, .1, 0, .95, .05, p.dark2);
     b(.44, .6, .01, 0, .98, .105, p.dark);

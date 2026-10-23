@@ -28,6 +28,12 @@ The Sketchfab *Standard* license does not allow the model file to be shared publ
 this repository. If you have the file, run `node tools/bake.mjs chair` (see below) or drop the baked result into
 `assets/models/optional/chair.glb` and the game will use it for its chairs; without it the game draws a plain chair.
 
+## Items
+
+The things you pick up (key, cutting pliers, kitchen knife, apple, shotgun, shells, car battery, fuel can, flashlight
+and the spiral vase), their hand-held models and their icons are copied from *Dread* in this repository
+(`js/held.js`, `js/apple.js`, `js/vase.js`, `js/icons.js`, `assets/textures/item_key.png`, `item_pliers.png`).
+
 ## Textures
 
 The wall and floor textures are from the earlier *Dread* project in this repository (`assets/textures/floor_02.jpg`,

@@ -370,7 +370,7 @@ function drop() {
   const type = selected;
   house.dropItem(type, x, player.y, z, player.yaw, player.level, null, true);
   setHand(null);
-  if (type !== 'jar') audio.sfx('drop');   // the jar makes its own sound when it lands
+  if (type !== 'jar') audio.sfx('drop');   // the vase makes its own sound when it lands
   showToast(`Dropped the ${NAMES[type]}`, 1200);
 }
 for (const [el, fn] of [[fireBtn, fire], [dropBtn, drop]]) {
@@ -437,7 +437,7 @@ house.onPickup = type => {
   audio.chime();
 };
 house.onMessage = showToast;
-// Something loud happened (a window was shot out, a jar smashed): the Hillbilly comes to look.
+// Something loud happened (a window was shot out, a vase smashed): the Hillbilly comes to look.
 let lastAlert = null;
 house.onAlert = a => {
   lastAlert = { ...a, at: performance.now() };
@@ -461,7 +461,7 @@ house.onLoad = () => {
   showToast(`Loaded 3 shells. ${ammo} in the shotgun.`);
   renderInventory();
 };
-// a key is used up when it opens a lock; a peach when it is put on the block
+// a key is used up when it opens a lock; an apple when it is put on the block
 house.onConsume = type => { if (selected === type) setHand(null); };
 if (testMode) setHand('shotgun'); // only the test start begins with the shotgun in hand
 house.onSound = name => audio.sfx(name);

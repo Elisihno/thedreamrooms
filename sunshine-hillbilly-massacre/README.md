@@ -13,13 +13,13 @@ screen moves, right half looks, a quick tap toggles the flashlight.
 
 * **Escape** any of three ways:
   * **Front door** — two padlocks (keys) and a keypad. The code is on a postcard in a drawer in the parlor.
-  * **Storm hatch** (cellar) — cut the three fuse-box wires with the bolt cutters, then unlock two padlocks.
+  * **Storm hatch** (cellar) — cut the three fuse-box wires with the cutting pliers, then unlock two padlocks.
   * **The pickup truck** (barn) — a battery (hayloft), a can of gas (cellar) and a key; the barn door opens when it starts.
 * **Hide** under beds and tables, or inside a wardrobe, by looking at it and tapping the hand.
 * **Fear** drives him: darkness, noise and the sight of him raise it; sunshine (stand in a patch of sun), the
   flashlight and hiding lower it. The more afraid you are, the farther he smells you.
-* **The shotgun** (padlocked in the hayloft; shells are inside a peach that you chop on the butcher block with the cleaver)
-  stalls his saw for a few seconds. A smashed jar or a broken window sends him to investigate.
+* **The shotgun** (padlocked in the hayloft; shells are inside an apple that you cut on the butcher block with the kitchen knife)
+  stalls his saw for a few seconds. A smashed vase or a broken window sends him to investigate.
 * If he catches you, a new day begins in a new house. Survive the days and the game ends.
 
 Difficulty modes: Easy (7 days), Medium (5), Hard (4), Extreme (3, he is faster than you), Practice (no Hillbilly).

@@ -30,7 +30,7 @@ const LEVELS = [
       { item: 'livingset', cell: [0, 0] },
       { item: 'truck', cell: [7, 4] },
       // the kitchen: the long run of cabinets with the sink fills the north wall to the east corner; the
-      // icebox stands on the east wall; the stove, the butcher block and the drawers that hold the cleaver
+      // icebox stands on the east wall; the stove, the butcher block and the drawers that hold the knife
       // stand along the rest of the north wall, and two counters along the west wall
       { item: 'kitchenrun', cell: [8, 0], side: 'N', shift: -0.83 },
       { item: 'fridge', cell: [8, 0], side: 'E', shift: 1.5 },
@@ -343,12 +343,11 @@ export function buildHouse(renderer, seed = 1, props = {}) {
     if (item.board) item.board.peach = null;
   }
 
-  // One pair of bolt cutters in a single drawer, one key per storey (preferably in a chest), and the rest of the puzzle pieces.
+  // One pair of cutting pliers in a single drawer, one key per storey (preferably in a chest), and the rest of the puzzle pieces.
   function placeLoot() {
     const place = (type, part) => {
       const mesh = makeItemMesh(type, type === 'shotgun' ? 0 : undefined);
       mesh.position.set(...part.loot.pos);
-      if (part.kind === 'drawer' && type === 'cutters') mesh.scale.setScalar(0.62);   // laid short so it fits the drawer
       part.loot.parent.add(mesh);
       const item = { kind: 'item', type, part, mesh };
       mesh.userData.proxy.userData.item = item;
@@ -357,15 +356,15 @@ export function buildHouse(renderer, seed = 1, props = {}) {
       part.hasItem = true;
     };
     const holders = parts.filter(p => p.loot);
-    // the peach always lies in the icebox, the shotgun in the padlocked metal box
+    // the apple always lies in the icebox, the shotgun in the padlocked metal box
     const icebox = holders.find(p => p.tag === 'fridge');
     if (icebox) place('peach', icebox);
     const gunBox = holders.find(p => p.tag === 'gunbox');
     if (gunBox) place('shotgun', gunBox);
-    // the jar of preserves stands on the start bedroom's round table
+    // the spiral vase stands on the start bedroom's table
     if (jarStart) dropItem('jar', jarStart.x, jarStart.y, jarStart.z, 0.4, jarStart.level);
     for (const d of floorDrops) dropItem(d.item, d.x, d.y, d.z, d.spin, d.level);
-    // a meat cleaver in one of the kitchen drawers
+    // a kitchen knife in one of the kitchen drawers
     const cleaverDrawers = holders.filter(p => p.kind === 'drawer' && p.role === 'kitchen' && !p.hasItem);
     if (cleaverDrawers.length) place('cleaver', pick(cleaverDrawers));
     else { const any = holders.filter(p => p.kind === 'drawer' && !p.hasItem); if (any.length) place('cleaver', pick(any)); }
@@ -908,7 +907,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
         ensureGroup().add(inst);
       }
 
-      if (item.jarSpot && withJar) {   // the jar of preserves stands on the start bedroom's round table
+      if (item.jarSpot && withJar) {   // the spiral vase stands on the start bedroom's table
         const [vx, vz] = xf(item.jarSpot.x, item.jarSpot.z);
         jarStart = { x: vx, z: vz, y: Y + item.jarSpot.y, level };   // made into a pick-up item once the loot is placed
       }
@@ -1051,7 +1050,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
   }
 
   function cutLock(part, held) {
-    if (held !== 'cutters') { say('Padlocked tight. Something with long handles could cut through it.'); return; }
+    if (held !== 'cutters') { say('Padlocked tight. Something strong could cut through it.'); return; }
     part.locked = false;
     part.lockMesh.visible = false;
     const spark = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true }));
@@ -1062,24 +1061,24 @@ export function buildHouse(renderer, seed = 1, props = {}) {
     say('Snap. The padlock drops away.');
   }
 
-  // The butcher block is a table: put the peach on it, then chop it with the cleaver and
+  // The butcher block is a table: put the apple on it, then chop it with the knife and
   // shotgun shells spill out onto the block.
   function useBoard(board, held) {
     const wp = board.proxy.getWorldPosition(new THREE.Vector3());
     if (held === 'peach') {
-      if (board.peach) { say('There is already a peach on the block.'); return; }
+      if (board.peach) { say('There is already an apple on the block.'); return; }
       api.onConsume?.('peach');
       board.peach = dropItem('peach', wp.x + 0.05, wp.y, wp.z, 0.4, board.level, board);
       api.onSound?.('drop');
-      say('The peach sits on the block. Chop it with a cleaver.');
+      say('The apple sits on the block. Cut it with a knife.');
     } else if (held === 'cleaver') {
       if (!board.peach) { say('Nothing on the block to chop.'); return; }
       removeItem(board.peach);
       api.onSound?.('chop');
       dropItem('shells', wp.x + 0.04, wp.y, wp.z, 0.5, board.level);
-      say('The peach splits open. Shotgun shells were hidden inside.');
+      say('The apple splits open. Shotgun shells were hidden inside.');
     } else {
-      say(board.peach ? 'Chop the peach with a cleaver.' : 'A butcher block, stained dark. Put something on it.');
+      say(board.peach ? 'Cut the apple with a knife.' : 'A butcher block, stained dark. Put something on it.');
     }
   }
 
@@ -1097,7 +1096,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
     };
     if (target.kind === 'carhood') {
       if (truck.battery) { say('The battery is already in.'); return; }
-      if (held !== 'battery') { say('The engine bay is empty. It needs a truck battery.'); return; }
+      if (held !== 'battery') { say('The engine bay is empty. It needs a car battery.'); return; }
       truck.battery = true;
       api.onConsume?.('battery');
       glow(target.proxy.getWorldPosition(new THREE.Vector3()));
@@ -1303,7 +1302,7 @@ export function buildHouse(renderer, seed = 1, props = {}) {
         shownSunLevel = player.level;
         for (const m of sunMeshes) m.visible = m.userData.level === player.level;
       }
-      for (let i = falling.length - 1; i >= 0; i--) {   // a dropped jar falls and smashes
+      for (let i = falling.length - 1; i >= 0; i--) {   // a dropped vase falls and smashes
         const w = falling[i];
         if (!w.mesh.parent) { falling.splice(i, 1); continue; }   // picked up again
         w.vy -= 11 * dt; w.mesh.position.y += w.vy * dt;
