@@ -391,11 +391,11 @@ export const ITEMS = {
   morris: { w: .96, d: 1.94, tall: false, model: 'morris_chair', modelZ: .98, colliders: [[.96, 1.9, 0, .98]], build() {} },
   // the bird cage with what was in it, and a dead bird on the floor
   birdcage: { w: .6, d: .6, tall: false, models: [{ name: 'bird_cage', x: 0, y: 0, z: .35 }, { name: 'dead_bird', x: .35, y: 0, z: .55, ry: 1 }], colliders: [[.4, .4, 0, .35]], build() {} },
-  // chests of drawers (user's models): two trays slide out to be searched
-  dresser: { w: 1.3, d: .46, tall: false, models: [{ name: 'drawers_austere', x: 0, y: 0, z: 0 }], colliders: [[1.3, .46, 0, .23]], build(b, p, mv) { trays(mv, p); } },
-  dresser2: { w: 1.3, d: .46, tall: false, models: [{ name: 'drawers_ornate', x: 0, y: 0, z: 0 }], colliders: [[1.3, .46, 0, .23]], build(b, p, mv) { trays(mv, p); } },
-  dresserkettle: { w: 1.3, d: .46, tall: false, models: [{ name: 'drawers_austere', x: 0, y: 0, z: 0 }, { name: 'kettle', x: -.4, y: .806, z: .23, ry: .4 }], colliders: [[1.3, .46, 0, .23]], build(b, p, mv) { trays(mv, p); } },
-  dresserpots: { w: 1.3, d: .46, tall: false, models: [{ name: 'drawers_ornate', x: 0, y: 0, z: 0 }, { name: 'copper_pots', x: -.25, y: .806, z: .23, ry: 0 }], colliders: [[1.3, .46, 0, .23]], build(b, p, mv) { trays(mv, p); } },
+  // the sideboard (user's model); a kettle or the copper pots can stand on it
+  dresser: { w: 1.3, d: .87, tall: false, rig: 'sideboard', model: 'sideboard', colliders: [[1.3, .87, 0, .435]], build() {} },
+  dresser2: { w: 1.3, d: .87, tall: false, rig: 'sideboard', model: 'sideboard', colliders: [[1.3, .87, 0, .435]], build() {} },
+  dresserkettle: { w: 1.3, d: .87, tall: false, rig: 'sideboard', model: 'sideboard', models: [{ name: 'kettle', x: -.4, y: .669, z: .45, ry: .4 }], colliders: [[1.3, .87, 0, .435]], build() {} },
+  dresserpots: { w: 1.3, d: .87, tall: false, rig: 'sideboard', model: 'sideboard', models: [{ name: 'copper_pots', x: -.3, y: .669, z: .45, ry: 0 }], colliders: [[1.3, .87, 0, .435]], build() {} },
   // an old iron bed: you can hide under it
   oldbed: { w: 1.3, d: 2.0, tall: false, hide: { x: 0, z: 1.0, w: 1.3, d: 2.0, h: .6, eye: .26 }, models: [{ name: 'old_bed', x: 0, y: 0, z: 1.0, ry: Math.PI / 2 }], colliders: [[1.3, 2.0, 0, 1.0]], build() {} },
   chair: { w: .5, d: .55, tall: false, model: 'chair', modelZ: .3, build(b, p, mv, ctx) { if (!ctx.has('chair')) chairAt(b, p, 0, .33, 0, 1); } },

@@ -34,6 +34,7 @@ window.bake = async job => {
   const items = [];
   for (const n of nodes) n.traverse(o => {
     if (!o.isMesh) return;
+    if (job.skipMat && o.material.name === job.skipMat) return;
     const g = o.geometry.clone();
     for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
     if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
@@ -44,7 +45,8 @@ window.bake = async job => {
       const ix = g.index.array;
       for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; }
     }
-    items.push({ g, mat: o.material });
+    if (job.rotY) g.applyMatrix4(new THREE.Matrix4().makeRotationY(job.rotY));   // turn it so its front faces +z
+    items.push({ g, mat: o.material, name: o.name });
   });
   // size and place it: metres, bottom on y = 0, centred (or its back against z = 0)
   const all = new THREE.Box3();
@@ -61,6 +63,10 @@ window.bake = async job => {
   // one mesh per material
   const byMat = new Map();
   for (const it of items) { it.g.applyMatrix4(m4); if (!byMat.has(it.mat)) byMat.set(it.mat, []); byMat.get(it.mat).push(it.g); }
+  if (job.parts) {   // keep every piece as a mesh of its own (named after its node), so the game can move them
+    byMat.clear();
+    items.forEach((it, i) => byMat.set(Object.assign(it.mat.clone(), { name: it.name || 'part' + i }), [it.g]));
+  }
   const out = new THREE.Group(); out.name = job.name;
   let tris = 0;
   for (const [mat, list] of byMat) {

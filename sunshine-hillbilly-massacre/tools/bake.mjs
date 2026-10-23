@@ -30,6 +30,8 @@ const JOBS = [
   // three finishes stand side by side in the download: austere (left), ornate (middle), painted blue (right, not used)
   { name: 'drawers_austere', src: R + 'drawer_table.glb', topOf: 'GLTF_SceneRootNode', select: 'c.x < -0.7', fit: 'x', size: 1.3, anchor: 'back', maxTex: 512 },
   { name: 'drawers_ornate', src: R + 'drawer_table.glb', topOf: 'GLTF_SceneRootNode', select: 'c.x > -0.7 && c.x < 0.7', fit: 'x', size: 1.3, anchor: 'back', maxTex: 512 },
+  // the sideboard keeps its drawers and doors as separate meshes (the game slides them open); the black line-art outline is dropped
+  { name: 'sideboard', src: R + 'sideboard.glb', skipMat: 'Material.005', parts: true, rotY: Math.PI, fit: 'x', size: 1.3, anchor: 'back', maxTex: 512 },
 ];
 const only = process.argv.slice(2);
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });

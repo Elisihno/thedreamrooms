@@ -934,6 +934,32 @@ export function buildHouse(renderer, seed = 1, props = {}) {
           wires.push(wire);
         },
       };
+      // The sideboard's three drawers are separate meshes. Each is made hollow: the model's solid block is squashed into a
+      // thin front panel and an open tray built behind it, so a drawer that slides out shows its inside and what lies in it.
+      const trayMat = new THREE.MeshLambertMaterial({ color: 0x4a3322 }), trayIn = new THREE.MeshLambertMaterial({ color: 0x7a5a3a });
+      function rigSideboard(host) {
+        const meshes = [];
+        host.traverse(o => { if (o.isMesh) meshes.push(o); });
+        for (const m of meshes.slice(3, 6)) {
+          m.geometry.computeBoundingBox();
+          const bb = m.geometry.boundingBox, w = bb.max.x - bb.min.x, h = bb.max.y - bb.min.y, d = bb.max.z - bb.min.z;
+          const cx = (bb.min.x + bb.max.x) / 2, front = bb.max.z, panel = 0.045, wall = 0.014, back = front - d;
+          const parent = m.parent, pg = new THREE.Group();
+          parent.add(pg);
+          pg.add(m);
+          const sc = panel / d;
+          m.scale.z = sc; m.position.z = front * (1 - sc);
+          const box = (bw, bh, bd, x, y, z, mat) => { const b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat); b.position.set(x, y, z); pg.add(b); return b; };
+          const y0 = bb.min.y + 0.012, zc = (front - panel + back + 0.02) / 2, td = front - panel - back - 0.02;
+          box(w - 0.05, wall, td, cx, y0, zc, trayIn);                                          // the floor of the drawer
+          box(wall, h - 0.04, td, cx - (w - 0.05) / 2, y0 + (h - 0.04) / 2, zc, trayMat);      // the two sides
+          box(wall, h - 0.04, td, cx + (w - 0.05) / 2, y0 + (h - 0.04) / 2, zc, trayMat);
+          box(w - 0.05, h - 0.04, wall, cx, y0 + (h - 0.04) / 2, back + 0.02, trayMat);         // the back
+          const part = { pg, pivot: [0, 0, 0], level, open: false, t: 0, kind: 'drawer', dist: 0.4, role: cfg.roles?.[at(c, r)], loot: { parent: pg, pos: [cx, y0 + wall / 2 + 0.01, zc + 0.03] } };
+          pg.traverse(o => { if (o.isMesh) { o.userData.part = part; partMeshes.push(o); } });
+          parts.push(part);
+        }
+      }
       const ctx = { has: n => !!props[n] };
       item.build(b, pal, mv, ctx);
       // real 3D models belonging to this piece of furniture, placed in its own frame
@@ -944,6 +970,8 @@ export function buildHouse(renderer, seed = 1, props = {}) {
         inst.rotation.y = m.ry ?? 0;
         ensureGroup().add(inst);
       }
+
+      if (item.rig === 'sideboard' && props.sideboard) rigSideboard(ensureGroup());
 
       if (item.jarSpot && withJar) {   // the spiral vase stands on the start bedroom's table
         const [vx, vz] = xf(item.jarSpot.x, item.jarSpot.z);

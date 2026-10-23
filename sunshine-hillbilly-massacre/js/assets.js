@@ -28,7 +28,7 @@ async function loadModel(url) {
 // chair is optional: "Chair" by shuvalov.di is under Sketchfab's Standard license, which does not let it be
 // shared publicly, so it is not committed. Put chair.glb in assets/models/optional/ to use it locally.
 const PROPS = ['kitchen_run', 'dining_set', 'trestle_table', 'butcher_hooks', 'bone_pile',
-  'kettle', 'candelabra', 'cleaver', 'old_fridge', 'copper_pots', 'wood_stove', 'dish_rack', 'bird_cage', 'dead_bird', 'wall_clock', 'morris_chair', 'chest_freezer', 'armadillo', 'bird_skull', 'old_bed', 'drawers_austere', 'drawers_ornate'];
+  'kettle', 'candelabra', 'cleaver', 'old_fridge', 'copper_pots', 'wood_stove', 'dish_rack', 'bird_cage', 'dead_bird', 'wall_clock', 'morris_chair', 'chest_freezer', 'armadillo', 'bird_skull', 'old_bed', 'drawers_austere', 'drawers_ornate', 'sideboard'];
 
 // lit the way the rest of the house is lit: cheap and flat, which also keeps phones happy
 const lambertCache = new Map();
