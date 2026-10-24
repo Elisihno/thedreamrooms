@@ -65,6 +65,35 @@ export const ITEMS = {
     chairAt(b, p, 0, -.85, 0, 1);
     chairAt(b, p, 0, .85, 0, -1);
   }, colliders: [[1.1, 1.1, 0, 0], [.5, .5, 0, -.85], [.5, .5, 0, .85]] },
+  // bathroom (after Granny's house): a tub with a bloody bottom, toilet, sink and mirror
+  bathtub: { w: 1.8, d: .85, tall: false, build(b, p) {
+    b(1.8, .5, .85, 0, .1, .425, p.white);
+    b(1.6, .05, .65, 0, .56, .425, p.blood);
+    for (const dx of [-.8, .8]) for (const dz of [.1, .75]) b(.1, .1, .1, dx, 0, dz, p.dark2);
+    b(.05, .25, .05, .75, .6, .08, p.steel);
+  }, colliders: [[1.8, .85, 0, .425]] },
+  toilet: { w: .5, d: .75, tall: false, build(b, p) {
+    b.cyl(.2, .4, 0, 0, .42, p.white);
+    b(.42, .38, .22, 0, .4, .12, p.white);
+    b(.4, .04, .4, 0, .4, .45, p.light);
+  }, colliders: [[.5, .7, 0, .37]] },
+  sink: { w: .65, d: .5, tall: true, build(b, p) {
+    b(.16, .75, .16, 0, 0, .2, p.white);
+    b(.55, .14, .42, 0, .75, .24, p.white);
+    b(.5, .7, .03, 0, 1.15, .02, p.steel);
+  }, colliders: [[.6, .4, 0, .22]] },
+  grandclock: { w: .6, d: .45, tall: true, build(b, p) {
+    b(.5, .25, .35, 0, 0, .22, p.dark2);
+    b(.42, 1.55, .3, 0, .25, .22, p.dark2);
+    b(.5, .22, .35, 0, 1.8, .22, p.dark2);
+    b(.3, .3, .02, 0, 1.38, .38, p.light);
+    b(.05, .7, .02, 0, .5, .38, p.steel);
+    b(.14, .14, .02, 0, .42, .385, p.steel);
+  }, colliders: [[.55, .4, 0, .22]] },
+  barrel: { w: .62, d: .62, tall: false, build(b, p) {
+    b.cyl(.28, .85, 0, 0, .31, p.dark2);
+    for (const y of [.12, .42, .72]) b.cyl(.295, .04, 0, y, .31, p.steel);
+  }, colliders: [[.58, .58, 0, .31]] },
   desk: { w: 1.3, d: 1.2, tall: false, build(b, p, mv) {
     b(1.3, .05, .6, 0, .72, .3, p.body);
     b(.05, .72, .55, -.62, 0, .3, p.dark2);
@@ -280,10 +309,11 @@ export const ROLE_ITEMS = {
   dining: ['tablechairs', 'drawers', 'chair'],
   kitchen: [], // laid out by hand in house.js
   study: ['desk', 'bookshelf', 'bookshelf', 'drawers'],
-  hall: ['drawers', 'chair'],
+  hall: ['grandclock', 'drawers', 'chair'],
+  bathroom: ['bathtub', 'toilet', 'sink'],
   pantry: ['shelves', 'shelves', 'crates', 'counter'],
   bedroom: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'roundtable', 'bookshelf'],
-  storage: ['shelves', 'crates', 'crates', 'boiler', 'chest', 'drawers'],
+  storage: ['shelves', 'crates', 'barrel', 'crates', 'barrel', 'boiler', 'chest', 'drawers'],
   attic: ['covered', 'chest', 'crates', 'wardrobe', 'drawers', 'chair', 'covered'],
 };
 

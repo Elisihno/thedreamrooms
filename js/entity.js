@@ -1,118 +1,13 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { levelY } from './house.js';
+import { buildGranny } from './granny.js';
 
 export const ENTITY_NAME = 'Dread';
 
 // ---- the body ---------------------------------------------------------------------------
 // A tall, thin, ashen figure in a torn gown. Its arms hang to its knees, its face is two
 // black hollows and a mouth that never closes. Local forward is +z.
-export function buildHollow() {
-  const root = new THREE.Group();
-  const body = new THREE.Group();       // everything that leans, falls over and sways
-  root.add(body);
-  const skin = new THREE.MeshLambertMaterial({ color: 0xa4a29e, emissive: 0x16161a });
-  const gownMat = new THREE.MeshLambertMaterial({ color: 0x2a2830, emissive: 0x08080a, side: THREE.DoubleSide });
-  const black = new THREE.MeshBasicMaterial({ color: 0x000000 });
-  const glint = new THREE.MeshBasicMaterial({ color: 0xe8f2ff });
-  const hairMat = new THREE.MeshLambertMaterial({ color: 0x0b0b0d });
-
-  const mesh = (geo, mat, parent, x = 0, y = 0, z = 0) => {
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set(x, y, z);
-    parent.add(m);
-    return m;
-  };
-  // a limb piece that hangs down from its pivot
-  const limb = (parent, r0, r1, len, x, y, z) => {
-    const piv = new THREE.Group();
-    piv.position.set(x, y, z);
-    parent.add(piv);
-    mesh(new THREE.CylinderGeometry(r0, r1, len, 8), skin, piv, 0, -len / 2, 0);
-    return piv;
-  };
-
-  // legs: thigh, knee, shin, long flat foot
-  const legs = [];
-  for (const s of [-1, 1]) {
-    const hip = limb(body, 0.075, 0.055, 0.55, s * 0.12, 1.1, 0);
-    const knee = limb(hip, 0.055, 0.04, 0.55, 0, -0.55, 0);
-    mesh(new THREE.BoxGeometry(0.09, 0.04, 0.3), skin, knee, 0, -0.56, 0.08);
-    legs.push({ hip, knee, s });
-  }
-
-  // torso, stooped
-  const torso = new THREE.Group();
-  torso.position.set(0, 1.1, 0);
-  body.add(torso);
-  const chest = mesh(new THREE.CylinderGeometry(0.2, 0.15, 0.85, 14), gownMat, torso, 0, 0.42, 0);
-  chest.scale.z = 0.62;
-  for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(0.085, 8, 6), skin, torso, s * 0.24, 0.8, 0);
-
-  // arms: very long, with long fingers
-  const arms = [];
-  let batGroup = null;
-  for (const s of [-1, 1]) {
-    const sh = limb(torso, 0.06, 0.045, 0.76, s * 0.26, 0.8, 0);
-    const el = limb(sh, 0.045, 0.032, 0.76, 0, -0.76, 0);
-    mesh(new THREE.BoxGeometry(0.075, 0.12, 0.025), skin, el, 0, -0.82, 0);
-    for (let i = 0; i < 4; i++) {
-      const f = mesh(new THREE.ConeGeometry(0.011, 0.26, 5), skin, el, (i - 1.5) * 0.02, -1.0, 0);
-      f.rotation.x = Math.PI + (i % 2 ? 0.15 : -0.1);
-    }
-    if (s === 1) {   // a nail-studded bat in the right hand
-      const bat = new THREE.Group();
-      bat.position.set(0, -0.86, 0.02);
-      bat.rotation.x = Math.PI - 1.2;          // points down and forward; local +y is along the bat
-      batGroup = bat;
-      const wood = new THREE.MeshLambertMaterial({ color: 0x9a7650, emissive: 0x2a1c10 });
-      const iron = new THREE.MeshLambertMaterial({ color: 0xd0d0d8, emissive: 0x34343c });
-      const blood = new THREE.MeshLambertMaterial({ color: 0x8a1010, emissive: 0x3a0606 });
-      mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.3, 8), wood, bat, 0, 0.05, 0);          // handle
-      mesh(new THREE.CylinderGeometry(0.065, 0.025, 0.75, 10), wood, bat, 0, 0.5, 0);        // barrel
-      mesh(new THREE.CylinderGeometry(0.066, 0.066, 0.12, 10), blood, bat, 0, 0.82, 0);      // stained end
-      for (let r = 0; r < 4; r++) for (let a = 0; a < 6; a++) {                                // spikes
-        const y = 0.3 + r * 0.16, ang = a * Math.PI / 3 + r * 0.5, rad = 0.025 + (y - 0.2) * 0.07;
-        const spike = mesh(new THREE.ConeGeometry(0.014, 0.1, 5), iron, bat, Math.cos(ang) * (rad + 0.03), y, Math.sin(ang) * (rad + 0.03));
-        spike.rotation.set(Math.sin(ang) * 1.45, 0, -Math.cos(ang) * 1.45);
-      }
-      el.add(bat);
-    }
-    arms.push({ sh, el, s });
-  }
-
-  // neck and head
-  const neck = new THREE.Group();
-  neck.position.set(0, 0.86, 0.02);
-  torso.add(neck);
-  mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.3, 8), skin, neck, 0, 0.15, 0);
-  const head = new THREE.Group();
-  head.position.set(0, 0.46, 0.02);
-  neck.add(head);
-  mesh(new THREE.SphereGeometry(0.125, 16, 12), skin, head).scale.set(0.82, 1.55, 0.95);
-  for (const s of [-1, 1]) {
-    mesh(new THREE.SphereGeometry(0.05, 10, 8), black, head, s * 0.05, 0.06, 0.1).scale.set(0.9, 1.5, 0.45);
-    mesh(new THREE.SphereGeometry(0.007, 6, 5), glint, head, s * 0.05, 0.05, 0.128);
-  }
-  mesh(new THREE.SphereGeometry(0.04, 10, 8), black, head, 0, -0.13, 0.1).scale.set(0.8, 2.1, 0.5);   // the mouth
-  // long black hair, hanging over the shoulders and back
-  for (let i = 0; i < 18; i++) {
-    const a = (i / 18) * Math.PI * 2, len = 0.5 + ((i * 37) % 10) * 0.05;
-    const strand = mesh(new THREE.BoxGeometry(0.014, len, 0.014), hairMat, head, Math.cos(a) * 0.1, 0.12 - len / 2 + 0.05, Math.sin(a) * 0.09 - 0.03);
-    strand.rotation.x = Math.sin(a) * 0.12; strand.rotation.z = -Math.cos(a) * 0.1;
-  }
-  head.rotation.z = 0.16;
-
-  // the torn gown
-  const gg = new THREE.CylinderGeometry(0.21, 0.4, 1.0, 28, 3, true);
-  const pos = gg.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    if (pos.getY(i) < -0.45) pos.setY(i, pos.getY(i) - (0.04 + ((i * 53) % 7) / 7 * 0.4));   // ragged hem
-  }
-  gg.computeVertexNormals();
-  mesh(gg, gownMat, body, 0, 1.0, 0);
-
-  return { root, body, torso, legs, arms, neck, head, bat: batGroup };
-}
+export const buildHollow = buildGranny;
 
 // ---- finding the way ------------------------------------------------------------------------
 class Heap {
@@ -577,33 +472,38 @@ export function createHollow(house, opts = {}) {
     group.position.set(me.x, me.y, me.z);
     group.rotation.y = me.yaw;
     walkPhase += dt * speed * 3.1;
-    const m = model, w = Math.sin(walkPhase), amp = Math.min(1, speed / 1.5);
+    const m = model, amp = Math.min(1, speed / 1.5);
     const hunt = me.state === 'hunt' || me.state === 'kill';
-    lean += ((me.state === 'kill' ? 0.3 + 0.35 * (ease(0.55, 0.72, killT) * (1 - ease(1.0, 1.4, killT)) + ease(1.4, 1.55, killT)) : hunt ? 0.38 : 0.12) - lean) * Math.min(1, dt * (me.state === 'kill' ? 14 : 4));
+    lean += ((me.state === 'kill' ? 0.18 + 0.3 * (ease(0.55, 0.72, killT) * (1 - ease(1.0, 1.4, killT)) + ease(1.4, 1.55, killT)) : hunt ? 0.3 : 0.1) - lean) * Math.min(1, dt * (me.state === 'kill' ? 14 : 4));
     const fallA = me.state === 'stun' ? Math.min(1, (9 - stunT) / 0.55) : 0;
-    m.body.rotation.x = -fallA * 1.5;
-    group.position.y = me.y + fallA * 0.12;
-    m.torso.rotation.x = lean + Math.sin(t * 1.3) * 0.02;
-    m.body.rotation.z = me.limp && speed > 0 && me.state !== 'stun' ? Math.sin(walkPhase) * 0.09 : 0;   // she drags one leg
+    m.body.rotation.x = fallA * 1.5;                       // falls forward
+    group.position.y = me.y + fallA * 0.1;
+    m.body.rotation.z = me.limp && speed > 0 && me.state !== 'stun' ? Math.sin(walkPhase) * 0.08 : 0;   // she drags one leg
+    // the body hinges forward at the waist (rotation about z tips +y toward -x, so lean is negative)
+    m.torso.rotation.z = -(lean + Math.sin(t * 1.3) * 0.015);
     for (const l of m.legs) {
       const ph = Math.sin(walkPhase + (l.s > 0 ? 0 : Math.PI));
-      l.hip.rotation.x = ph * 0.55 * amp;
-      l.knee.rotation.x = Math.max(0, -Math.sin(walkPhase + (l.s > 0 ? 0 : Math.PI) + 0.6)) * 0.9 * amp;
+      l.hip.rotation.z = ph * 0.5 * amp;
     }
+    // arms hang from the shoulders (x rotation), swing forward and back (z rotation); the elbow bends about y
+    const batU = k => (k < 1.0 ? ease(0.1, 0.55, k) * (1 - ease(0.55, 0.72, k)) : ease(1.0, 1.4, k) * (1 - ease(1.4, 1.55, k)));
     for (const a of m.arms) {
       const ph = Math.sin(walkPhase + (a.s > 0 ? Math.PI : 0));
-      let reach = me.state === 'kill' ? -0.9 : hunt ? -0.7 : 0;
-      if (me.state === 'kill' && a.s === 1) reach = batAngle(killT);
-      a.sh.rotation.x = reach + ph * 0.3 * amp + (me.state === 'stun' ? 0 : Math.sin(t * 1.1 + a.s) * 0.04);
-      a.sh.rotation.z = a.s * (0.06 + (hunt ? 0.12 : 0));
-      a.el.rotation.x = me.state === 'kill' && a.s === 1 ? -0.25 - 1.65 * Math.max(0, Math.min(1, (reach - -1.0) / -1.0)) : hunt ? -0.5 : -0.12 - Math.sin(t * 0.9 + a.s) * 0.04;
+      let swing = (me.state === 'kill' ? 0.9 : hunt ? 1.15 : 0.05) + ph * 0.3 * amp + (me.state === 'stun' ? 0 : Math.sin(t * 1.1 + a.s) * 0.04);
+      let bend = hunt ? 0.45 : 0.12 + Math.sin(t * 0.9 + a.s) * 0.04;
+      if (me.state === 'kill' && a.s === 1) {            // the bat arm: raised behind her head, brought down hard, twice
+        const u = batU(killT);
+        swing = 1.0 + 1.0 * u;                 // up beside her head ...
+        bend = 0.25 + 1.05 * u;                // ... with the forearm folded back, the bat cocked behind her
+      }
+      a.sh.rotation.set(a.s * Math.PI / 2, 0, swing);
+      a.el.rotation.set(0, a.s * bend, 0);
     }
-    m.bat.rotation.x = Math.PI - (me.state === 'kill' ? 0.1 : hunt ? 0.9 : 1.2);   // the bat follows the arm in the kill
+    m.bat.rotation.y = me.state === 'kill' ? 0.1 : hunt ? 0.75 : 1.15;                  // the bat follows the arm in the kill
     // the head cocks and twitches
     const tw = Math.sin(t * 2.3) * Math.sin(t * 0.7);
-    m.head.rotation.z = 0.16 + tw * 0.09 + (hunt ? 0.1 : 0);
-    m.head.rotation.x = 0.1 + Math.max(0, Math.sin(t * 5.1)) * Math.max(0, Math.sin(t * 0.37)) * 0.08;
-    m.neck.rotation.x = 0.18;
+    m.head.rotation.x = 0.12 + tw * 0.1 + (hunt ? 0.1 : 0);
+    m.head.rotation.z = -0.12 - (hunt ? 0.15 : 0) - Math.max(0, Math.sin(t * 5.1)) * Math.max(0, Math.sin(t * 0.37)) * 0.08;
   }
 
   return me;

@@ -67,7 +67,8 @@ const LEVELS = [
   },
   {
     name: 'Upper Floor', windows: 0.7, traps: 1,
-    roles: { P: 'bedroom', Q: 'bedroom', R: 'study', T: 'bedroom', U: 'hall', V: 'bedroom' },
+    roles: { P: 'bedroom', Q: 'bedroom', R: 'study', T: 'bedroom', U: 'hall', V: 'bathroom' },
+    looks: { V: { walls: [0, 6], floors: [6], tint: 0xeeeeee } },   // the bathroom: pale walls, tiles
     // the player starts in room P: [col, row] of the spawn cell, plus pieces fixed to a cell
     spawn: [1, 1],
     fixed: [{ item: 'roundtable', cell: [1, 0], vase: true }, { item: 'tablechairs', cell: [0, 1], turn: 1 }],
@@ -118,6 +119,26 @@ const TILE_W = 2.5, TILE_H = 4.2;             // world size one texture tile cov
 const SPAN = 2;                                // stair length in cells
 
 export const levelY = i => (i - GROUND) * WALL_H;
+const WALL_TINTS = [0xffffff, 0xffffff, 0xb4c8ac, 0xcc9e8e, 0xaeb8c8, 0xdcd0b8];   // plain, green, rust, blue-grey, cream
+let bloodMat = null;
+function bloodDecal() {
+  if (bloodMat) return bloodMat;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 256;
+  const g = cv.getContext('2d');
+  for (let i = 0; i < 38; i++) {
+    const a = Math.random() * Math.PI * 2, d = Math.random() * Math.random() * 90, r = 6 + Math.random() * 26 * (1 - d / 120);
+    const x = 128 + Math.cos(a) * d, y = 128 + Math.sin(a) * d, gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, 'rgba(96,6,6,.95)'); gr.addColorStop(.75, 'rgba(70,3,3,.9)'); gr.addColorStop(1, 'rgba(50,0,0,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  }
+  g.strokeStyle = 'rgba(80,4,4,.85)'; g.lineCap = 'round';
+  for (let i = 0; i < 9; i++) { const a = Math.random() * 6.28; g.lineWidth = 2 + Math.random() * 5; g.beginPath(); g.moveTo(128, 128); g.lineTo(128 + Math.cos(a) * (60 + Math.random() * 60), 128 + Math.sin(a) * (60 + Math.random() * 60)); g.stroke(); }
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  bloodMat = new THREE.MeshLambertMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  return bloodMat;
+}
 const COUNT = { wall: 10, floor: 10, window: 10, furniture: 1, door: 1 };
 
 export const stairs = STAIR_CELLS.map((s, k) => ({
@@ -322,7 +343,7 @@ export function buildHouse(renderer, seed = 1) {
     return plainCache.get(color);
   };
   const pal = {
-    body: fm(0xc8b8a4), dark2: fm(0x8a7e70), light: fm(0xf0e8dc),
+    body: fm(0xc8b8a4), dark2: fm(0x8a7e70), light: fm(0xf0e8dc), white: fm(0xf4f0ea), blood: plain(0x5e0a0a),
     cloth: fm(0xa89288), paper: fm(0xb09a78), dark: plain(0x161312), steel: fm(0x8c949a),
   };
 
@@ -479,9 +500,11 @@ export function buildHouse(renderer, seed = 1) {
     const ids = [...new Set(MAP.join(''))];
     const look = {};
     for (const id of ids) {
-      look[id] = { wall: tex.wall[pick(cfg.walls)], floor: tex.floor[pick(cfg.floors)], sx: 0, sz: 0, n: 0 };
+      const rc = cfg.looks?.[id] ?? {};
+      // each room gets its own wallpaper tint, like the colours of Granny's house
+      look[id] = { wall: tex.wall[pick(rc.walls ?? cfg.walls)], floor: tex.floor[pick(rc.floors ?? cfg.floors)], tint: rc.tint ?? pick(WALL_TINTS), sx: 0, sz: 0, n: 0 };
     }
-    const wallMat = id => (id ? mat(look[id].wall) : outside);
+    const wallMat = id => (id ? mat(look[id].wall, look[id].tint) : outside);
 
     // which wall edges exist: 'h' = on top of cell (c,r), 'v' = on its left
     const key = (dir, c, r) => `${dir}${c},${r}`;
@@ -549,6 +572,18 @@ export function buildHouse(renderer, seed = 1) {
       if (!floorHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(CELL, CELL), x, Y, z, -Math.PI / 2), mat(lk.floor));
       if (!ceilHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(CELL, CELL), x, Y + WALL_H, z, Math.PI / 2), mat(ceilTex, 0xaaaaaa));
       lk.sx += x; lk.sz += z; lk.n++;
+    }
+
+    // old blood on the floor, here and there
+    for (let n = 0; n < (level === GROUND ? 2 : 3); n++) {
+      const c = Math.floor(rand() * cols), r = Math.floor(rand() * rows), k = `${c},${r}`;
+      if (floorHole.has(k) || ceilHole.has(k)) continue;
+      const size = 0.9 + rand() * 1.2;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), bloodDecal());
+      m.rotation.set(-Math.PI / 2, 0, 0);
+      m.rotateZ(rand() * Math.PI * 2);
+      m.position.set((c + 0.2 + rand() * 0.6) * CELL, Y + 0.006, (r + 0.2 + rand() * 0.6) * CELL);
+      group.add(m);
     }
 
     // Each wall-junction square is owned by exactly one wall piece (west edge first,

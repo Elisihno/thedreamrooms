@@ -1305,7 +1305,7 @@ function frame() {
       const tx = hollow.x - player.pos.x, tz = hollow.z - player.pos.z;
       const hits = [0.74, 1.55];
       player.yaw += angleDiff(Math.atan2(-tx, -tz), player.yaw) * Math.min(1, dt * 9);
-      player.pitch += (0.3 - player.pitch) * Math.min(1, dt * 6);
+      player.pitch += (0.2 - player.pitch) * Math.min(1, dt * 6);
       f.hit = f.hit ?? 0;
       if (f.hit < 2 && k >= hits[f.hit]) { bloodHit(f.hit++); }
       if (!f.swung1 && k > 0.5) { f.swung1 = true; entitySound('swing', 1); }
