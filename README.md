@@ -4,7 +4,7 @@ Where Am I? In Heaven?
 
 ## Credits
 
-- Dread's body, face and legs are from the model **"Granny Animated FBX"** by **Mysis The Cat**
+- Nanny's body, face and legs are from the model **"Granny Animated FBX"** by **Mysis The Cat**
   (https://sketchfab.com/3d-models/granny-animated-fbx-894ee61618ef44fdb5fd6c9278433a8e), licensed
   [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). The mesh and textures were exported into
   `js/granny_data.js`, recoloured in code (darker gown, paler skin, black hair) and posed on a rig of our

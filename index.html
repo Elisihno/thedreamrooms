@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Dread</title>
+<title>Nanny</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Dread">
+<meta name="apple-mobile-web-app-title" content="Nanny">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="assets/icon.png">
@@ -49,7 +49,7 @@
   #drop { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 2; padding: 4px 26px; border: 0; background: none; color: #fff; font: 800 46px system-ui, sans-serif; letter-spacing: .14em; text-shadow: 0 2px 8px rgba(0,0,0,.9); cursor: pointer; }
   #drop[hidden] { display: none; }
   #start[hidden], #lidT[hidden], #lidB[hidden] { display: none; }
-  /* the title screen: the game name top left, Dread standing in the room, Play and Options */
+  /* the title screen: the game name top left, Nanny standing in the room, Play and Options */
   #start { position: fixed; inset: 0; z-index: 9; color: #e8e2d8; font-family: system-ui, sans-serif; pointer-events: none; }
   #start > * { pointer-events: auto; }
   #gameTitle { position: absolute; left: max(22px, env(safe-area-inset-left, 0px)); top: max(10px, env(safe-area-inset-top, 0px)); margin: 0; font: 400 clamp(46px, 12vw, 104px) Georgia, 'Times New Roman', serif; letter-spacing: .12em; text-transform: uppercase; color: #e6dfd2; text-shadow: 0 0 24px rgba(170,0,0,.6), 0 2px 0 #000; animation: titleflick 8s infinite; pointer-events: none; }
@@ -179,7 +179,7 @@
 <div id="keypad" hidden><div class="kp"><div id="kpDisplay">_ _ _ _</div><div id="kpMsg"></div><div id="kpGrid"></div></div></div>
 <div id="note" hidden><div class="noteCard"><img id="noteImg" alt="Sticky note"><p>Tap to put it away</p></div></div>
 <div id="start">
-  <h1 id="gameTitle">Dread</h1>
+  <h1 id="gameTitle">Nanny</h1>
   <nav id="menuMain"><button class="mbtn" id="btnPlay" type="button">Play</button><button class="mbtn" id="btnOptions" type="button">Options</button></nav>
   <section class="panel" id="opts" hidden>
     <h2>Options</h2>
@@ -187,7 +187,7 @@
     <label class="row"><span>Look speed</span><input type="range" id="oSens" min="40" max="220" step="5"><output id="oSensV"></output></label>
     <label class="row"><span>Volume</span><input type="range" id="oVol" min="0" max="100" step="5"><output id="oVolV"></output></label>
     <label class="row"><span>Fear meter</span><input type="checkbox" id="oFear"><span></span></label>
-    <p class="credit">Dread's body: "Granny Animated FBX" by Mysis The Cat (CC BY 4.0). The house layout is inspired by "Granny 1 House" by the same author.</p>
+    <p class="credit">Nanny's body: "Granny Animated FBX" by Mysis The Cat (CC BY 4.0). The house layout is inspired by "Granny 1 House" by the same author.</p>
     <div class="btns"><button class="pbtn" id="optBack" type="button">Back</button></div>
   </section>
   <section class="setup" id="mods" hidden>

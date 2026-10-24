@@ -118,8 +118,8 @@ function endWake() {
 // ---- settings (kept in the browser) -----------------------------------------------------------------
 const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 5, dread: true, pspeed: 100, dark: false, limp: false, quality: 'high', mode: 'medium', volume: 100 };
 const settings = { ...DEFAULTS };
-try { Object.assign(settings, JSON.parse(localStorage.getItem('dread.settings') || '{}')); } catch { /* storage may be blocked */ }
-const saveSettings = () => { try { localStorage.setItem('dread.settings', JSON.stringify(settings)); } catch { /* ignore */ } };
+try { Object.assign(settings, JSON.parse(localStorage.getItem('nanny.settings') ?? localStorage.getItem('dread.settings') ?? '{}')); } catch { /* storage may be blocked */ }
+const saveSettings = () => { try { localStorage.setItem('nanny.settings', JSON.stringify(settings)); } catch { /* ignore */ } };
 let paused = false;
 const title = { active: false, phase: 'idle', k: 0 };   // k: 0 looking at the room, 1 looking at the floor
 
@@ -506,7 +506,7 @@ function showWin(title, verb, kind = 'front') {
   heldView.show(null);
   if (kind !== 'dead') chime();
 }
-// a day is over (Dread got you, or you fell): the next one begins, or it was the last
+// a day is over (Nanny got you, or you fell): the next one begins, or it was the last
 function endDay() {
   escaped = true;
   dayEl.style.opacity = '1'; dayEl.hidden = false;
@@ -1009,12 +1009,12 @@ for (const [id, key] of CHECKS) $(id).addEventListener('change', () => {
   if (key === 'sound' && audio) (settings.sound ? audio.resume() : audio.suspend()).catch?.(() => {});
 });
 // the modes, Granny-style: you pick one on the floor and the game begins
-const MODES = {   // speed: Dread's, pspeed: yours, both as a percentage of the normal walking pace
+const MODES = {   // speed: Nanny's, pspeed: yours, both as a percentage of the normal walking pace
   easy:     { pspeed: 75,  speed: 65,  sense: 60,  grace: 50, batt: 200, days: 7, dread: true },
   medium:   { pspeed: 100, speed: 95,  sense: 100, grace: 25, batt: 100, days: 5, dread: true },
   hard:     { pspeed: 115, speed: 115, sense: 140, grace: 10, batt: 70,  days: 4, dread: true },
   extreme:  { pspeed: 120, speed: 135, sense: 200, grace: 0,  batt: 50,  days: 3, dread: true },
-  practice: { pspeed: 85,  speed: 100, sense: 100, grace: 25, batt: 100, days: 1, dread: false },   // no Dread, nothing to fear
+  practice: { pspeed: 85,  speed: 100, sense: 100, grace: 25, batt: 100, days: 1, dread: false },   // no Nanny, nothing to fear
 };
 refreshMenu();
 applyLook();
@@ -1036,11 +1036,11 @@ function beginGame(mode) {
 }
 $('btnContinue').addEventListener('click', () => beginGame(modeSel.value));
 const DESC = {
-  easy: ['Easy', ['Dread is slower than you.', 'The flashlight lasts twice as long.', 'You have 7 days to escape.']],
-  medium: ['Medium', ['Dread is a little slower than you.', 'You have 5 days to escape.', 'A quiet start: 25 seconds before she hunts.']],
-  hard: ['Hard', ['Dread is as fast as you.', 'She smells your fear from far away.', 'You have 4 days to escape.']],
-  extreme: ['Extreme', ['Dread Is Faster Than You.', 'She smells your fear from everywhere.', 'You have 3 days to escape.']],
-  practice: ['Practice', ['No Dread.', 'Nothing is hunting you.', 'Take your time and find the ways out.']],
+  easy: ['Easy', ['Nanny is slower than you.', 'The flashlight lasts twice as long.', 'You have 7 days to escape.']],
+  medium: ['Medium', ['Nanny is a little slower than you.', 'You have 5 days to escape.', 'A quiet start: 25 seconds before she hunts.']],
+  hard: ['Hard', ['Nanny is as fast as you.', 'She smells your fear from far away.', 'You have 4 days to escape.']],
+  extreme: ['Extreme', ['Nanny Is Faster Than You.', 'She smells your fear from everywhere.', 'You have 3 days to escape.']],
+  practice: ['Practice', ['No Nanny.', 'Nothing is hunting you.', 'Take your time and find the ways out.']],
 };
 // our own drop-down chooser (the phone's system one looks out of place)
 function chooser(id, options, onPick) {
@@ -1272,7 +1272,7 @@ function frame() {
     if (wake.t >= wake.dur) endWake();
   }
 
-  // the title screen: looking at Dread across the room; pressing Play tips the view down to the floor
+  // the title screen: looking at Nanny across the room; pressing Play tips the view down to the floor
   if (title.active) {
     const goal = title.phase === 'down' || title.phase === 'mods' ? 1 : 0;
     title.k += Math.sign(goal - title.k) * Math.min(Math.abs(goal - title.k), dt / 1.4);
@@ -1301,7 +1301,7 @@ function frame() {
       fadeEl.style.opacity = String(smooth(T + 0.05, T + 0.8, k));
       if (k > T + 1.8) { driving = null; endDay(); }
     } else if (f.kind === 'caught') {
-      // Dread raises her spiked bat and brings it down on you twice; blood runs down the screen
+      // Nanny raises her spiked bat and brings it down on you twice; blood runs down the screen
       const tx = hollow.x - player.pos.x, tz = hollow.z - player.pos.z;
       const hits = [0.74, 1.55];
       player.yaw += angleDiff(Math.atan2(-tx, -tz), player.yaw) * Math.min(1, dt * 9);

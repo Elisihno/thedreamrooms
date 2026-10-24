@@ -2,7 +2,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import { levelY } from './house.js';
 import { buildGranny } from './granny.js';
 
-export const ENTITY_NAME = 'Dread';
+export const ENTITY_NAME = 'Nanny';
 
 // ---- the body ---------------------------------------------------------------------------
 // A tall, thin, ashen figure in a torn gown. Its arms hang to its knees, its face is two
