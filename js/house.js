@@ -25,44 +25,45 @@ const LEVELS = [
     walls: [0, 1, 4, 6], floors: [1, 5, 6],
     map: [
       'AAAABBBBB',
-      'ASAABBBBB',
-      'ASAABBBBB',
-      'CCCCDDDEE',
-      'CCCCDDDEE',
+      'AAAABBBBB',
+      'AAAABBBBB',
+      'CCCSDDDEE',
+      'CCCSDDDEE',
       'CCCCDDDEE',
     ],
   },
   {
     name: 'Base Floor', windows: 0.7,
-    roles: { P: 'living', Q: 'dining', R: 'kitchen', T: 'living', U: 'hall', V: 'pantry', W: 'bedroom' },
-    // kitchen table in the kitchen, a rug and coffee table in each of the two living rooms
+    // the plan follows Granny's house: dining room and living room to the north, the kitchen in
+    // the south-west corner, the hall with the front door and both staircases in the middle
+    roles: { P: 'living', Q: 'dining', R: 'kitchen', T: 'living', U: 'hall' },
     fixed: [
-      { item: 'tablechairs', cell: [7, 1] },
-      { item: 'livingset', cell: [0, 0] },
-      { item: 'livingset', cell: [7, 2] },
-      // the kitchen: fridge on the east wall between the windows, units along the north and west walls
-      { item: 'fridge', cell: [8, 0], side: 'E', shift: 1.5 },
-      { item: 'counter', cell: [6, 0], side: 'W', shift: 0.7 },
-      { item: 'counter', cell: [6, 0], side: 'W', shift: -0.7 },
-      { item: 'counter', cell: [6, 0], side: 'N', shift: -0.05 },
-      { item: 'cuttingboard', cell: [6, 0], side: 'N', shift: -0.05 },
-      { item: 'microcounter', cell: [6, 0], side: 'N', shift: 1.1 },
-      { item: 'kitchendrawers', cell: [7, 0], side: 'N', shift: -0.8 },
-      { item: 'stove', cell: [7, 0], side: 'N', shift: 0.3 },
-      { item: 'counter', cell: [7, 0], side: 'N', shift: 1.45 },
-      { item: 'counter', cell: [8, 0], side: 'N', shift: -0.4 },
-      { item: 'kitchendrawers', cell: [8, 0], side: 'N', shift: 0.7 },
+      { item: 'tablechairs', cell: [1, 4] },     // the kitchen table
+      { item: 'livingset', cell: [6, 1] },
+      { item: 'livingset', cell: [7, 4] },
+      // the kitchen: fridge on the outer west wall, units along the south and east walls
+      { item: 'fridge', cell: [0, 5], side: 'W', shift: -1.5 },
+      { item: 'counter', cell: [2, 5], side: 'E', shift: -0.7 },
+      { item: 'counter', cell: [2, 5], side: 'E', shift: 0.7 },
+      { item: 'counter', cell: [2, 5], side: 'S', shift: 0.05 },
+      { item: 'cuttingboard', cell: [2, 5], side: 'S', shift: 0.05 },
+      { item: 'microcounter', cell: [2, 5], side: 'S', shift: -1.1 },
+      { item: 'kitchendrawers', cell: [1, 5], side: 'S', shift: 0.8 },
+      { item: 'stove', cell: [1, 5], side: 'S', shift: -0.3 },
+      { item: 'counter', cell: [1, 5], side: 'S', shift: -1.45 },
+      { item: 'counter', cell: [0, 5], side: 'S', shift: 0.4 },
+      { item: 'kitchendrawers', cell: [0, 5], side: 'S', shift: -0.7 },
     ],
     // the front door, in the south wall of the hall: three padlocks
     exits: [{ id: 'front', edge: ['h', 4, 6], style: 'wood', locks: [['code', 1.85], ['padlock', 1.5], ['padlock', 1.1], ['padlock', 0.7]] }],
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
-      'PPPQQQRRR',
-      'PPPQQQRRR',
-      'PPPQQQTTT',
-      'PPPUSUTTT',
-      'VVVUSUWWW',
-      'VVVUUUWWW',
+      'QQQQQPPPP',
+      'QQQQQPPPP',
+      'QQQQQPPPP',
+      'RRRUUSTTT',
+      'RRRUUSTTT',
+      'RRRUUUTTT',
     ],
   },
   {
@@ -76,9 +77,9 @@ const LEVELS = [
     guarantee: [{ item: 'trashcan', cells: [[2, 2], [0, 2], [2, 0], [0, 0]] }],
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
     map: [
-      'PPPQQQRRR',
-      'PPPQQQRSR',
-      'PPPQQQRSR',
+      'PPPPPQQQR',
+      'PPPPPQQSR',
+      'PPPPPQQSR',
       'VVVUUUTTT',
       'VVVUUUTTT',
       'VVVUUUTTT',
@@ -105,8 +106,8 @@ export const GROUND = 1; // index of the Base Floor
 
 // stairs[k] climbs from LEVELS[k] to LEVELS[k+1], running south (+z)
 const STAIR_CELLS = [
-  { col: 1, row: 1 },
-  { col: 4, row: 3 },
+  { col: 3, row: 3 },   // basement to ground: in the hall, left of the front door
+  { col: 5, row: 3 },   // ground to upper floor: in the hall, right of the front door
   { col: 7, row: 1 },
 ];
 
@@ -516,7 +517,10 @@ export function buildHouse(renderer, seed = 1) {
     // wall edges that hand-placed furniture stands against must never get a doorway
     const reserved = new Set();
     // a doorway must not open straight onto the hole where the stairs come up
-    if (down) reserved.add(key('h', down.col, down.row));
+    if (down) {
+      reserved.add(key('h', down.col, down.row));
+      for (const rr of [down.row, down.row + 1]) { reserved.add(key('v', down.col, rr)); reserved.add(key('v', down.col + 1, rr)); }
+    }
     for (const f of cfg.fixed ?? []) {
       const [c, r] = f.cell;
       if (!f.side) { // a free-standing set (table and chairs) must not stand in front of any doorway of its cell
