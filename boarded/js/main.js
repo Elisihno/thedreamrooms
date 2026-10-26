@@ -188,13 +188,14 @@ addEventListener('keyup', (e) => {
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') input.run = false;
 });
 addEventListener('mousemove', (e) => {
-  if (document.pointerLockElement !== canvas) return;
+  // without pointer lock (some embeds refuse it) dragging with the left button looks around
+  if (document.pointerLockElement !== canvas && !(e.buttons & 1)) return;
   player.yaw -= e.movementX * 0.0022;
   player.pitch = Math.max(-1.3, Math.min(1.3, player.pitch - e.movementY * 0.0022));
 });
 canvas.addEventListener('mousedown', (e) => {
   if (e.button !== 0) return;
-  if (document.pointerLockElement !== canvas) { requestLock(); return; }
+  if (document.pointerLockElement !== canvas) { requestLock(); if (!isTouch) return; }
   input.act = true; input.actPressed = true;
 });
 addEventListener('mouseup', (e) => { if (e.button === 0) input.act = false; });
