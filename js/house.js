@@ -91,25 +91,29 @@ const LEVELS = [
     rooms: [
       { id: 'A', x: [-19.7, 0.5], z: [-12.75, -1.65] },     // the big bedroom: you start here
       { id: 'C', x: [0.5, 3.6], z: [-12.75, -1.65] },       // the narrow stairs to the attic
-      { id: 'B', x: [3.6, 20.85], z: [-12.75, -1.65] },     // Nanny's bedroom
+      { id: 'B', x: [3.6, 15.35], z: [-12.75, -1.65] },     // Nanny's bedroom
+      { id: 'B', x: [15.35, 20.85], z: [-8.0, -1.65] },
+      { id: 'W', x: [15.35, 20.85], z: [-12.75, -8.0] },    // the walk-in closet
       { id: 'D', x: [-19.7, -6.25], z: [-1.65, 14.05] },    // the bathroom
       { id: 'L', x: [-6.25, 7.35], z: [-1.65, 14.05] },     // the landing, with the stairs
       { id: 'F', x: [7.35, 20.85], z: [-1.65, 14.05] },     // the kids room
     ],
-    doors: [['x', -1.65, -3.1, 0.5], ['x', -1.65, 1.2, 2.9], ['x', -1.65, 4.6, 7.0], ['z', -6.25, -1.65, 2.0], ['z', 7.35, 9.6, 13.0], ['x', -1.65, 13.0, 16.8]],
-    roles: { A: 'bedroom', B: 'bedroom', C: 'closet', D: 'bathroom', L: 'hall', F: 'kids' },
+    doors: [['x', -1.65, -3.1, 0.5], ['x', -1.65, 1.2, 2.9], ['x', -1.65, 4.6, 7.0], ['z', -6.25, -1.65, 2.0], ['z', 7.35, 9.6, 13.0], ['x', -1.65, 16.4, 19.4], ['x', -8.0, 16.4, 19.4]],
+    roles: { A: 'bedroom', B: 'bedroom', W: 'closet', C: 'closet', D: 'bathroom', L: 'hall', F: 'kids' },
     looks: { D: { walls: [0, 6], floors: [6], tint: 0xeeeeee } },   // the bathroom: pale walls, tiles
     spawnAt: [-10.0, -3.0],
     fixed: [
-      { item: 'roundtable', at: [-14.5, -8.0], turn: 0, vase: true }, { item: 'drawers', side: 'S', at: [-6.0, -1.65] },
-      { item: 'drawers', side: 'N', at: [16.5, -12.75] },
+      { item: 'roundtable', at: [-15.5, -4.2], turn: 0, vase: true }, { item: 'drawers', side: 'S', at: [-6.0, -1.65] },   // the table: the west side of the room, in front of the bed, across from the wardrobe
+      { item: 'wardrobe', side: 'N', at: [16.9, -12.75] }, { item: 'wardrobe', side: 'N', at: [19.4, -12.75] },   // the walk-in closet: two wardrobes, shelves, a chest and drawers
+      { item: 'shelves', side: 'E', at: [20.85, -10.4] }, { item: 'drawers', side: 'W', at: [15.35, -10.4] },
       { item: 'toybox', side: 'S', at: [14.0, 14.05] }, { item: 'smalltable', at: [13.0, 8.0], turn: 0 },
       { item: 'drawers', side: 'W', at: [-6.25, 10.0] },
     ],
     granny: ['A', 'B', 'D', 'F', 'L'],   // her bathroom, her dressers and wardrobes
     grannyCopies: [   // her beds: yours against the north wall of the start bedroom (head to the wall), Nanny's in the big bedroom
       { from: [-19.7, -16.0, -9.5, -1.8], at: [-10.0, -8.85], turn: 2, moved: true, bed: 0.62, hide: 0.26 },
-      { from: [0.8, 8.4, -12.7, -9.0], at: [12.0, -10.85], turn: 0, moved: true, hide: 0.26 },
+      { from: [0.8, 8.4, -12.7, -9.0], at: [10.8, -10.85], turn: 0, moved: true, hide: 0.26 },
+      { from: [-12.5, -6.8, -4.6, -1.9], at: [18.0, -4.6], turn: 0, moved: true },   // her low table, on the east side across from the wardrobes
     ],
     guarantee: [{ item: 'trashcan', room: 'A' }],   // the trash can stands against a wall of the start bedroom
     furnishing: {},
@@ -1073,7 +1077,9 @@ export function buildHouse(renderer, seed = 1) {
           const [fl, mi, vs, vc, is, tc, x0, x1, y0, y1, z0, z1] = piece;
           if (fl !== level || moved.has(pi) || !cfg.granny) return;
           const rect = toWorld(x0, x1, z0, z1);
-          const shrunk = { minX: rect.minX + 0.04, maxX: rect.maxX - 0.04, minZ: rect.minZ + 0.04, maxZ: rect.maxZ - 0.04 };
+          if (y0 > 3.0 && y1 - y0 < 1.0) return;   // a curtain rail or a shelf edge hanging in mid-air
+          const shrunk = { minX: rect.minX + 0.15, maxX: rect.maxX - 0.15, minZ: rect.minZ + 0.15, maxZ: rect.maxZ - 0.15 };   // a little overhang into a wall is hidden by the wall
+          if (shrunk.minX >= shrunk.maxX || shrunk.minZ >= shrunk.maxZ) { shrunk.minX = shrunk.maxX = (rect.minX + rect.maxX) / 2; shrunk.minZ = shrunk.maxZ = (rect.minZ + rect.maxZ) / 2; }
           const corners = [[shrunk.minX, shrunk.minZ], [shrunk.maxX, shrunk.minZ], [shrunk.minX, shrunk.maxZ], [shrunk.maxX, shrunk.maxZ]];
           const room = roomAt(...corners[0]);
           if (!room || !cfg.granny.includes(room) || !corners.every(([x, z]) => roomAt(x, z) === room)) return;
@@ -1082,6 +1088,7 @@ export function buildHouse(renderer, seed = 1) {
           if (keep.some(o => hits(fit, o)) || ((tall || flat) && furn.some(o => hits(fit, o)))) return;
           if (tall) { const col = { ...rect, level }; colliders.push(col); furn.push(col); }
           add(mi, [vs, vc, is, tc, null]);
+          if (location.hash.includes('gfdbg')) console.log('GF', level, pi, room, 'x', x0, x1, 'y', y0, y1, 'z', z0, z1, 'tris', tc);
         });
         for (const [mi, list] of byMat) {
           let nv = 0, ni = 0;
