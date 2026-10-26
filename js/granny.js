@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import data from './nanny_data.js';
 
-// Nanny's body: the Meshy model "The Hollow Granny", coloured by region and skinned to seven bones
+// Nanny's body: the Meshy model "The Hollow Granny" with its own texture, skinned to seven bones
 // (hip, torso, head, two arms, two legs). The left arm carries the spiked bat, so swinging that
 // bone swings the bat. Everything is in the mesh's own units (+z forward, +y up, 50 high) and
 // scaled down at the end. The pose is set from code each frame (see animate() in entity.js).
@@ -14,12 +14,18 @@ function geometry() {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(f32(data.pos), 3));
   g.setAttribute('normal', new THREE.BufferAttribute(f32(data.nor), 3));
-  g.setAttribute('color', new THREE.BufferAttribute(bytes(data.col), 3, true));
+  g.setAttribute('uv', new THREE.BufferAttribute(f32(data.uv), 2));
   g.setAttribute('skinIndex', new THREE.BufferAttribute(bytes(data.si), 4));
   g.setAttribute('skinWeight', new THREE.BufferAttribute(bytes(data.sw), 4, true));
   g.setIndex(new THREE.BufferAttribute(u16(data.idx), 1));
   return g;
 }
+
+let skinTex = null;
+const skin = () => {   // Meshy's own texture, shared by every Nanny
+  if (!skinTex) { skinTex = new THREE.TextureLoader().load(globalThis.__DR_TEX?.nanny ?? 'assets/textures/nanny.jpg'); skinTex.colorSpace = THREE.SRGBColorSpace; skinTex.anisotropy = 4; }
+  return skinTex;
+};
 
 export function buildGranny() {
   const SCALE = 1.7 / data.height;
@@ -42,7 +48,7 @@ export function buildGranny() {
   const [hip, torso, head, armL, armR, legL, legR] = bones;
   holder.add(hip);
 
-  const mesh = new THREE.SkinnedMesh(geometry(), new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x120a0c, side: THREE.DoubleSide }));
+  const mesh = new THREE.SkinnedMesh(geometry(), new THREE.MeshLambertMaterial({ map: skin(), emissive: 0x0c0708, side: THREE.DoubleSide }));
   mesh.frustumCulled = false;
   holder.add(mesh);
   holder.updateMatrixWorld(true);
