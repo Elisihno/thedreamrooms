@@ -601,21 +601,27 @@ function buildTuck() {
     const f = (d - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]), a = pts[i - 1], b = pts[i];
     return { x: a.x + (b.x - a.x) * f, z: a.z + (b.z - a.z) * f, y: a.y + (b.y - a.y) * f, level: f > 0.5 ? b.level : a.level };
   };
-  // doors along the way are already open
-  const opened = [];
-  for (let d = 0; d <= len; d += 0.4) {
-    const p = sample(d);
-    for (const rd of house.roomDoors) {
-      if (rd.open || rd.level !== p.level) continue;
-      const cx = rd.axis === 'x' ? rd.mid : rd.f, cz = rd.axis === 'x' ? rd.f : rd.mid;
-      if (Math.hypot(cx - p.x, cz - p.z) < 1.5) { house.openDoorFor(rd, sample(d - 1), true); opened.push(rd); }
+  // the doors on the way stay shut: she slows, reaches out and opens each one (see tuckFrame)
+  const doorsOnPath = [];
+  for (const rd of house.roomDoors) {
+    if (rd.open) continue;
+    const cx = rd.axis === 'x' ? rd.mid : rd.f, cz = rd.axis === 'x' ? rd.f : rd.mid;
+    let best = null;
+    for (let d = 0; d <= len; d += 0.2) {
+      const p = sample(d);
+      if (p.level !== rd.level) continue;
+      const dist = Math.hypot(cx - p.x, cz - p.z);
+      if (dist < 1.0 && (!best || dist < best.dist)) best = { d, dist };
     }
+    if (best) doorsOnPath.push({ door: rd, d: best.d, done: false });
   }
+  doorsOnPath.sort((a, b) => a.d - b.d);
+  const opened = [];
   const bed = house.bed ?? (sp => ({ x: sp.x, z: sp.z, halfLen: 0.98, halfWid: 0.75, topY: 0.72 }))(house.hideSpots.filter(h => h.level === house.spawnLevel && h.eye < 0.3).sort((a, b) => Math.hypot(a.x - house.spawn.x, a.z - house.spawn.z) - Math.hypot(b.x - house.spawn.x, b.z - house.spawn.z))[0]);
   // the bedroom door she will leave by: the nearest door on that floor
   const exitDoor = house.roomDoors.filter(d => d.level === house.spawnLevel).sort((a, b) => Math.hypot((a.axis === 'x' ? a.mid : a.f) - bed.x, (a.axis === 'x' ? a.f : a.mid) - bed.z) - Math.hypot((b.axis === 'x' ? b.mid : b.f) - bed.x, (b.axis === 'x' ? b.f : b.mid) - bed.z))[0];
   const doorAt = exitDoor ? { x: exitDoor.axis === 'x' ? exitDoor.mid : exitDoor.f, z: exitDoor.axis === 'x' ? exitDoor.f : exitDoor.mid } : { x: bed.x, z: bed.z + 4 };
-  return { len, sample, bed, opened, doorAt, vmax: 1.45 };
+  return { len, sample, bed, opened, doors: doorsOnPath, doorAt, vmax: 1.45 };
 }
 function startTuck() {
   initAudio();
@@ -671,7 +677,15 @@ function tuckFrame(f, dt, t) {
   if (f.arrive === null) {
     const here = P.sample(f.s), ahead = P.sample(f.s + 0.6), steep = Math.abs(ahead.y - here.y) > 0.05;
     const remain = P.len - f.s;
-    const want = k < 1.2 ? 0 : D * (steep ? 0.7 : 1) * easeIO(Math.min(1, (k - 1.2) / 1.6)) * (0.18 + 0.82 * easeIO(Math.min(1, remain / 2.4)));
+    // a shut door ahead: slow down, reach out and push it open
+    let slow = 1;
+    const nd = P.doors.find(x => !x.done);
+    if (nd) {
+      const gap = nd.d - f.s;
+      if (gap < 2.1) slow = 0.3 + 0.7 * smooth(0.5, 1.9, gap);
+      if (gap < 1.3) { nd.done = true; house.openDoorFor(nd.door, P.sample(Math.max(0, nd.d - 1.6)), false); P.opened.push(nd.door); }
+    }
+    const want = k < 1.2 ? 0 : D * (steep ? 0.7 : 1) * slow * easeIO(Math.min(1, (k - 1.2) / 1.6)) * (0.18 + 0.82 * easeIO(Math.min(1, remain / 2.4)));
     f.v += (want - f.v) * damp(4, dt);
     f.s = Math.min(P.len, f.s + f.v * dt);
     if (P.len - f.s < 0.03) { f.arrive = k; f.v = 0; }
