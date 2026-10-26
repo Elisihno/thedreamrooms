@@ -146,11 +146,7 @@
   .slot span { position: absolute; right: 3px; bottom: 1px; color: #fff; font: 700 12px system-ui, sans-serif; }
   #toast { position: fixed; left: 0; right: 0; bottom: 84px; text-align: center; color: #fff; font: 600 14px system-ui, sans-serif; pointer-events: none; }
   #toast[hidden] { display: none; }
-  /* fear: a thin red bar top left and a heartbeat glow at the screen edges */
-  #fear { position: fixed; z-index: 2; left: 16px; top: 16px; width: 110px; pointer-events: none; font: 700 11px system-ui, sans-serif; letter-spacing: .16em; color: rgba(255,255,255,.7); }
-  #fear i { display: block; margin-top: 4px; height: 5px; background: rgba(255,255,255,.14); }
-  #fear b { display: block; height: 100%; width: 0; background: #b3261a; }
-  #fear[hidden] { display: none; }
+  /* fear: a heartbeat glow at the screen edges */
   #fearV { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(120,0,0,0) 45%, rgba(120,0,0,.75) 100%); }
   #win.dead { background: radial-gradient(ellipse at 50% 40%, #2a0505, #000 80%); color: #e9c4c0; }
   #day { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; text-align: center; align-items: center; justify-content: center; background: #000; color: #d8d2c8; font: 300 clamp(34px, 9vw, 72px) Georgia, 'Times New Roman', serif; letter-spacing: .3em; text-transform: uppercase; transition: opacity 1.4s; pointer-events: none; }
@@ -161,7 +157,6 @@
 </head>
 <body>
 <div id="hide"></div>
-<div id="fear" hidden>FEAR<i><b id="fearFill"></b></i></div>
 <div id="fearV"></div>
 <div id="day" hidden></div>
 <canvas id="splash" hidden></canvas>
@@ -187,7 +182,6 @@
     <label class="row"><span>Sound</span><input type="checkbox" id="oSound"><span></span></label>
     <label class="row"><span>Look speed</span><input type="range" id="oSens" min="40" max="220" step="5"><output id="oSensV"></output></label>
     <label class="row"><span>Volume</span><input type="range" id="oVol" min="0" max="100" step="5"><output id="oVolV"></output></label>
-    <label class="row"><span>Fear meter</span><input type="checkbox" id="oFear"><span></span></label>
     <p class="credit">Nanny's body: "Granny All Parts Mesh" (Sketchfab). The cellar, ground and upper floor plans follow "Granny 1 House" by Mysis The Cat (CC BY 4.0).</p>
     <div class="btns"><button class="pbtn" id="optBack" type="button">Back</button></div>
   </section>
@@ -197,7 +191,6 @@
       <div id="sMode"></div></div>
     <div class="checks">
       <label><span>Darker</span><input type="checkbox" id="sDark"></label>
-      <label><span>Fear meter</span><input type="checkbox" id="sFear"></label>
       <label><span>Limping</span><input type="checkbox" id="sLimp"></label>
       <label><span>Music</span><input type="checkbox" id="sSound"></label>
     </div>

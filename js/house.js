@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
+import grannyFurniture from './granny_furniture.js';
 import { ITEMS, ROLE_ITEMS, buildMannequin } from './furniture.js';
 import { makeApple } from './apple.js';
 import { makeVase } from './vase.js';
@@ -43,11 +44,9 @@ const LEVELS = [
     fixed: [
       { item: 'circuitbox', side: 'N', at: [0.5, -8.35] },
       { item: 'scrap', at: [-6.0, 6.5], turn: 0 }, { item: 'scrap', at: [7.2, 7.8], turn: 1 }, { item: 'scrap', at: [-2.0, 8.2], turn: 0 },
-      { item: 'shelves', side: 'N', at: [-5.5, -8.35] }, { item: 'shelves', side: 'N', at: [4.5, -8.35] },
-      { item: 'boiler', side: 'W', at: [-8.4, -3.0] },
       { item: 'chest', side: 'W', at: [-14.5, 3.5] },       // in the hidden room
-      { item: 'barrel', side: 'W', at: [-14.5, 7.0] },
     ],
+    granny: ['B'],        // Granny's cellar furniture, wherever it fits
     // crates you shove by walking into them (model units, size in metres): the first one hides the doorway
     pushBoxes: [{ at: [-6.9, 4.5], size: 0.95 }, { at: [-6.9, 8.0], size: 0.9 }, { at: [-5.1, 8.6], size: 0.8 }],
     walls: [0, 1, 4, 6], floors: [1, 5, 6],
@@ -71,31 +70,15 @@ const LEVELS = [
       { id: 'window', at: ['z', -19.7, 2.0, 5.0], width: 1.4, style: 'window', locks: [['padlock', 1.6], ['padlock', 0.9]] },   // the kitchen window: a way out too
     ],
     fixed: [
-      // the kitchen: a run of units along the north wall, the fridge and more along the west wall, a table with its chairs
-      { item: 'counter', side: 'N', at: [-18.4, -1.65] },
-      { item: 'cuttingboard', side: 'N', at: [-18.4, -1.65] },
-      { item: 'microcounter', side: 'N', at: [-16.2, -1.65] },
-      { item: 'stove', side: 'N', at: [-14.1, -1.65] },
-      { item: 'kitchendrawers', side: 'N', at: [-12.0, -1.65] },
-      { item: 'fridge', side: 'W', at: [-19.7, 11.8] },
-      { item: 'counter', side: 'W', at: [-19.7, 9.7] },
-      { item: 'kitchendrawers', side: 'W', at: [-19.7, 7.7] },
-      { item: 'tablechairs', at: [-12.5, 6.4], turn: 0 },
-      // the dining room: a long table in the middle, a sideboard and a clock
-      { item: 'tablechairs', at: [-13.0, -7.2], turn: 0 }, { item: 'drawers', side: 'N', at: [-13.0, -12.75] },
-      { item: 'bookshelf', side: 'W', at: [-19.7, -5.0] },
-      // living room one: the sofa facing the fireplace
-      { item: 'fireplace', side: 'N', at: [0.5, -12.75] }, { item: 'livingset', at: [0.5, -7.0], turn: 2 },
-      { item: 'armchair', side: 'E', at: [7.35, -4.0] }, { item: 'bookshelf', side: 'S', at: [-3.0, -1.65] },
-      // living room two: the television
-      { item: 'tvunit', side: 'N', at: [14.0, -12.75] }, { item: 'sofa', at: [14.0, -6.5], turn: 2 },
-      { item: 'bookshelf', side: 'E', at: [20.85, -9.0] }, { item: 'drawers', side: 'S', at: [18.0, -1.65] },
-      // the hall
-      { item: 'grandclock', side: 'N', at: [0.5, -1.65] }, { item: 'drawers', side: 'E', at: [7.35, 5.0] },
-      // the kids room
+      // what we keep by hand because things are found in it: the fridge, a counter with its board, drawers
+      { item: 'fridge', side: 'W', at: [-19.7, 11.8] }, { item: 'kitchendrawers', side: 'W', at: [-19.7, 7.7] },
+      { item: 'counter', side: 'N', at: [-18.4, -1.65] }, { item: 'cuttingboard', side: 'N', at: [-18.4, -1.65] },
+      { item: 'drawers', side: 'N', at: [-13.0, -12.75] }, { item: 'drawers', side: 'S', at: [-3.0, -1.65] }, { item: 'drawers', side: 'S', at: [18.0, -1.65] },
+      // the kids room, which Granny never had
       { item: 'kidsbed', side: 'E', at: [20.85, 3.0] }, { item: 'toybox', side: 'N', at: [14.0, -1.65] },
       { item: 'smalltable', at: [13.0, 7.0], turn: 0 }, { item: 'drawers', side: 'S', at: [14.0, 14.05] },
     ],
+    granny: ['D', 'N', 'M', 'K', 'H'],   // Granny's furniture fills these rooms
     furnishing: {},
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
   },
@@ -115,13 +98,13 @@ const LEVELS = [
     spawnAt: [-10.0, -6.0],
     fixed: [
       { item: 'roundtable', at: [-14.5, -8.0], turn: 0, vase: true }, { item: 'bed', side: 'N', at: [-10.0, -12.75] },   // your bed: Nanny tucks you in here
-      { item: 'nightstand', side: 'N', at: [-7.6, -12.75] }, { item: 'wardrobe', side: 'W', at: [-19.7, -4.0] }, { item: 'drawers', side: 'S', at: [-6.0, -1.65] },
-      { item: 'bed', side: 'N', at: [12.0, -12.75] }, { item: 'nightstand', side: 'N', at: [9.6, -12.75] }, { item: 'wardrobe', side: 'E', at: [20.85, -8.0] },
-      { item: 'drawers', side: 'N', at: [16.5, -12.75] }, { item: 'bookshelf', side: 'S', at: [14.0, -1.65] },
+      { item: 'nightstand', side: 'N', at: [-7.6, -12.75] }, { item: 'drawers', side: 'S', at: [-6.0, -1.65] },
+      { item: 'drawers', side: 'N', at: [16.5, -12.75] },
       { item: 'bathtub', side: 'N', at: [-17.0, -1.65] }, { item: 'toilet', side: 'W', at: [-19.7, 6.0] }, { item: 'sink', side: 'W', at: [-19.7, 10.0] },
       { item: 'kidsbed', side: 'E', at: [20.85, 6.0] }, { item: 'toybox', side: 'S', at: [14.0, 14.05] }, { item: 'smalltable', at: [13.0, 8.0], turn: 0 },
       { item: 'drawers', side: 'W', at: [-6.25, 10.0] },
     ],
+    granny: ['A', 'B'],
     guarantee: [{ item: 'trashcan', room: 'A' }],   // the trash can stands against a wall of the start bedroom
     furnishing: {},
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
@@ -206,6 +189,22 @@ export const stairs = STAIR_DEFS.map((d, k) => {
   const zb = mz(d.bottom), zt = mz(d.top);
   return { from: k, x0: mx(d.x[0]), x1: mx(d.x[1]), zb, zt, z0: Math.min(zb, zt), z1: Math.max(zb, zt), dir: Math.sign(zt - zb), rise: WALL_H };
 });
+
+// Granny's furniture, cut into pieces: each is placed only where it fits one of our rooms and clears our own pieces
+const gfBytes = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
+const GF = {
+  pos: new Float32Array(gfBytes(grannyFurniture.pos).buffer), nor: new Float32Array(gfBytes(grannyFurniture.nor).buffer),
+  uv: new Float32Array(gfBytes(grannyFurniture.uv).buffer), idx: new Uint16Array(gfBytes(grannyFurniture.idx).buffer),
+};
+const gfMats = new Map();
+function gfMaterial(i) {
+  if (!gfMats.has(i)) {
+    const t = new THREE.TextureLoader().load(`assets/textures/${grannyFurniture.mats[i]}`);
+    t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false;   // glTF UVs start at the top left
+    gfMats.set(i, new THREE.MeshLambertMaterial({ map: t, side: THREE.DoubleSide, color: 0xb0aaa4 }));
+  }
+  return gfMats.get(i);
+}
 
 let dummyTex = null;
 function dummyTexture() {
@@ -1031,6 +1030,49 @@ export function buildHouse(renderer, seed = 1) {
         if (!spots.length) { doorLog.missing = (doorLog.missing ?? []).concat(g.item); continue; }
         const [base, ang] = pick(spots);
         placeItem(fb, ITEMS[g.item], base, ang);
+      }
+
+      // Granny's own furniture fills what is left: a piece is used when it sits wholly inside one of the
+      // listed rooms and clears the doorways, the stairs and the pieces we placed by hand
+      if (cfg.granny) {
+        const byMat = new Map();
+        for (const [fl, mi, vs, vc, is, tc, x0, x1, y0, y1, z0, z1] of grannyFurniture.pieces) {
+          if (fl !== level) continue;
+          const rect = { minX: (x0 - MX) * SH, maxX: (x1 - MX) * SH, minZ: (z0 - MZ) * SH, maxZ: (z1 - MZ) * SH };
+          const shrunk = { minX: rect.minX + 0.04, maxX: rect.maxX - 0.04, minZ: rect.minZ + 0.04, maxZ: rect.maxZ - 0.04 };
+          const corners = [[shrunk.minX, shrunk.minZ], [shrunk.maxX, shrunk.minZ], [shrunk.minX, shrunk.maxZ], [shrunk.maxX, shrunk.maxZ]];
+          const room = roomAt(...corners[0]);
+          if (!room || !cfg.granny.includes(room) || !corners.every(([x, z]) => roomAt(x, z) === room)) continue;
+          const tall = (y1 - y0) * SH > 0.35 && (x1 - x0) * SH > 0.12 && (z1 - z0) * SH > 0.12;
+          const fit = { minX: rect.minX - 0.08, maxX: rect.maxX + 0.08, minZ: rect.minZ - 0.08, maxZ: rect.maxZ + 0.08 };
+          if (keep.some(o => hits(fit, o)) || (tall && furn.some(o => hits(fit, o)))) continue;
+          if (tall) { const col = { ...rect, level }; colliders.push(col); furn.push(col); }
+          if (!byMat.has(mi)) byMat.set(mi, []);
+          byMat.get(mi).push([vs, vc, is, tc]);
+        }
+        for (const [mi, list] of byMat) {
+          let nv = 0, ni = 0;
+          for (const [, vc, , tc] of list) { nv += vc; ni += tc * 3; }
+          const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(ni);
+          let vo = 0, io = 0;
+          for (const [vs, vc, is, tc] of list) {
+            for (let k = 0; k < vc; k++) {
+              pos[(vo + k) * 3] = (GF.pos[(vs + k) * 3] - MX) * SH;
+              pos[(vo + k) * 3 + 1] = Y + GF.pos[(vs + k) * 3 + 1] * SH;
+              pos[(vo + k) * 3 + 2] = (GF.pos[(vs + k) * 3 + 2] - MZ) * SH;
+              nor.set(GF.nor.subarray((vs + k) * 3, (vs + k) * 3 + 3), (vo + k) * 3);
+              uv.set(GF.uv.subarray((vs + k) * 2, (vs + k) * 2 + 2), (vo + k) * 2);
+            }
+            for (let k = 0; k < tc * 3; k++) idx[io + k] = GF.idx[is + k] + vo;
+            vo += vc; io += tc * 3;
+          }
+          const g = new THREE.BufferGeometry();
+          g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+          g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+          g.setIndex(new THREE.BufferAttribute(idx, 1));
+          group.add(new THREE.Mesh(g, gfMaterial(mi)));
+        }
       }
 
       for (const [id, names] of Object.entries(cfg.furnishing ?? {})) {

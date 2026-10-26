@@ -117,7 +117,7 @@ function endWake() {
   showToast('Where am I?', 2600);
 }
 // ---- settings (kept in the browser) -----------------------------------------------------------------
-const DEFAULTS = { sound: true, sens: 100, fear: true, speed: 100, sense: 100, grace: 25, batt: 100, days: 5, dread: true, pspeed: 100, dark: false, limp: false, quality: 'high', mode: 'medium', volume: 100 };
+const DEFAULTS = { sound: true, sens: 100, speed: 100, sense: 100, grace: 25, batt: 100, days: 5, dread: true, pspeed: 100, dark: false, limp: false, quality: 'high', mode: 'medium', volume: 100 };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('nanny.settings') ?? localStorage.getItem('dread.settings') ?? '{}')); } catch { /* storage may be blocked */ }
 const saveSettings = () => { try { localStorage.setItem('nanny.settings', JSON.stringify(settings)); } catch { /* ignore */ } };
@@ -1226,7 +1226,7 @@ window.__hollow = hollow;
 // ---- the menu --------------------------------------------------------------------------------------
 const $ = id => document.getElementById(id);
 const FIELDS = [['oSens', 'sens', v => v + '%'], ['oVol', 'volume', v => v + '%'], ['pVol', 'volume', v => v + '%']];
-const CHECKS = [['oSound', 'sound'], ['oFear', 'fear'], ['sSound', 'sound'], ['sFear', 'fear'], ['sDark', 'dark'], ['sLimp', 'limp']];
+const CHECKS = [['oSound', 'sound'], ['sSound', 'sound'], ['sDark', 'dark'], ['sLimp', 'limp']];
 function refreshMenu() {
   for (const [id, key, fmt] of FIELDS) { $(id).value = settings[key]; $(id + 'V').textContent = fmt(settings[key]); }
   for (const [id, key] of CHECKS) $(id).checked = !!settings[key];
@@ -1420,7 +1420,7 @@ function bloodDrips(dt) {
     d.y = ny;
   }
 }
-const fearEl = document.getElementById('fear'), fearFill = document.getElementById('fearFill'), fearV = document.getElementById('fearV');
+const fearV = document.getElementById('fearV');
 let beatT = 0;
 
 // ---- loop ---------------------------------------------------------------
@@ -1618,8 +1618,6 @@ function frame() {
       frozen: wake.active || !startEl.hidden || finale || title.active, dead: driving?.kind === 'caught',
     });
     const f = hollow.fear;
-    fearEl.hidden = wake.active || !startEl.hidden || !!driving || !settings.fear || !hollowOn;
-    fearFill.style.width = f.toFixed(0) + '%';
     beatT -= dt;
     if (f > 18 && !driving && startEl.hidden && !wake.active) {
       if (beatT <= 0) { beatT = 1.25 - f * 0.0085; entitySound('beat', 0.25 + f * 0.007); fearV.dataset.pulse = t; }
