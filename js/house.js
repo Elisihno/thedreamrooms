@@ -135,7 +135,8 @@ const WIN_W = 1.1, WIN_H = 1.87, WIN_Y = 0.7; // window tiles are ~0.59 aspect
 const TILE_W = 2.5, TILE_H = 4.2;             // world size one texture tile covers
 
 export const levelY = i => (i - GROUND) * WALL_H;
-const WALL_TINTS = [0xffffff, 0xffffff, 0xb4c8ac, 0xcc9e8e, 0xaeb8c8, 0xdcd0b8];   // plain, green, rust, blue-grey, cream
+const WALL_TINTS = [0xe8c98a, 0xd9a98f, 0xe6c0a4, 0xc9a86a, 0xd8b9a6, 0xb9b3a6];   // golden cream, dusty rose, peach, mustard, blush: warm papers against the grey house; one plain grey
+const FLOOR_TINT = 0xe6c398;                                                        // warm varnished wood over the grey boards
 let bloodMat = null;
 function bloodDecal() {
   if (bloodMat) return bloodMat;
@@ -614,7 +615,7 @@ export function buildHouse(renderer, seed = 1) {
         continue;
       }
       const lk = look[id], x = XS[c] + cw / 2, z = ZS[r] + ch / 2;
-      if (!floorHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(cw, ch), x, Y, z, -Math.PI / 2), mat(lk.floor));
+      if (!floorHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(cw, ch), x, Y, z, -Math.PI / 2), mat(lk.floor, lk.tint === 0xeeeeee ? 0xffffff : FLOOR_TINT));
       if (!ceilHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(cw, ch), x, Y + WALL_H, z, Math.PI / 2), mat(ceilTex, 0xaaaaaa));
       lk.sx += x * cw * ch; lk.sz += z * cw * ch; lk.n += cw * ch;
     }

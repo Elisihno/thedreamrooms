@@ -20,7 +20,7 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0a0e);
 scene.fog = new THREE.FogExp2(0x0a0a0e, 0.05);
-const ambient = new THREE.AmbientLight(0x7a7a92, 2.1);
+const ambient = new THREE.AmbientLight(0x9a8c88, 2.3);
 scene.add(ambient);
 
 const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.1, 45);
@@ -1073,7 +1073,7 @@ function showDesc() {
 }
 
 function applyLook() {
-  ambient.intensity = settings.dark ? 1.0 : 2.1;
+  ambient.intensity = settings.dark ? 1.0 : 2.3;
   const q = { low: 0.6, medium: 0.85, high: Math.min(devicePixelRatio, 2) }[settings.quality] ?? 1;
   renderer.setPixelRatio(q); renderer.setSize(innerWidth, innerHeight);
 }
