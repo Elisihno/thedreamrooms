@@ -15,10 +15,15 @@
   #phase { font: 700 12px system-ui; letter-spacing: .18em; text-transform: uppercase; opacity: .75; }
   #timer { font: 400 28px Georgia, serif; letter-spacing: .08em; }
   #carry { top: max(10px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); font: 600 15px system-ui; text-align: right; }
-  #ents { top: max(10px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); font: 600 11px system-ui; line-height: 1.55; opacity: .85; }
+  #ents { top: max(10px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); font: 600 10.5px system-ui; line-height: 1.45; opacity: .85; color: #cfcfcf; }
   #ents .open { color: #ff6a5a; }
   #ents .full { color: #9fd49f; }
-  #prompt { left: 50%; bottom: 30%; transform: translateX(-50%); font: 600 15px system-ui; text-align: center; white-space: nowrap; }
+  #prompt { left: 50%; bottom: 30%; transform: translateX(-50%); color: #cfcfcf; font: 600 15px system-ui; text-align: center; white-space: nowrap; }
+  #hand { position: fixed; top: calc(46px + env(safe-area-inset-top, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); width: 44px; opacity: .7; pointer-events: none; filter: drop-shadow(0 1px 3px #000); }
+  #mark { position: fixed; width: 32px; height: 32px; margin: -16px 0 0 -16px; border-radius: 50%; border: 2px solid rgba(210,210,210,.85); box-shadow: 0 0 6px rgba(0,0,0,.7); pointer-events: none; }
+  #mark::after { content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(235,235,235,.95); }
+  #ents .fl { margin-top: 3px; opacity: .55; text-transform: uppercase; letter-spacing: .12em; font-size: 9px; }
+  #ents .fl.here { opacity: 1; color: #d8d8d8; }
   #bar { position: fixed; left: 50%; bottom: calc(30% - 14px); width: 120px; height: 5px; margin-left: -60px; background: rgba(255,255,255,.18); display: none; }
   #bar i { display: block; height: 100%; width: 0; background: #d9c9a4; }
   #dot { left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: rgba(255,255,255,.45); }
@@ -51,6 +56,8 @@
 <div class="hud" id="carry"></div>
 <div class="hud" id="ents"></div>
 <div class="hud" id="dot"></div>
+<img id="hand" src="assets/ui_hand.png" alt="" hidden>
+<div id="mark" hidden></div>
 <div class="hud" id="prompt"></div>
 <div id="bar"><i></i></div>
 <div class="hud" id="toast"></div>

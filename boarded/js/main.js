@@ -1,5 +1,5 @@
 import * as THREE from '../../vendor/three.module.min.js';
-import { W, D, buildWorld, resolveCircle, roomAt } from './world.js';
+import { W, D, floorY, FLOOR_NAMES, buildWorld, resolveCircle, lineClear, plankMat } from './world.js';
 import { createMother } from './mother.js';
 import { createAudio } from './audio.js';
 
@@ -45,13 +45,13 @@ scene.add(world.group);
 const audio = createAudio();
 
 // ---- state ----------------------------------------------------------------
-const player = { x: 3, z: 6.8, yaw: 0, pitch: 0, hidden: false, spot: null, carry: 0, stamina: 1 };
+const player = { x: 3, z: 8, floor: 1, yaw: 0, pitch: 0, hidden: false, spot: null, carry: 0, stamina: 1, climb: null };
 const G = { phase: 'title', night: 1, t: 0, noise: null, shake: 0, snapshot: null, dead: false };
 const input = { keys: new Set(), mx: 0, my: 0, act: false, actPressed: false, run: false };
 
 const mother = createMother(world, audio, {
   subtitle: (t) => toast(t),
-  shake: (x, z) => { G.shake = Math.max(G.shake, 0.03 * Math.max(0, 1 - Math.hypot(player.x - x, player.z - z) / 12)); },
+  shake: (e) => { G.shake = Math.max(G.shake, e.floor === player.floor ? 0.03 * Math.max(0, 1 - Math.hypot(player.x - e.cx, player.z - e.cz) / 12) : 0.006); },
   opened: () => { G.noise = null; },
   caught: (spot) => caught(spot),
 });
@@ -72,17 +72,20 @@ const panTo = (x, z) => {
 };
 
 function emitNoise(x, z, r) {
-  G.noise = { x, z };
-  mother.hear(x, z, r);
+  G.noise = { f: player.floor, x, z };
+  mother.hear(player.floor, x, z, r);
 }
+const rectsNow = () => world.floors[player.floor].rects;
 
 // ---- nights ---------------------------------------------------------------
 function distributeSupply(n) {
-  const total = 12 + 2 * n;
-  const shares = [0.4, 0.2, 0.2, 0.2];
+  const total = 14 + 3 * n;
+  // cellarA, cellarB, groundA, groundB, groundC, upA, upB, attic
+  const shares = [1, 1, 2, 1, 1, 1, 1, 1];
+  const sum = shares.reduce((a, b) => a + b, 0);
   let left = total;
   world.piles.forEach((p, i) => {
-    const c = i === world.piles.length - 1 ? left : Math.round(total * shares[i]);
+    const c = i === world.piles.length - 1 ? left : Math.round(total * shares[i] / sum);
     left -= c;
     world.setPileCount(p, c);
   });
@@ -98,7 +101,8 @@ function startNight(n, retry = false) {
   }
   world.entries.forEach(e => { e.heat = 0; e.refresh(); });
   distributeSupply(n);
-  Object.assign(player, { x: 3, z: 6.8, yaw: 0, pitch: 0, hidden: false, spot: null, carry: 0, stamina: 1 });
+  Object.assign(player, { x: 3, z: 8, floor: 1, yaw: 0, pitch: 0, hidden: false, spot: null, carry: 0, stamina: 1, climb: null });
+  world.showFloors(1);
   world.hides.forEach(h => { h.occupied = false; });
   G.phase = 'prep';
   G.t = PREP[n - 1];
@@ -113,7 +117,7 @@ function startNight(n, retry = false) {
 function startSiege() {
   G.phase = 'siege';
   G.t = SIEGE[G.night - 1];
-  mother.start(G.night, player.x, player.z);
+  mother.start(G.night);
   audio.pound(0, 0.5);
   toast('She is here.', 3000);
 }
@@ -122,6 +126,7 @@ function dawn() {
   mother.stop();
   audio.win();
   if (player.hidden) leaveHide();
+  player.climb = null;
   const last = G.night >= NIGHTS;
   G.phase = last ? 'won' : 'dawn';
   showOver(
@@ -140,6 +145,7 @@ function caught(spot) {
   // turn to face her
   player.yaw = Math.atan2(-(mother.x - player.x), -(mother.z - player.z));
   if (spot) leaveHide();
+  player.climb = null;
   $('flash').style.transition = 'opacity .15s';
   $('flash').style.background = '#3a0000'; $('flash').style.opacity = 0.55;
   setTimeout(() => {
@@ -159,7 +165,7 @@ function showOver(h, p, b, fn) {
 function enterHide(h) {
   player.hidden = true; player.spot = h; h.occupied = true;
   player.x = h.x; player.z = h.z;
-  const sawEnter = mother.isInside() && Math.hypot(mother.x - player.x, mother.z - player.z) < 9 && mother.state === 'hunt' && mother.sub === 'chase';
+  const sawEnter = mother.state === 'hunt' && mother.sub === 'chase' && mother.floor === player.floor && Math.hypot(mother.x - player.x, mother.z - player.z) < 9;
   mother.tellHidden(h, sawEnter);
   $('hideov').style.opacity = 1;
   toast(`You hide in ${h.label}. Hold still.`, 2200);
@@ -267,9 +273,10 @@ function findTarget() {
     const score = dist * (1.5 - dot);
     if (score < bestScore) { bestScore = score; best = { type, obj }; }
   };
-  for (const e of world.entries) consider('entry', e, e.mid, 2.4);
-  for (const p of world.piles) consider('pile', p, p.pos, 2.2);
-  for (const h of world.hides) consider('hide', h, h.pos, 2.2);
+  for (const e of world.floors[player.floor].entries) consider('entry', e, e.mid, 2.4);
+  for (const p of world.floors[player.floor].piles) consider('pile', p, p.pos, 2.2);
+  for (const h of world.floors[player.floor].hides) consider('hide', h, h.pos, 2.2);
+  for (const st of world.stairs) if (st.floor === player.floor) consider('stair', st, st.pos, 2.6);
   return best;
 }
 
@@ -293,6 +300,7 @@ function interact(dt, target) {
           if (hitT <= 0) {
             hitT = 0.3;
             audio.hammer(0, 0.9);
+            vm.kick = 1;
             o.heat = Math.min(6, o.heat + 0.8);
             emitNoise(player.x, player.z, 11);
           }
@@ -317,6 +325,10 @@ function interact(dt, target) {
       nail = 0;
       text = `Hide in ${o.label}`;
       if (input.actPressed) enterHide(o);
+    } else if (target.type === 'stair') {
+      nail = 0;
+      text = o.label;
+      if (input.actPressed) startClimb(o);
     }
   } else nail = 0;
   prompt.textContent = text;
@@ -326,7 +338,30 @@ function interact(dt, target) {
 
 // ---- player movement ------------------------------------------------------
 let stepAcc = 0;
+function startClimb(mouth) {
+  if (player.hidden || player.climb) return;
+  const q = mouth.flight, up = mouth.dir === 'up';
+  const to = up ? q.top : q.bottom, f1 = up ? q.f + 1 : q.f;
+  player.climb = { t: 0, from: { x: player.x, z: player.z }, to, f0: player.floor, f1, stepT: 0 };
+  // if she is watching you take the stairs, she follows
+  if (mother.state === 'hunt' && mother.floor === player.floor && mother.sub !== 'climb'
+      && Math.hypot(mother.x - player.x, mother.z - player.z) < 14
+      && lineClear(mother.x, mother.z, player.x, player.z, rectsNow())) mother.tellStairs({ f: f1, x: to.x, z: to.z });
+}
+function updateClimb(dt) {
+  const c = player.climb;
+  c.t += dt / 1.5;
+  const k = Math.min(1, c.t), e = k * k * (3 - 2 * k);
+  player.x = c.from.x + (c.to.x - c.from.x) * e;
+  player.z = c.from.z + (c.to.z - c.from.z) * e;
+  if (k > 0.5 && player.floor !== c.f1) { player.floor = c.f1; world.showFloors(c.f1); }
+  c.stepT -= dt;
+  if (c.stepT <= 0) { c.stepT = 0.3; audio.step(0, 0.5); mother.hear(player.floor, player.x, player.z, 3); }
+  if (k >= 1) { player.x = c.to.x; player.z = c.to.z; player.climb = null; }
+}
+
 function movePlayer(dt) {
+  if (player.climb) { updateClimb(dt); return; }
   if (player.hidden) {
     if (Math.hypot(move.x, move.y) > 0.6 || input.keys.has('KeyW') || input.keys.has('KeyS') || input.keys.has('KeyA') || input.keys.has('KeyD')) leaveHide();
     return;
@@ -344,7 +379,7 @@ function movePlayer(dt) {
   const speed = running ? 4.5 : 3.0;
   const sx = Math.sin(player.yaw), cx = Math.cos(player.yaw);
   const pos = { x: player.x + (-sx * f + cx * s) * speed * dt, z: player.z + (-cx * f - sx * s) * speed * dt };
-  resolveCircle(pos, 0.3, world.rects);
+  resolveCircle(pos, 0.3, rectsNow());
   pos.x = Math.max(0.4, Math.min(W - 0.4, pos.x));
   pos.z = Math.max(0.4, Math.min(D - 0.4, pos.z));
   player.x = pos.x; player.z = pos.z;
@@ -352,30 +387,70 @@ function movePlayer(dt) {
     stepAcc += speed * mag * dt;
     if (stepAcc > (running ? 1.6 : 2.2)) {
       stepAcc = 0;
-      if (running) emitNoise(player.x, player.z, 7); else mother.hear(player.x, player.z, 3);
+      if (running) emitNoise(player.x, player.z, 7); else mother.hear(player.floor, player.x, player.z, 3);
     }
   }
 }
 
 // ---- HUD ------------------------------------------------------------------
+const playingNow = () => G.phase === 'prep' || G.phase === 'siege';
 let hudT = 0;
 function updateHud(dt) {
   hudT -= dt;
   if (hudT > 0) return;
   hudT = 0.2;
-  $('phase').textContent = G.phase === 'prep' ? `Night ${G.night} · dusk` : G.phase === 'siege' ? `Night ${G.night} · until dawn` : '';
+  $('phase').textContent = (G.phase === 'prep' ? `Night ${G.night} · dusk` : G.phase === 'siege' ? `Night ${G.night} · until dawn` : '') + (playingNow() ? ` · ${FLOOR_NAMES[player.floor]}` : '');
   $('timer').textContent = G.phase === 'prep' || G.phase === 'siege' ? fmt(G.t) : '';
   $('carry').textContent = G.phase === 'prep' || G.phase === 'siege' ? `Planks carried  ${player.carry}/${CARRY_MAX}` : '';
-  $('ents').innerHTML = G.phase === 'prep' || G.phase === 'siege'
-    ? world.entries.map(e => {
+  $('ents').innerHTML = playingNow()
+    ? [3, 2, 1].map(f => `<div class="fl${f === player.floor ? ' here' : ''}">${FLOOR_NAMES[f]}</div>` + world.floors[f].entries.map(e => {
       const pips = '■'.repeat(e.planks) + '□'.repeat(e.max - e.planks);
       const cls = e.open ? 'open' : e.planks >= e.max ? 'full' : '';
       return `<div class="${cls}">${e.name} ${pips}${e.open ? ' OPEN' : ''}</div>`;
-    }).join('')
+    }).join('')).join('')
     : '';
 }
 
+// ---- held planks (no hands, just the wood) ----------------------------------
+const vm = new THREE.Group();
+vm.kick = 0;
+camera.add(vm);
+const vmPlanks = [];
+const vmMat = plankMat.clone();
+vmMat.color.setHex(0x8f8070);
+for (let i = 0; i < CARRY_MAX; i++) {
+  const p = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.035, 0.85), vmMat);
+  p.position.set((i - 1.5) * 0.045, i * 0.04, 0);
+  p.rotation.z = (i - 1.5) * 0.09;
+  vm.add(p); vmPlanks.push(p);
+}
+let bobT = 0;
+function updateViewmodel(dt) {
+  vm.visible = player.carry > 0 && !player.hidden;
+  vmPlanks.forEach((p, i) => { p.visible = i < player.carry; });
+  const moving = Math.hypot(move.x, move.y) > 0.1 || input.keys.has('KeyW') || input.keys.has('KeyS') || input.keys.has('KeyA') || input.keys.has('KeyD');
+  bobT += dt * (moving ? 8 : 1.6);
+  vm.kick = Math.max(0, vm.kick - dt * 6);
+  vm.position.set(0.34, -0.4 + Math.sin(bobT) * (moving ? 0.014 : 0.004), -0.78 - vm.kick * 0.12);
+  vm.rotation.set(0.12 - vm.kick * 0.4, -0.32, 0.18);
+}
+
+// ---- grey hand + ring marker on whatever you can use ----------------------------
+const handEl = $('hand'), markEl = $('mark');
+const proj = new THREE.Vector3();
+function updateMarker(target) {
+  if (player.hidden) { handEl.hidden = false; markEl.hidden = true; return; }
+  if (!target) { handEl.hidden = true; markEl.hidden = true; return; }
+  handEl.hidden = false;
+  proj.copy(target.obj.pos || target.obj.mid).project(camera);
+  if (proj.z > 1 || Math.abs(proj.x) > 1.1 || Math.abs(proj.y) > 1.1) { markEl.hidden = true; return; }
+  markEl.hidden = false;
+  markEl.style.left = (proj.x * 0.5 + 0.5) * innerWidth + 'px';
+  markEl.style.top = (-proj.y * 0.5 + 0.5) * innerHeight + 'px';
+}
+
 // ---- main loop ------------------------------------------------------------
+let lastTarget = null;
 const clock = new THREE.Clock();
 function frame() {
   requestAnimationFrame(frame);
@@ -384,17 +459,18 @@ function frame() {
 
   if (playing) {
     movePlayer(dt);
-    const target = findTarget();
+    const target = player.climb ? null : findTarget();
+    lastTarget = target;
     interact(dt, target);
     G.t -= dt;
     if (G.phase === 'prep' && G.t <= 0) startSiege();
     else if (G.phase === 'siege' && G.t <= 0) dawn();
-    mother.update(dt, player, world.rects, G);
+    mother.update(dt, player, G);
     if (G.phase === 'prep' || G.phase === 'siege') {
       // her hunting sound design: heartbeat and a red vignette as she closes in
       let fear = 0;
       if (mother.isInside()) {
-        const d = Math.hypot(mother.x - player.x, mother.z - player.z);
+        const d = Math.hypot(mother.x - player.x, mother.z - player.z) + 4 * Math.abs(mother.floor - player.floor);
         fear = Math.max(0, Math.min(1, 1 - (d - 2) / 10));
       }
       $('vig').style.opacity = fear * 0.9;
@@ -404,7 +480,7 @@ function frame() {
   } else {
     $('prompt').textContent = ''; $('bar').style.display = 'none';
     audio.heart(dt, 0);
-    if (G.phase === 'dead') mother.update(dt * 0.0001, player, world.rects, G);
+    if (G.phase === 'dead') mother.update(dt * 0.0001, player, G);
   }
   input.actPressed = false;
 
@@ -419,12 +495,16 @@ function frame() {
   // camera
   G.shake = Math.max(0, G.shake - dt * 0.05);
   const sh = G.shake;
-  const eye = player.hidden ? 1.0 : EYE + Math.sin(performance.now() / 260) * 0.012;
+  let baseY = floorY(player.floor);
+  if (player.climb) { const c = player.climb, k = Math.min(1, c.t), e = k * k * (3 - 2 * k); baseY = floorY(c.f0) + (floorY(c.f1) - floorY(c.f0)) * e; }
+  const eye = baseY + (player.hidden ? 1.0 : EYE + Math.sin(performance.now() / 260) * 0.012);
   camera.position.set(player.x + (Math.random() - 0.5) * sh, eye + (Math.random() - 0.5) * sh, player.z + (Math.random() - 0.5) * sh);
   camera.rotation.set(player.pitch, player.yaw, 0);
+  updateViewmodel(dt);
+  updateMarker(playing ? lastTarget : null);
   updateHud(dt);
   renderer.render(scene, camera);
 }
 frame();
 
-window.__boarded = { G, player, world, mother, startNight, input, caught };
+window.__boarded = { G, player, world, mother, startNight, input, caught, startClimb };
