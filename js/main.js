@@ -677,14 +677,16 @@ function tuckFrame(f, dt, t) {
   if (f.arrive === null) {
     const here = P.sample(f.s), ahead = P.sample(f.s + 0.6), steep = Math.abs(ahead.y - here.y) > 0.05;
     const remain = P.len - f.s;
-    // a shut door ahead: slow down, reach out and push it open
+    // a shut door ahead: slow right down, reach out, push it open and wait until it has swung clear
     let slow = 1;
     const nd = P.doors.find(x => !x.done);
     if (nd) {
       const gap = nd.d - f.s;
-      if (gap < 2.1) slow = 0.3 + 0.7 * smooth(0.5, 1.9, gap);
-      if (gap < 1.3) { nd.done = true; house.openDoorFor(nd.door, P.sample(Math.max(0, nd.d - 1.6)), false); P.opened.push(nd.door); }
+      if (gap < 2.8) slow = 0.18 + 0.82 * smooth(0.2, 2.6, gap);
+      if (gap < 1.45) { nd.done = true; nd.at = k; house.openDoorFor(nd.door, P.sample(Math.max(0, nd.d - 1.7)), false); P.opened.push(nd.door); }
     }
+    const wait = P.doors.find(x => x.done && k - x.at < 1.7);
+    if (wait) slow = Math.min(slow, 0.14 + 0.86 * smooth(0.7, 1.7, k - wait.at));
     const want = k < 1.2 ? 0 : D * (steep ? 0.7 : 1) * slow * easeIO(Math.min(1, (k - 1.2) / 1.6)) * (0.18 + 0.82 * easeIO(Math.min(1, remain / 2.4)));
     f.v += (want - f.v) * damp(4, dt);
     f.s = Math.min(P.len, f.s + f.v * dt);
