@@ -106,6 +106,7 @@ function startWake() {
   wakeSounds();
 }
 function skipWake() {
+  skipTuck();
   if (wake.active && wake.skippable && wake.t < wake.dur - 1) wake.t = wake.dur - 1; // jump to the standing-up part
 }
 function endWake() {
@@ -543,6 +544,175 @@ function startFinale(kind, exit) {
 }
 house.onEscape = exit => startFinale(exit.id === 'hatch' ? 'hatch' : 'front', exit);
 house.onDrive = () => startFinale('car');   // the engine sound is started by the house
+
+// ---- bedtime: the opening film ------------------------------------------------------------------
+// First person, no control. Nanny walks you in through her front door, up the stairs and to your bed,
+// tucks you in and hums; you black out, wake up in the dark bedroom, and the screen goes black. The
+// game starts after that.
+const LULL = [[64, 1], [67, 1], [69, 1], [69, 2], [67, 1], [64, 1], [67, 1], [69, 1], [72, 2], [69, 1], [71, 1], [69, 1], [67, 1], [64, 2], [62, 1], [64, 1], [67, 1], [64, 3], [0, 2]];
+const lull = { on: false, i: 0, next: 0, vol: 0.5, unit: 0.46, detune: 0 };
+function lullaby(dt) {
+  if (!lull.on || !audio || !settings.sound) return;
+  while (audio.currentTime >= lull.next - 0.2) {
+    const [note, units] = LULL[lull.i % LULL.length];
+    const when = Math.max(audio.currentTime, lull.next);
+    if (note) {                                           // a music box: a bright sine with two quiet overtones
+      const f = 440 * Math.pow(2, (note - 69 + lull.detune * (Math.random() - 0.3)) / 12);
+      for (const [mul, amp] of [[1, 1], [2, 0.35], [3.01, 0.12]]) {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = f * mul;
+        g.gain.setValueAtTime(0, when); g.gain.linearRampToValueAtTime(0.09 * amp * lull.vol, when + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0008, when + 1.5);
+        o.connect(g).connect(audio.destination); o.start(when); o.stop(when + 1.6);
+      }
+    }
+    lull.next = when + units * lull.unit; lull.i++;
+  }
+}
+const bump = (u, a, b) => smooth(a, a + 0.1, u) * (1 - smooth(b - 0.1, b, u));
+function buildTuck() {
+  const front = house.exits.find(e => e.id === 'front');
+  const door = front.axis === 'x' ? { x: front.mid, z: front.f } : { x: front.f, z: front.mid };
+  const start = { x: door.x - front.out[0] * 1.3, z: door.z - front.out[1] * 1.3, y: levelY(front.level), level: front.level };
+  const wps = hollow.nav.find(front.level, start.x, start.z, house.spawnLevel, house.spawn.x, house.spawn.z) ?? [];
+  const pts = [start, ...wps.map(w => ({ x: w.x, z: w.z, y: w.y, level: w.level }))];
+  // round the corners a little so the head does not snap around
+  const sm = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const a = pts[i - 1], b = pts[i], c = pts[i + 1];
+    sm.push({ x: b.x * 0.5 + a.x * 0.25 + c.x * 0.25, z: b.z * 0.5 + a.z * 0.25 + c.z * 0.25, y: b.y, level: b.level });
+  }
+  sm.push(pts[pts.length - 1]);
+  const cum = [0];
+  for (let i = 1; i < sm.length; i++) cum.push(cum[i - 1] + Math.hypot(sm[i].x - sm[i - 1].x, sm[i].z - sm[i - 1].z));
+  const len = cum[cum.length - 1];
+  const sample = d => {
+    if (d <= 0) { const a = sm[0], b = sm[1] ?? a, n = Math.hypot(b.x - a.x, b.z - a.z) || 1; return { x: a.x + (b.x - a.x) / n * d, z: a.z + (b.z - a.z) / n * d, y: a.y, level: a.level }; }
+    if (d >= len) return sm[sm.length - 1];
+    let i = 1; while (cum[i] < d) i++;
+    const f = (d - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]), a = sm[i - 1], b = sm[i];
+    return { x: a.x + (b.x - a.x) * f, z: a.z + (b.z - a.z) * f, y: a.y + (b.y - a.y) * f, level: f > 0.5 ? b.level : a.level };
+  };
+  // doors along the way are already open
+  const opened = [];
+  for (let d = 0; d <= len; d += 0.4) {
+    const p = sample(d);
+    for (const rd of house.roomDoors) {
+      if (rd.open || rd.level !== p.level) continue;
+      const cx = rd.axis === 'x' ? rd.mid : rd.f, cz = rd.axis === 'x' ? rd.f : rd.mid;
+      if (Math.hypot(cx - p.x, cz - p.z) < 1.5) { house.openDoorFor(rd, sample(d - 1), true); opened.push(rd); }
+    }
+  }
+  const bed = house.hideSpots.filter(h => h.level === house.spawnLevel && h.eye < 0.3).sort((a, b) => Math.hypot(a.x - house.spawn.x, a.z - house.spawn.z) - Math.hypot(b.x - house.spawn.x, b.z - house.spawn.z))[0];
+  return { len, sample, bed, opened, speed: 1.7, yaw: 0, stepT: 0 };
+}
+function startTuck() {
+  initAudio();
+  startEl.hidden = true;
+  playStart = performance.now();
+  title.active = false;
+  setHand(null); heldView.show(null);
+  const path = buildTuck();
+  document.body.classList.add('waking');
+  const Tw = 0.8 + path.len / path.speed;
+  driving = { kind: 'tuck', t: 0, path, Tw, skipTo: Tw + 6.6, phase: 0 };
+  path.yaw = Math.atan2(-(path.sample(1.4).x - path.sample(0).x), -(path.sample(1.4).z - path.sample(0).z));
+  player.pos.set(path.sample(0).x, 0, path.sample(0).z); player.level = path.sample(0).level;
+  fadeEl.style.background = '#000'; fadeEl.style.opacity = '1';
+  hollow.group.visible = true;
+  lull.on = true; lull.i = 0; lull.vol = 0.2; lull.detune = 0; lull.next = audio ? audio.currentTime + 1.2 : 0;
+}
+function skipTuck() { if (driving?.kind === 'tuck' && driving.t > 2 && driving.t < driving.skipTo) driving.t = driving.skipTo; }
+function endTuck(f) {
+  hollow.cine = null;
+  document.body.classList.remove('waking');
+  for (const d of f.path.opened) if (d.level === house.spawnLevel && d.open) house.use({ kind: 'roomdoor', door: d }, null);   // she closes the bedroom door behind her
+  lidT.hidden = lidB.hidden = true; lidT.style.height = lidB.style.height = '';
+  renderer.domElement.style.filter = '';
+  player.pos.set(house.spawn.x, 0, house.spawn.z); player.level = house.spawnLevel; player.y = levelY(house.spawnLevel);
+  player.yaw = 0; player.pitch = 0;
+  hollow.spawn(player);
+  lull.on = false;
+  fadeEl.style.opacity = '0';
+  driving = null;
+  showToast('Where am I?', 2600);
+}
+function tuckFrame(f, dt, t) {
+  const k = f.t, P = f.path, Tw = f.Tw, o = { eye: EYE, pitch: 0, roll: 0 };
+  const say = (n, text, ms = 2600) => { if (f.phase < n) { f.phase = n; showToast(text, ms); } };
+  const nan = hollow.cine ?? (hollow.cine = { x: 0, z: 0, y: 0, level: 0, yaw: 0, speed: 0, lean: 0.05 });
+  const bed = P.bed, S = house.spawn;
+  const walkEnd = Tw;
+  if (k < walkEnd) {
+    const s = Math.min(P.len, Math.max(0, k - 0.8) * P.speed), u = s / P.len;
+    const here = P.sample(s), ahead = P.sample(s + 1.4);
+    const want = Math.atan2(-(ahead.x - here.x), -(ahead.z - here.z));
+    if (Math.hypot(ahead.x - here.x, ahead.z - here.z) > 0.3) P.yaw += angleDiff(want, P.yaw) * Math.min(1, dt * 4);
+    const lb = bump(u, 0.07, 0.22);     // now and then she looks back at Nanny
+    player.pos.x = here.x; player.pos.z = here.z; player.y = here.y; player.level = here.level;
+    const toNan = Math.atan2(-(nan.x - here.x), -(nan.z - here.z));
+    player.yaw = P.yaw + angleDiff(toNan, P.yaw) * lb; player.pitch = -0.05 * lb;
+    const moving = k > 0.8 && s < P.len;
+    o.eye = EYE + (moving ? Math.sin(k * 7.4) * 0.03 : 0);
+    o.pitch = moving ? Math.sin(k * 7.4 + 1) * 0.008 : 0;
+    o.roll = moving ? Math.sin(k * 3.7) * 0.01 : 0;
+    const behind = P.sample(s - (1.2 + 0.25 * Math.sin(k * 0.9)));
+    const before = P.sample(s - 2.2);
+    nan.x = behind.x; nan.z = behind.z; nan.y = behind.y; nan.level = behind.level;
+    nan.yaw = Math.atan2(here.x - before.x, here.z - before.z); nan.speed = moving ? P.speed : 0; nan.lean = 0.08;
+    // her footsteps and the front door shutting
+    if (k > 0.25 && !f.door) { f.door = true; house.onSound('doorClose'); }
+    if (moving) { P.stepT -= dt; if (P.stepT <= 0) { P.stepT = 0.62; entitySound('step', 0.45); } }
+    fadeEl.style.opacity = String(1 - smooth(0.3, 1.6, k));
+    say(1, 'Come along, dear. Nearly home.', 2800);
+    if (u > 0.45) say(2, 'Up the stairs we go.', 2600);
+    if (u > 0.8) say(3, 'Good girl. Good boy. Whoever you are.', 2600);
+    return o;
+  }
+  // at the bed
+  const q = k - Tw;
+  const toBed = smooth(0.0, 1.4, q), lie = smooth(1.2, 3.0, q);
+  const foot = { x: bed.x, z: bed.z + 1.35 }, pillow = { x: bed.x, z: bed.z - 0.25 };
+  const px = S.x + (foot.x - S.x) * toBed, pz = S.z + (foot.z - S.z) * toBed;
+  player.pos.x = px + (pillow.x - px) * lie; player.pos.z = pz + (pillow.z - pz) * lie;
+  player.y = levelY(house.spawnLevel); player.level = house.spawnLevel;
+  const face = smooth(1.2, 3.2, q) * (1 - smooth(T1 + 1.0, T1 + 2.6, q));     // you turn to look at her while she tucks you in
+  player.yaw += angleDiff(-1.25 * face, player.yaw) * Math.min(1, dt * 3);
+  o.eye = EYE + (0.98 - EYE) * lie;
+  o.pitch = 0.5 * smooth(1.2, 3.0, q) + 0.8 * smooth(T1 + 1.0, T1 + 2.6, q) + Math.sin(k * 0.8) * 0.01;
+  // she comes round to the side of the bed and leans over
+  const side = { x: bed.x + 1.0, z: bed.z - 0.2 }, near = smooth(0.2, 2.2, q);
+  const from = P.sample(P.len - 1.2);
+  nan.x = from.x + (side.x - from.x) * near; nan.z = from.z + (side.z - from.z) * near; nan.y = levelY(house.spawnLevel); nan.level = house.spawnLevel;
+  nan.yaw = Math.atan2(bed.x - nan.x, bed.z - 0.25 - nan.z);
+  nan.speed = near < 0.97 ? P.speed * 0.8 : 0; nan.lean = 0.08 + 0.55 * smooth(2.0, 3.4, q);
+  const T1 = 3.6;                                   // from here she tucks you in and hums
+  if (q > 1.5) say(4, 'Sweet dreams. And don\'t you go wandering.', 3400);
+  lull.vol = 0.2 + 0.7 * smooth(0, 3, q);
+  if (q > T1 + 0.4) say(5, 'Nanny will be right outside.', 2800);
+  // blackout
+  const out = smooth(T1 + 1.2, T1 + 3.2, q);
+  o.roll = Math.sin(q * 1.3) * 0.03 * out;
+  fadeEl.style.opacity = String(out);
+  const asleep = T1 + 3.2;                          // black from here
+  if (q > asleep + 0.1 && !f.gone) { f.gone = true; hollow.cine = null; hollow.spawn(player); lull.vol = 0.12; house.onSound('doorClose'); }
+  // waking up in the dark: slow blinks, then the lids settle
+  const wk = q - (asleep + 0.8);
+  if (wk > 0) {
+    lidT.hidden = lidB.hidden = false;
+    const e = eyeOpen(Math.min(wk * 1.35 + 0.4, 8.0));
+    lidT.style.height = lidB.style.height = (50 * (1 - e)) + '%';
+    renderer.domElement.style.filter = `blur(${(10 * (1 - smooth(0.5, 5.0, wk)) + (1 - e) * 3).toFixed(1)}px)`;
+    fadeEl.style.opacity = String(1 - smooth(0, 1.0, wk));
+    o.pitch = 1.3 - 0.1 * smooth(2, 5, wk); player.yaw += angleDiff(0, player.yaw) * Math.min(1, dt * 2) + 0.07 * dt * smooth(1, 4, wk);
+    say(6, 'Where... where am I?', 2200);
+  }
+  // then it goes black
+  const fadeOut = asleep + 0.8 + 5.2;
+  if (q > fadeOut) { fadeEl.style.opacity = String(smooth(fadeOut, fadeOut + 0.9, q)); lull.on = q < fadeOut + 0.9; }
+  if (q > fadeOut + 1.4) endTuck(f);
+  return o;
+}
 
 // the overlay canvas: light rays at the front door, stars at the hatch, speed streaks in the car
 function resizeFx() { fxEl.width = innerWidth; fxEl.height = innerHeight; }
@@ -1031,6 +1201,7 @@ function beginGame(mode) {
   if (hollow) { applyHollowSettings(); hollow.group.visible = hollowOn; hollow.state = 'roam'; hollow.fear = 0; hollow.spawn(player); }
   if (titleLight) { titleLight.removeFromParent(); }
   player.pitch = 0;
+  if (hollowOn) { startTuck(); return; }
   lidT.hidden = lidB.hidden = false;
   startWake();
 }
@@ -1146,7 +1317,7 @@ function runSplash() {
 }
 let titleLight = null;
 if (titleMode) {
-  if (!hashFlags.has('nosplash')) runSplash();
+  if (hashFlags.has('splash')) runSplash();   // the Elisihno opening is off until it is remade
   title.active = true;
   const yaw = hollow ? hollow.placeForTitle(player) : null;
   player.yaw = (yaw ?? 0) + (innerWidth > innerHeight ? 0.28 : 0.1);       // she stands off to the right of the screen
@@ -1320,6 +1491,9 @@ function frame() {
       glowEl.style.opacity = String(Math.min(1, 0.9 * smooth(0.7, 1.0, k)) * (1 - smooth(2.2, 2.7, k)));
       fadeEl.style.opacity = String(smooth(2.2, 2.9, k));
       if (k > 3.1) { driving = null; endDay(); }
+    } else if (f.kind === 'tuck') {
+      const r = tuckFrame(f, dt, t);
+      if (driving) { eye = r.eye; pitchAdd = r.pitch; rollAdd = r.roll; fov = 74; }
     } else if (f.kind === 'car') {
       // slide into the driver's seat, then the car pulls out through the garage door
       const seat = house.car.seat;
@@ -1352,7 +1526,7 @@ function frame() {
       fadeEl.style.opacity = String(smooth(hatch ? 3.9 : 3.6, hatch ? 4.8 : 4.5, k));
       if (k > (hatch ? 5.2 : 5.0)) { driving = null; showWin(hatch ? 'You escaped' : 'You escaped', 'got out', f.kind); }
     }
-    if (driving && driving.kind !== 'caught' && driving.kind !== 'fall') drawFx(driving);
+    if (driving && driving.kind !== 'caught' && driving.kind !== 'fall' && driving.kind !== 'tuck') drawFx(driving);
     if (driving && (driving.kind === 'caught' || driving.kind === 'fall')) bloodDrips(dt);
   }
   if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
@@ -1368,6 +1542,7 @@ function frame() {
   flash.visible = gear.on;
   if (gear.on) flash.intensity = 7 * (gear.charge < 15 ? (Math.sin(t * 37) > -0.55 ? 0.35 + 0.65 * (gear.charge / 15) : 0.05) : 1);
   updateLights(t, dt);
+  lullaby(dt);
   house.update(dt, player);
   updateTarget();
   if (hollow) hollow.group.visible = hollowOn || title.active;
@@ -1410,3 +1585,5 @@ window.__ammo = () => ammo;
 window.__seed = seed;
 Object.defineProperty(window, '__finale', { get: () => driving });
 window.__wake = wake;
+if (hashFlags.has('tuck') && hollow) { hollowOn = true; hollow.group.visible = true; startTuck(); }   // watch the opening film straight away
+window.__camera = camera; window.__hollowCine = () => hollow.cine;

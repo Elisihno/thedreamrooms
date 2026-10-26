@@ -343,6 +343,12 @@ export function createHollow(house, opts = {}) {
 
   me.update = (dt, t, ctx) => {
     const p = ctx.player;
+    if (me.cine) {   // a film is driving her: { x, z, y, level, yaw, speed, lean }
+      const c = me.cine;
+      me.x = c.x; me.z = c.z; me.y = c.y; me.level = c.level; me._heading = c.yaw; path = null;
+      animate(dt, t, c.speed ?? 0);
+      return;
+    }
     graceT = Math.max(0, graceT - (ctx.frozen ? 0 : dt));
     const same = me.level === p.level;
     const dx = p.pos.x - me.x, dz = p.pos.z - me.z, d = same ? Math.hypot(dx, dz) : 99;
@@ -474,7 +480,7 @@ export function createHollow(house, opts = {}) {
     walkPhase += dt * speed * 3.1;
     const m = model, amp = Math.min(1, speed / 1.5);
     const hunt = me.state === 'hunt' || me.state === 'kill';
-    lean += ((me.state === 'kill' ? 0.18 + 0.3 * (ease(0.55, 0.72, killT) * (1 - ease(1.0, 1.4, killT)) + ease(1.4, 1.55, killT)) : hunt ? 0.3 : 0.1) - lean) * Math.min(1, dt * (me.state === 'kill' ? 14 : 4));
+    lean += ((me.cine?.lean ?? (me.state === 'kill' ? 0.18 + 0.3 * (ease(0.55, 0.72, killT) * (1 - ease(1.0, 1.4, killT)) + ease(1.4, 1.55, killT)) : hunt ? 0.3 : 0.1)) - lean) * Math.min(1, dt * (me.state === 'kill' ? 14 : 4));
     const fallA = me.state === 'stun' ? Math.min(1, (9 - stunT) / 0.55) : 0;
     m.body.rotation.x = fallA * 1.5;                       // falls forward
     group.position.y = me.y + fallA * 0.1;
@@ -490,6 +496,11 @@ export function createHollow(house, opts = {}) {
     // the head cocks and twitches
     const tw = Math.sin(t * 2.3) * Math.sin(t * 0.7);
     m.torso.rotation.y += tw * 0.04;
+    // legs and the free arm swing against each other; the head stays level against the lean
+    const sw = Math.sin(walkPhase) * amp;
+    m.legL.rotation.x = sw * 0.6; m.legR.rotation.x = -sw * 0.6;
+    m.armR.rotation.set(me.state === 'kill' ? -0.5 : -sw * 0.45, 0, -0.04);
+    m.head.rotation.set(-lean * 0.85 + (hunt ? 0.1 : 0.0), tw * 0.25, Math.sin(t * 1.1) * 0.05 + (hunt ? Math.sin(t * 7) * 0.03 : 0));
   }
 
   return me;

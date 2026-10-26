@@ -85,10 +85,10 @@ const LEVELS = [
     roles: { A: 'bedroom', B: 'bedroom', C: 'study', D: 'bathroom', L: 'hall', F: 'bedroom' },
     looks: { D: { walls: [0, 6], floors: [6], tint: 0xeeeeee } },   // the bathroom: pale walls, tiles
     spawnAt: [-10.0, -6.0],
-    fixed: [{ item: 'roundtable', at: [-14.5, -8.0], turn: 0, vase: true }],
+    fixed: [{ item: 'roundtable', at: [-14.5, -8.0], turn: 0, vase: true }, { item: 'bed', side: 'N', at: [-10.0, -12.75] }],   // your bed: Nanny tucks you in here
     guarantee: [{ item: 'trashcan', room: 'A' }],   // the trash can stands against a wall of the start bedroom
     furnishing: {
-      A: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'bookshelf', 'drawers', 'tablechairs'],
+      A: ['nightstand', 'wardrobe', 'drawers', 'chair', 'bookshelf', 'drawers', 'tablechairs'],
       B: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'roundtable', 'bookshelf'],
       C: ['desk', 'bookshelf', 'drawers', 'bookshelf'],
       D: ['bathtub', 'toilet', 'sink', 'drawers'],
@@ -135,8 +135,8 @@ const WIN_W = 1.1, WIN_H = 1.87, WIN_Y = 0.7; // window tiles are ~0.59 aspect
 const TILE_W = 2.5, TILE_H = 4.2;             // world size one texture tile covers
 
 export const levelY = i => (i - GROUND) * WALL_H;
-const WALL_TINTS = [0xe8c98a, 0xd9a98f, 0xe6c0a4, 0xc9a86a, 0xd8b9a6, 0xb9b3a6];   // golden cream, dusty rose, peach, mustard, blush: warm papers against the grey house; one plain grey
-const FLOOR_TINT = 0xe6c398;                                                        // warm varnished wood over the grey boards
+const WALL_TINTS = [0xffffff, 0xffffff, 0xf2e8da, 0xe6e0d6];   // the wallpapers carry their own colours now; a light tint just varies them
+const FLOOR_TINT = 0xffffff;
 let bloodMat = null;
 function bloodDecal() {
   if (bloodMat) return bloodMat;
