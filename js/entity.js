@@ -479,31 +479,17 @@ export function createHollow(house, opts = {}) {
     m.body.rotation.x = fallA * 1.5;                       // falls forward
     group.position.y = me.y + fallA * 0.1;
     m.body.rotation.z = me.limp && speed > 0 && me.state !== 'stun' ? Math.sin(walkPhase) * 0.08 : 0;   // she drags one leg
-    // the body hinges forward at the waist (rotation about z tips +y toward -x, so lean is negative)
-    m.torso.rotation.z = -(lean + Math.sin(t * 1.3) * 0.015);
-    for (const l of m.legs) {
-      const ph = Math.sin(walkPhase + (l.s > 0 ? 0 : Math.PI));
-      l.hip.rotation.z = ph * 0.5 * amp;
-    }
-    // arms hang from the shoulders (x rotation), swing forward and back (z rotation); the elbow bends about y
+    // the whole body hinges forward at the waist; she sways and bobs as she walks
+    const step = Math.abs(Math.sin(walkPhase)) * amp;
+    m.torso.rotation.set(lean + Math.sin(t * 1.3) * 0.015, Math.sin(walkPhase) * 0.1 * amp, Math.sin(walkPhase) * 0.05 * amp);
+    m.holder.position.y = step * 0.05;
+    // the bat arm: raised behind her head, brought down hard, twice
     const batU = k => (k < 1.0 ? ease(0.1, 0.55, k) * (1 - ease(0.55, 0.72, k)) : ease(1.0, 1.4, k) * (1 - ease(1.4, 1.55, k)));
-    for (const a of m.arms) {
-      const ph = Math.sin(walkPhase + (a.s > 0 ? Math.PI : 0));
-      let swing = (me.state === 'kill' ? 0.9 : hunt ? 1.15 : 0.05) + ph * 0.3 * amp + (me.state === 'stun' ? 0 : Math.sin(t * 1.1 + a.s) * 0.04);
-      let bend = hunt ? 0.45 : 0.12 + Math.sin(t * 0.9 + a.s) * 0.04;
-      if (me.state === 'kill' && a.s === 1) {            // the bat arm: raised behind her head, brought down hard, twice
-        const u = batU(killT);
-        swing = 1.0 + 1.0 * u;                 // up beside her head ...
-        bend = 0.25 + 1.05 * u;                // ... with the forearm folded back, the bat cocked behind her
-      }
-      a.sh.rotation.set(a.s * Math.PI / 2, 0, swing);
-      a.el.rotation.set(0, a.s * bend, 0);
-    }
-    m.bat.rotation.y = me.state === 'kill' ? 0.1 : hunt ? 0.75 : 1.15;                  // the bat follows the arm in the kill
+    const rest = me.state === 'kill' ? 0.2 : hunt ? 0.35 : 0.1;
+    m.bat.rotation.set(me.state === 'kill' ? rest - 2.0 * batU(killT) : rest + Math.sin(walkPhase) * 0.12 * amp, 0, 0);
     // the head cocks and twitches
     const tw = Math.sin(t * 2.3) * Math.sin(t * 0.7);
-    m.head.rotation.x = 0.12 + tw * 0.1 + (hunt ? 0.1 : 0);
-    m.head.rotation.z = -0.12 - (hunt ? 0.15 : 0) - Math.max(0, Math.sin(t * 5.1)) * Math.max(0, Math.sin(t * 0.37)) * 0.08;
+    m.torso.rotation.y += tw * 0.04;
   }
 
   return me;
