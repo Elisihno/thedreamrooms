@@ -361,7 +361,7 @@ export function createHollow(house, opts = {}) {
     // ---- fear ----
     if (!ctx.frozen) {
       let rate = 0;
-      const rest = ctx.flash ? 0 : p.level === 0 ? 26 : p.level === 3 ? 18 : 6;
+      const rest = ctx.flash ? 0 : p.level <= 1 ? 26 : p.level >= 4 ? 18 : 6;
       if (me.fear < rest) rate += 3; else rate -= ctx.hidden ? 4 : 2.2;
       if (me.state === 'stun') rate -= 12;
       else if (sees) rate += (12 - d) * 1.4 + (me.state === 'hunt' ? 4 : 0);

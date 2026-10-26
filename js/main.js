@@ -1586,3 +1586,5 @@ Object.defineProperty(window, '__finale', { get: () => driving });
 window.__wake = wake;
 if (hashFlags.has('tuck') && hollow) { hollowOn = true; hollow.group.visible = true; startTuck(); }   // watch the opening film straight away
 window.__camera = camera; window.__hollowCine = () => hollow.cine;
+window.__house = house;
+window.__player = player;

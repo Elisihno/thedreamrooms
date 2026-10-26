@@ -17,40 +17,61 @@ const OUT_X = [-19.7, 20.85], OUT_Z = [-12.75, 14.05];   // the outer walls
 // Fixed items are { item, side, at: [x, z] } (backed onto the wall at that spot) or { item, at, turn } (free-standing).
 const LEVELS = [
   {
-    name: 'Basement', windows: 0,
-    rooms: [{ id: 'B', x: [-8.4, 9.5], z: [-8.35, 9.7] }],
-    extraX: [-7.0, -4.0],
-    windowAt: [['x', -8.35, -7.0, -4.0]],    // the one basement window: you can shoot it
-    roles: { B: 'storage' },
-    // the power box on the north wall, and the three pillars of Granny's cellar
+    name: 'Lower Basement', windows: 0, barred: true,
+    // the smallest room: shelves, a weird wooden machine, and a little barred window high in the north wall
+    rooms: [{ id: 'S', x: [-8.5, 2.0], z: [-7.5, 4.5] }],
+    windowAt: [['x', -7.5, -2.0, -0.5]],
+    roles: { S: 'storage' },
     fixed: [
-      { item: 'circuitbox', side: 'N', at: [0.5, -8.35] },
-      { item: 'pillar', at: [-4.2, -4.6] }, { item: 'pillar', at: [4.9, -4.6] }, { item: 'pillar', at: [-4.2, 5.9] },
+      { item: 'shelves', side: 'W', at: [-8.5, -3.0] }, { item: 'shelves', side: 'W', at: [-8.5, 0.5] },
+      { item: 'shelves', side: 'S', at: [-1.5, 4.5] }, { item: 'barrel', side: 'E', at: [2.0, 3.0] },
+      { item: 'rackmachine', at: [-0.2, -2.8], turn: 0 },
     ],
-    furnishing: { B: ['shelves', 'crates', 'barrel', 'chest', 'boiler', 'barrel', 'drawers', 'shelves', 'crates', 'barrel'] },
-    drops: [['fuel', 0.0, 2.0, 0.4]],         // the fuel can lies in the open
     walls: [0, 1, 4, 6], floors: [1, 5, 6],
   },
   {
-    name: 'Base Floor', windows: 0.7,
+    name: 'Upper Basement', windows: 0, barred: true,
+    // bigger: scrap metal, and behind the boxes in the east wall a hidden way through
     rooms: [
-      { id: 'N', x: [-19.7, 20.85], z: [-12.75, -1.65] },   // dining and living room along the north
-      { id: 'K', x: [-19.7, -6.25], z: [-1.65, 14.05] },    // kitchen
-      { id: 'H', x: [-6.25, 7.35], z: [-1.65, 14.05] },     // the hall: front door and both staircases
-      { id: 'E', x: [7.35, 20.85], z: [-1.65, 14.05] },     // the south-east room, a garage here
+      { id: 'B', x: [-8.4, 9.5], z: [-8.35, 9.7] },
+      { id: 'H', x: [9.5, 15.5], z: [-1.0, 7.0] },        // the hidden room behind the boxes
     ],
-    doors: [['x', -1.65, -10.7, -7.3], ['x', -1.65, 8.6, 12.0], ['z', -6.25, 9.6, 13.0], ['z', 7.35, 9.6, 13.0]],
-    roles: { N: 'living', K: 'kitchen', H: 'hall', E: 'garage' },
-    // the front door in the south wall of the hall: a code lock and three padlocks; the back door of the kitchen
-    // (power cut in the cellar); the garage door that only opens for the car
+    doors: [['z', 9.5, 3.0, 5.5]],
+    windowAt: [['x', -8.35, -1.5, 0.0]],
+    roles: { B: 'storage', H: 'storage' },
+    fixed: [
+      { item: 'circuitbox', side: 'N', at: [0.5, -8.35] },
+      { item: 'scrap', at: [-6.0, 6.5], turn: 0 }, { item: 'scrap', at: [7.2, 7.8], turn: 1 }, { item: 'scrap', at: [-2.0, 8.2], turn: 0 },
+      { item: 'shelves', side: 'N', at: [-5.5, -8.35] }, { item: 'shelves', side: 'N', at: [4.5, -8.35] },
+      { item: 'boiler', side: 'W', at: [-8.4, 1.0] },
+      { item: 'chest', side: 'E', at: [15.5, 3.0] },       // in the hidden room
+      { item: 'barrel', side: 'E', at: [15.5, 5.5] },
+    ],
+    pushBoxes: [   // slide along the east wall when you walk into them; they hide the doorway
+      { x: 8.55, z: 1.6, size: 0.95, axis: 'z', min: -6.0, max: 7.5 },
+      { x: 8.55, z: 3.4, size: 0.95, axis: 'z', min: -6.0, max: 7.5 },
+    ],
+    walls: [0, 1, 4, 6], floors: [1, 5, 6],
+  },
+  {
+    name: 'Ground Floor', windows: 0.7,
+    rooms: [
+      { id: 'D', x: [-19.7, -6.25], z: [-12.75, -1.65] },  // dining room
+      { id: 'N', x: [-6.25, 7.35], z: [-12.75, -1.65] },   // living room one
+      { id: 'M', x: [7.35, 20.85], z: [-12.75, -1.65] },   // living room two
+      { id: 'K', x: [-19.7, -6.25], z: [-1.65, 14.05] },   // kitchen
+      { id: 'H', x: [-6.25, 7.35], z: [-1.65, 14.05] },    // the hall: front door and both staircases
+      { id: 'Q', x: [7.35, 20.85], z: [-1.65, 14.05] },    // kids room
+    ],
+    doors: [['z', -6.25, -10.7, -7.3], ['z', 7.35, -10.7, -7.3], ['x', -1.65, -1.2, 2.2], ['x', -1.65, -16.0, -12.6],
+            ['z', -6.25, 9.6, 13.0], ['z', 7.35, 9.6, 13.0]],
+    roles: { D: 'dining', N: 'living', M: 'living', K: 'kitchen', H: 'hall', Q: 'kids' },
+    // the front door in the south wall of the hall: a code lock and three padlocks
     exits: [
       { id: 'front', at: ['x', 14.05, -1.2, 2.2], width: 1.5, style: 'wood', locks: [['code', 1.85], ['padlock', 1.5], ['padlock', 1.1], ['padlock', 0.7]] },
-      { id: 'hatch', at: ['z', -19.7, 2.0, 5.2], width: 1.2, style: 'metal', locks: [['electric', 1.4], ['padlock', 1.05], ['padlock', 0.7]] },
-      { id: 'garage', at: ['x', 14.05, 12.0, 16.8], width: 2.4, style: 'metal', carOnly: true, locks: [] },
     ],
     fixed: [
-      { item: 'car', at: [14.4, 5.2], turn: 0 },
-      // the kitchen: a run of units along the north wall, the fridge and more along the west wall
+      // the kitchen: a run of units along the north wall, the fridge and more along the west wall, a table with its chairs
       { item: 'counter', side: 'N', at: [-18.4, -1.65] },
       { item: 'cuttingboard', side: 'N', at: [-18.4, -1.65] },
       { item: 'microcounter', side: 'N', at: [-16.2, -1.65] },
@@ -59,73 +80,94 @@ const LEVELS = [
       { item: 'fridge', side: 'W', at: [-19.7, 11.8] },
       { item: 'counter', side: 'W', at: [-19.7, 9.7] },
       { item: 'kitchendrawers', side: 'W', at: [-19.7, 7.7] },
-      { item: 'tablechairs', at: [-12.5, 6.2], turn: 0 },
-      { item: 'grandclock', side: 'N', at: [0.5, -1.65] },
-      { item: 'livingset', at: [-10.0, -7.2], turn: 0 },
-      { item: 'tablechairs', at: [9.5, -7.2], turn: 1 },
+      { item: 'tablechairs', at: [-12.5, 6.4], turn: 0 },
+      // the dining room: a long table in the middle, a sideboard and a clock
+      { item: 'tablechairs', at: [-13.0, -7.2], turn: 0 }, { item: 'drawers', side: 'N', at: [-13.0, -12.75] },
+      { item: 'bookshelf', side: 'W', at: [-19.7, -5.0] },
+      // living room one: the sofa facing the fireplace
+      { item: 'fireplace', side: 'N', at: [0.5, -12.75] }, { item: 'livingset', at: [0.5, -7.0], turn: 2 },
+      { item: 'armchair', side: 'E', at: [7.35, -4.0] }, { item: 'bookshelf', side: 'S', at: [-3.0, -1.65] },
+      // living room two: the television
+      { item: 'tvunit', side: 'N', at: [14.0, -12.75] }, { item: 'sofa', at: [14.0, -6.5], turn: 2 },
+      { item: 'bookshelf', side: 'E', at: [20.85, -9.0] }, { item: 'drawers', side: 'S', at: [18.0, -1.65] },
+      // the hall
+      { item: 'grandclock', side: 'N', at: [0.5, -1.65] }, { item: 'drawers', side: 'E', at: [7.35, 5.0] },
+      // the kids room
+      { item: 'kidsbed', side: 'E', at: [20.85, 3.0] }, { item: 'toybox', side: 'N', at: [14.0, -1.65] },
+      { item: 'smalltable', at: [13.0, 7.0], turn: 0 }, { item: 'drawers', side: 'S', at: [14.0, 14.05] },
     ],
-    furnishing: {
-      N: ['sofa', 'tvunit', 'bookshelf', 'armchair', 'drawers', 'fireplace', 'armchair', 'drawers', 'bookshelf', 'chair'],
-      H: ['drawers', 'chair'],
-      E: ['shelves', 'crates', 'drawers', 'chest', 'shelves', 'barrel'],
-    },
+    furnishing: {},
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
   },
   {
-    name: 'Upper Floor', windows: 0.7, traps: 1,
+    name: 'Upper Floor', windows: 0.7, traps: 0,
     rooms: [
       { id: 'A', x: [-19.7, 0.5], z: [-12.75, -1.65] },     // the big bedroom: you start here
-      { id: 'B', x: [0.5, 15.35], z: [-12.75, -1.65] },
-      { id: 'C', x: [15.35, 20.85], z: [-12.75, -1.65] },
+      { id: 'C', x: [0.5, 3.6], z: [-12.75, -1.65] },       // the narrow stairs to the attic
+      { id: 'B', x: [3.6, 20.85], z: [-12.75, -1.65] },     // Nanny's bedroom
       { id: 'D', x: [-19.7, -6.25], z: [-1.65, 14.05] },    // the bathroom
-      { id: 'L', x: [-6.25, 7.35], z: [-1.65, 14.05] },     // the landing, with both staircases
-      { id: 'F', x: [7.35, 20.85], z: [-1.65, 14.05] },
+      { id: 'L', x: [-6.25, 7.35], z: [-1.65, 14.05] },     // the landing, with the stairs
+      { id: 'F', x: [7.35, 20.85], z: [-1.65, 14.05] },     // the kids room
     ],
-    doors: [['x', -1.65, -3.1, 0.5], ['x', -1.65, 0.5, 4.6], ['x', -1.65, 16.8, 19.5], ['z', -6.25, -1.65, 2.0], ['z', 7.35, 9.6, 13.0], ['z', 15.35, -11.7, -9.1]],
-    roles: { A: 'bedroom', B: 'bedroom', C: 'study', D: 'bathroom', L: 'hall', F: 'bedroom' },
+    doors: [['x', -1.65, -3.1, 0.5], ['x', -1.65, 1.2, 2.9], ['x', -1.65, 4.6, 7.0], ['z', -6.25, -1.65, 2.0], ['z', 7.35, 9.6, 13.0], ['x', -1.65, 13.0, 16.8]],
+    roles: { A: 'bedroom', B: 'bedroom', C: 'closet', D: 'bathroom', L: 'hall', F: 'kids' },
     looks: { D: { walls: [0, 6], floors: [6], tint: 0xeeeeee } },   // the bathroom: pale walls, tiles
     spawnAt: [-10.0, -6.0],
-    fixed: [{ item: 'roundtable', at: [-14.5, -8.0], turn: 0, vase: true }, { item: 'bed', side: 'N', at: [-10.0, -12.75] }],   // your bed: Nanny tucks you in here
+    fixed: [
+      { item: 'roundtable', at: [-14.5, -8.0], turn: 0, vase: true }, { item: 'bed', side: 'N', at: [-10.0, -12.75] },   // your bed: Nanny tucks you in here
+      { item: 'nightstand', side: 'N', at: [-7.6, -12.75] }, { item: 'wardrobe', side: 'W', at: [-19.7, -4.0] }, { item: 'drawers', side: 'S', at: [-6.0, -1.65] },
+      { item: 'bed', side: 'N', at: [12.0, -12.75] }, { item: 'nightstand', side: 'N', at: [9.6, -12.75] }, { item: 'wardrobe', side: 'E', at: [20.85, -8.0] },
+      { item: 'drawers', side: 'N', at: [16.5, -12.75] }, { item: 'bookshelf', side: 'S', at: [14.0, -1.65] },
+      { item: 'bathtub', side: 'N', at: [-17.0, -1.65] }, { item: 'toilet', side: 'W', at: [-19.7, 6.0] }, { item: 'sink', side: 'W', at: [-19.7, 10.0] },
+      { item: 'kidsbed', side: 'E', at: [20.85, 6.0] }, { item: 'toybox', side: 'S', at: [14.0, 14.05] }, { item: 'smalltable', at: [13.0, 8.0], turn: 0 },
+      { item: 'drawers', side: 'W', at: [-6.25, 10.0] },
+    ],
     guarantee: [{ item: 'trashcan', room: 'A' }],   // the trash can stands against a wall of the start bedroom
-    furnishing: {
-      A: ['nightstand', 'wardrobe', 'drawers', 'chair', 'bookshelf', 'drawers', 'tablechairs'],
-      B: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'roundtable', 'bookshelf'],
-      C: ['desk', 'bookshelf', 'drawers', 'bookshelf'],
-      D: ['bathtub', 'toilet', 'sink', 'drawers'],
-      L: ['drawers', 'chair', 'chair'],
-      F: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'bookshelf', 'drawers'],
-    },
+    furnishing: {},
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
   },
   {
-    name: 'Attic', windows: 0.45,
+    name: 'Lower Attic', windows: 0.2,
+    // the dummy room, a locked stairwell, and the prison room with the electric machine
     rooms: [
-      { id: 'W', x: [-19.7, -6.25], z: [-12.75, 14.05] },
-      { id: 'M', x: [-6.25, 7.35], z: [-12.75, 14.05] },
-      { id: 'E', x: [7.35, 20.85], z: [-12.75, 14.05] },
+      { id: 'R', x: [-4.0, 7.0], z: [-12.75, 3.0] },
+      { id: 'K', x: [-13.0, -4.0], z: [-12.75, 3.0] },
+      { id: 'P', x: [7.0, 20.85], z: [-12.75, 3.0] },
     ],
-    doors: [['z', -6.25, 4.0, 7.4], ['z', 7.35, 4.0, 7.4]],
-    roles: { W: 'attic', M: 'attic', E: 'attic' },
-    mannequins: [[-13.0, -5.0], [-1.5, -3.0], [14.0, 9.0]],   // where each mannequin stands
-    traps: 2,                                                  // cracked boards that give way under you
-    fixed: [{ item: 'lockbox', side: 'N', at: [17.0, -12.75] }],   // holds the shotgun
-    furnishing: {
-      W: ['covered', 'chest', 'crates', 'wardrobe', 'drawers', 'chair', 'covered'],
-      M: ['covered', 'chest', 'crates', 'drawers', 'chair'],
-      E: ['covered', 'chest', 'crates', 'wardrobe', 'drawers', 'chair', 'covered'],
-    },
-    drops: [['paper', 15.0, 2.0, 0.5], ['battery', -1.5, 9.0, 1.1]],   // the smiley paper and the car battery
+    doors: [['z', -4.0, -8.0, -5.0], ['z', 7.0, -8.0, -5.0]],
+    roles: { R: 'attic', K: 'attic', P: 'attic' },
+    fixed: [
+      { item: 'dummy', at: [4.5, 0.5], turn: 0 },
+      { item: 'doubledoor', side: 'W', at: [7.0, -11.0] },   // sealed: it needs a hammer
+      { item: 'crates', side: 'N', at: [5.0, -12.75] }, { item: 'covered', side: 'S', at: [-1.5, 3.0] },
+      { item: 'electricmachine', side: 'N', at: [14.0, -12.75] }, { item: 'chest', side: 'E', at: [20.85, -9.0] },
+    ],
+    drops: [['paper', 4.0, -6.0, 0.5]],   // the smiley paper
+    furnishing: {},
+    walls: [2, 5, 7, 9], floors: [0, 2, 3, 4, 7, 9],
+  },
+  {
+    name: 'Upper Attic', windows: 0.2,
+    rooms: [{ id: 'T', x: [-13.0, -1.0], z: [-12.75, 6.0] }],
+    roles: { T: 'attic' },
+    fixed: [
+      { item: 'lockbox', side: 'S', at: [-6.5, 6.0] },    // the locker at the end of the room
+      { item: 'chest', side: 'W', at: [-13.0, -2.0] }, { item: 'crates', side: 'W', at: [-13.0, 2.0] }, { item: 'covered', side: 'E', at: [-1.0, 2.0] },
+    ],
+    furnishing: {},
     walls: [2, 5, 7, 9], floors: [0, 2, 3, 4, 7, 9],
   },
 ];
-export const GROUND = 1; // index of the Base Floor
+export const GROUND = 2; // index of the Ground Floor
 
 // stairs[k] climbs from LEVELS[k] to LEVELS[k+1]. x is its width and bottom / top the z where it starts
 // and ends, so it climbs north when top < bottom (the numbers are the model's).
 const STAIR_DEFS = [
-  { x: [4.6, 7.35], bottom: -1.65, top: 6.7 },     // cellar to ground: down the east side of the hall, climbing south
+  { x: [-6.0, -3.0], bottom: -5.0, top: 2.5 },     // lower basement to upper: climbing south
+  { x: [4.6, 7.35], bottom: -1.65, top: 6.7 },     // upper basement to ground: down the east side of the hall, climbing south
   { x: [-6.25, -3.1], bottom: 9.6, top: 2.0 },     // ground to upper floor: up the west side of the hall, climbing north
-  { x: [4.6, 7.35], bottom: 9.6, top: 2.0 },       // upper floor to attic
+  { x: [0.8, 3.3], bottom: -2.6, top: -10.3 },     // upper floor to the lower attic: the narrow stairs behind the little door
+  { x: [-9.5, -6.7], bottom: -2.0, top: -9.5 },   // lower attic to the upper attic, behind the locked door
 ];
 
 export const WALL_H = 3; // also the height of one storey

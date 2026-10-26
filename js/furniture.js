@@ -17,12 +17,16 @@ import * as THREE from '../vendor/three.module.min.js';
 // `boxes` is a list of [w, h, d, x, y0, zc, material]. p is the palette:
 // body, dark2, light, cloth, paper (textured) and dark (plain).
 
-// A chair at (cx, cz) facing the direction (dx, dz).
-const chairAt = (b, p, cx, cz, dx, dz) => {
-  const alongX = dx !== 0;
-  b(.5, .05, .5, cx, .46, cz, p.body);
-  b(alongX ? .05 : .5, .55, alongX ? .5 : .05, cx - dx * .23, .5, cz - dz * .23, p.body);
-  for (const lx of [-.2, .2]) for (const lz of [-.2, .2]) b(.06, .46, .06, cx + lx, 0, cz + lz, p.dark2);
+// A chair at (cx, cz) facing the direction (dx, dz): turned legs, a cushioned seat and a slatted back.
+const chairAt = (b, p, cx, cz, dx, dz, k = 1) => {
+  const ax = dx !== 0;                                   // faces along x
+  const bx = cx - dx * .205 * k, bz = cz - dz * .205 * k;  // the line of the back
+  b(.46 * k, .05, .46 * k, cx, .44 * k, cz, p.body);        // seat
+  b(.4 * k, .04, .4 * k, cx, .49 * k, cz, p.cloth);         // cushion
+  for (const lx of [-.19, .19]) for (const lz of [-.19, .19]) b(.045, .44 * k, .045, cx + lx * k, 0, cz + lz * k, p.dark2);
+  for (const sd of [-.19, .19]) b(ax ? .04 : .045, .52 * k, ax ? .045 : .04, bx + (ax ? 0 : sd * k), .49 * k, bz + (ax ? sd * k : 0), p.dark2);
+  b(ax ? .04 : .46 * k, .07, ax ? .46 * k : .04, bx, .98 * k, bz, p.body);
+  for (const sd of [-.1, 0, .1]) b(ax ? .02 : .03, .3 * k, ax ? .03 : .02, bx + (ax ? 0 : sd * k), .62 * k, bz + (ax ? sd * k : 0), p.body);
 };
 
 const handle = (p, x, y, z, w = .16) => [w, .03, .03, x, y, z, p.dark];
@@ -303,6 +307,84 @@ export const ITEMS = {
     mv.wire(0xd23a2e, -.14, .99, .56, .125);
     mv.wire(0x2f72dd, 0, .99, .56, .125);
     mv.wire(0xe0c030, .14, .99, .56, .125);
+  } },
+  // a child's bed: low frame, a small pillow and a blanket with a stripe
+  kidsbed: { w: .9, d: 1.6, tall: false, build(b, p) {
+    b(.9, .3, 1.6, 0, .08, .8, p.body);
+    b(.82, .12, 1.52, 0, .38, .8, p.light);
+    b(.5, .1, .3, 0, .5, .3, p.light);
+    b(.84, .06, 1.0, 0, .5, 1.0, p.cloth);
+    b(.84, .065, .12, 0, .5, 1.12, p.dark2);
+    b(.9, .7, .06, 0, .08, .03, p.body);
+    b(.9, .35, .06, 0, .08, 1.57, p.body);
+  } },
+  // a toy box with blocks on the lid; something can lie inside
+  toybox: { w: .8, d: .45, tall: false, build(b, p, mv) {
+    b(.8, .4, .45, 0, 0, .25, p.body);
+    b(.82, .03, .47, 0, .4, .25, p.dark2);
+    for (const [x, c] of [[-.25, p.cloth], [0, p.light], [.22, p.paper]]) b(.14, .14, .14, x, .43, .22 + x * .2, c);
+    mv.flap([[.8, .05, .47, 0, .4, .25, p.body]], .4, .02, -1.9, [0, .02, .25]);
+  } },
+  // a little table with two little chairs
+  smalltable: { w: .8, d: .9, tall: false, center: true, build(b, p) {
+    b(.7, .04, .5, 0, .46, 0, p.body);
+    for (const dx of [-.3, .3]) for (const dz of [-.2, .2]) b(.05, .46, .05, dx, 0, dz, p.dark2);
+    chairAt(b, p, -.2, -.5, 0, 1, .6);
+    chairAt(b, p, .2, .5, 0, -1, .6);
+  }, colliders: [[.7, .5, 0, 0], [.3, .3, -.2, -.5], [.3, .3, .2, .5]] },
+  // a heap of scrap metal: plates, pipes and a bent frame
+  scrap: { w: 1.4, d: 1.0, tall: false, build(b, p) {
+    b(1.3, .12, .9, 0, 0, .5, p.dark);
+    b(1.0, .1, .6, -.1, .12, .5, p.steel);
+    b(.9, .2, .5, .1, .22, .5, p.dark2);
+    b(.12, .12, .9, -.4, .42, .5, p.steel);
+    b(.7, .06, .5, .1, .42, .4, p.steel);
+    b(.06, .5, .06, .45, .12, .2, p.dark);
+    b(.5, .05, .05, .2, .6, .2, p.dark);
+    b(.5, .08, .35, -.35, .5, .6, p.dark2);
+  } },
+  // a heavy wooden frame with rollers at both ends, a hand wheel and leather straps: nobody says what for
+  rackmachine: { w: 2.2, d: 1.1, tall: false, center: true, colliders: [[2.0, .8, 0, 0]], build(b, p) {
+    for (const dx of [-.9, .9]) for (const dz of [-.3, .3]) b(.12, .5, .12, dx, 0, dz, p.dark2);
+    b(2.0, .1, .8, 0, .5, 0, p.body);
+    for (const dz of [-.4, .4]) b(2.0, .14, .08, 0, .6, dz, p.dark2);
+    for (const dx of [-.95, .95]) { b(.14, .14, .86, dx, .72, 0, p.dark2); b(.1, .1, .1, dx, .92, -.5, p.dark); b(.1, .1, .1, dx, .92, .5, p.dark); }
+    b(.08, .08, 1.2, -.95, .74, 0, p.dark);                       // the crank bar
+    b(.08, .5, .08, -1.15, .5, .6, p.dark); b(.5, .08, .08, -1.15, .7, .6, p.dark);   // the wheel
+    for (const dz of [-.12, .12]) b(.9, .02, .12, 0, .62, dz, p.paper);               // straps
+    b(.12, .02, .5, .6, .62, 0, p.blood);
+  } },
+  // a punching dummy on a heavy base
+  dummy: { w: .7, d: .7, tall: false, center: true, colliders: [[.5, .5, 0, 0]], build(b, p) {
+    b.cyl(.3, .08, 0, 0, 0, p.dark2);
+    b.cyl(.11, .9, 0, .08, 0, p.dark2);
+    b(.36, .75, .22, 0, .85, 0, p.paper);
+    b(.5, .16, .24, 0, 1.35, 0, p.paper);
+    b(.22, .24, .22, 0, 1.55, 0, p.paper);
+    b(.5, .1, .1, 0, 1.2, 0, p.paper);
+  } },
+  // a sealed double door nailed shut: it needs a hammer (later)
+  doubledoor: { w: 1.7, d: .18, tall: true, build(b, p) {
+    b(1.7, 2.3, .06, 0, 0, .03, p.dark2);
+    for (const dx of [-.4, .4]) b(.78, 2.15, .06, dx, .04, .1, p.body);
+    b(.06, 2.15, .08, 0, .04, .12, p.dark);
+    b(1.5, .12, .05, 0, .8, .16, p.dark2); b(1.5, .12, .05, 0, 1.4, .16, p.dark2);
+    b(.7, .1, .05, -.3, 1.1, .2, p.dark); b(.14, .2, .08, 0, 1.0, .2, p.steel);
+    for (const dx of [-.55, .55]) b(.1, .1, .1, dx, 1.05, .12, p.dark);
+  } },
+  // the prison room's machine: a steel cabinet with dials and a cable to a strapped chair
+  electricmachine: { w: 1.8, d: .9, tall: true, build(b, p) {
+    b(.9, 1.4, .55, -.45, 0, .3, p.steel);
+    b(.7, .35, .02, -.45, .8, .58, p.dark);
+    for (const dx of [-.65, -.45, -.25]) b(.1, .1, .03, dx, .95, .6, p.light);
+    b(.08, .08, .03, -.25, .8, .6, p.blood);
+    b(.2, .2, .1, -.45, 1.4, .3, p.dark2);
+    b(.04, .04, .9, .0, .04, .55, p.dark);                         // the cable
+    b(.5, .05, .5, .6, .44, .55, p.dark2);                          // the chair
+    b(.5, .6, .05, .6, .49, .3, p.dark2);
+    for (const dx of [-.2, .2]) for (const dz of [-.2, .2]) b(.05, .44, .05, .6 + dx, 0, .55 + dz, p.dark);
+    for (const dz of [-.18, .18]) b(.05, .05, .2, .38, .72, .55 + dz * 0, p.paper);
+    b(.04, .04, .25, .6, .75, .56, p.steel);
   } },
   chair: { w: .5, d: .55, tall: false, build(b, p) { chairAt(b, p, 0, .33, 0, 1); } },
 };
