@@ -499,7 +499,8 @@ export function createHollow(house, opts = {}) {
     // legs and the free arm swing against each other; the head stays level against the lean
     const sw = Math.sin(walkPhase) * amp;
     m.legL.rotation.x = sw * 0.6; m.legR.rotation.x = -sw * 0.6;
-    m.armR.rotation.set(me.state === 'kill' ? -0.5 : -sw * 0.45, 0, -0.04);
+    const tk = me.cine?.tuck ?? 0;   // smoothing the blanket: the free arm reaches out and strokes
+    m.armR.rotation.set(me.state === 'kill' ? -0.5 : -sw * 0.45 * (1 - tk) - tk * (1.05 + Math.sin(t * 2.2) * 0.18), 0, -0.04 - tk * 0.35);
     m.head.rotation.set(-lean * 0.85 + (hunt ? 0.1 : 0.0), tw * 0.25, Math.sin(t * 1.1) * 0.05 + (hunt ? Math.sin(t * 7) * 0.03 : 0));
   }
 

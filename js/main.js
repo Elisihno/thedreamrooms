@@ -570,27 +570,35 @@ function lullaby(dt) {
   }
 }
 const bump = (u, a, b) => smooth(a, a + 0.1, u) * (1 - smooth(b - 0.1, b, u));
+const damp = (rate, dt) => 1 - Math.exp(-rate * dt);                 // frame-rate independent easing
+const easeIO = x => x * x * x * (x * (x * 6 - 15) + 10);              // a gentler start and stop than smoothstep
 function buildTuck() {
   const front = house.exits.find(e => e.id === 'front');
   const door = front.axis === 'x' ? { x: front.mid, z: front.f } : { x: front.f, z: front.mid };
   const start = { x: door.x - front.out[0] * 1.3, z: door.z - front.out[1] * 1.3, y: levelY(front.level), level: front.level };
   const wps = hollow.nav.find(front.level, start.x, start.z, house.spawnLevel, house.spawn.x, house.spawn.z) ?? [];
-  const pts = [start, ...wps.map(w => ({ x: w.x, z: w.z, y: w.y, level: w.level }))];
-  // round the corners a little so the head does not snap around
-  const sm = [pts[0]];
-  for (let i = 1; i < pts.length - 1; i++) {
-    const a = pts[i - 1], b = pts[i], c = pts[i + 1];
-    sm.push({ x: b.x * 0.5 + a.x * 0.25 + c.x * 0.25, z: b.z * 0.5 + a.z * 0.25 + c.z * 0.25, y: b.y, level: b.level });
+  let pts = [start, ...wps.map(w => ({ x: w.x, z: w.z, y: w.y, level: w.level }))];
+  // round every corner (two passes of corner cutting), then lay the points out evenly so the camera glides
+  for (let pass = 0; pass < 3; pass++) {
+    const out = [pts[0]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1], mix = (u, v, t) => u + (v - u) * t;
+      const q = { x: mix(a.x, b.x, 0.25), z: mix(a.z, b.z, 0.25), y: mix(a.y, b.y, 0.25), level: a.level };
+      const r = { x: mix(a.x, b.x, 0.75), z: mix(a.z, b.z, 0.75), y: mix(a.y, b.y, 0.75), level: b.level };
+      if (i > 0) out.push(q);
+      if (i < pts.length - 2) out.push(r);
+    }
+    out.push(pts[pts.length - 1]);
+    pts = out;
   }
-  sm.push(pts[pts.length - 1]);
   const cum = [0];
-  for (let i = 1; i < sm.length; i++) cum.push(cum[i - 1] + Math.hypot(sm[i].x - sm[i - 1].x, sm[i].z - sm[i - 1].z));
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z));
   const len = cum[cum.length - 1];
   const sample = d => {
-    if (d <= 0) { const a = sm[0], b = sm[1] ?? a, n = Math.hypot(b.x - a.x, b.z - a.z) || 1; return { x: a.x + (b.x - a.x) / n * d, z: a.z + (b.z - a.z) / n * d, y: a.y, level: a.level }; }
-    if (d >= len) return sm[sm.length - 1];
+    if (d <= 0) { const a = pts[0], b = pts[1] ?? a, n = Math.hypot(b.x - a.x, b.z - a.z) || 1; return { x: a.x + (b.x - a.x) / n * d, z: a.z + (b.z - a.z) / n * d, y: a.y, level: a.level }; }
+    if (d >= len) return pts[pts.length - 1];
     let i = 1; while (cum[i] < d) i++;
-    const f = (d - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]), a = sm[i - 1], b = sm[i];
+    const f = (d - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]), a = pts[i - 1], b = pts[i];
     return { x: a.x + (b.x - a.x) * f, z: a.z + (b.z - a.z) * f, y: a.y + (b.y - a.y) * f, level: f > 0.5 ? b.level : a.level };
   };
   // doors along the way are already open
@@ -604,7 +612,10 @@ function buildTuck() {
     }
   }
   const bed = house.hideSpots.filter(h => h.level === house.spawnLevel && h.eye < 0.3).sort((a, b) => Math.hypot(a.x - house.spawn.x, a.z - house.spawn.z) - Math.hypot(b.x - house.spawn.x, b.z - house.spawn.z))[0];
-  return { len, sample, bed, opened, speed: 1.7, yaw: 0, stepT: 0 };
+  // the bedroom door she will leave by: the nearest door on that floor
+  const exitDoor = house.roomDoors.filter(d => d.level === house.spawnLevel).sort((a, b) => Math.hypot((a.axis === 'x' ? a.mid : a.f) - bed.x, (a.axis === 'x' ? a.f : a.mid) - bed.z) - Math.hypot((b.axis === 'x' ? b.mid : b.f) - bed.x, (b.axis === 'x' ? b.f : b.mid) - bed.z))[0];
+  const doorAt = exitDoor ? { x: exitDoor.axis === 'x' ? exitDoor.mid : exitDoor.f, z: exitDoor.axis === 'x' ? exitDoor.f : exitDoor.mid } : { x: bed.x, z: bed.z + 4 };
+  return { len, sample, bed, opened, doorAt, vmax: 1.45 };
 }
 function startTuck() {
   initAudio();
@@ -614,105 +625,157 @@ function startTuck() {
   setHand(null); heldView.show(null);
   const path = buildTuck();
   document.body.classList.add('waking');
-  const Tw = 0.8 + path.len / path.speed;
-  driving = { kind: 'tuck', t: 0, path, Tw, skipTo: Tw + 6.6, phase: 0 };
-  path.yaw = Math.atan2(-(path.sample(1.4).x - path.sample(0).x), -(path.sample(1.4).z - path.sample(0).z));
-  player.pos.set(path.sample(0).x, 0, path.sample(0).z); player.level = path.sample(0).level;
+  driving = { kind: 'tuck', t: 0, path, s: 0, v: 0, yaw: 0, look: 0, phase: 0, bob: 0, stepAcc: 0, nanS: -1.4, nanV: 0, arrive: null, camYaw: 0 };
+  const a = path.sample(0), b = path.sample(1.5);
+  driving.yaw = driving.camYaw = Math.atan2(-(b.x - a.x), -(b.z - a.z));
+  player.pos.set(a.x, 0, a.z); player.level = a.level;
   fadeEl.style.background = '#000'; fadeEl.style.opacity = '1';
   hollow.group.visible = true;
   lull.on = true; lull.i = 0; lull.vol = 0.2; lull.detune = 0; lull.next = audio ? audio.currentTime + 1.2 : 0;
 }
-function skipTuck() { if (driving?.kind === 'tuck' && driving.t > 2 && driving.t < driving.skipTo) driving.t = driving.skipTo; }
+function skipTuck() {
+  const f = driving;
+  if (f?.kind !== 'tuck' || f.t < 2) return;
+  if (f.arrive === null) { f.arrive = f.t; f.s = f.path.len; }
+  if (f.t - f.arrive < 6.6) f.t = f.arrive + 6.6;   // jump to the blackout
+}
+let tuckFadeIn = null;   // the screen coming back up after the film
 function endTuck(f) {
   hollow.cine = null;
   document.body.classList.remove('waking');
   for (const d of f.path.opened) if (d.level === house.spawnLevel && d.open) house.use({ kind: 'roomdoor', door: d }, null);   // she closes the bedroom door behind her
   lidT.hidden = lidB.hidden = true; lidT.style.height = lidB.style.height = '';
   renderer.domElement.style.filter = '';
+  vignette.style.opacity = '0';
   player.pos.set(house.spawn.x, 0, house.spawn.z); player.level = house.spawnLevel; player.y = levelY(house.spawnLevel);
   player.yaw = 0; player.pitch = 0;
   hollow.spawn(player);
   lull.on = false;
-  fadeEl.style.opacity = '0';
+  fadeEl.style.opacity = '1';
+  tuckFadeIn = { t: 0 };
   driving = null;
-  showToast('Where am I?', 2600);
+}
+// what the eyes do while waking: slow heavy blinks first, then a longer look, then wide open (0 shut, 1 open)
+function wakeLids(w) {
+  const keys = [[0, 0], [0.5, 0], [1.1, 0.22], [1.5, 0.1], [1.9, 0.32], [2.4, 0.05], [2.9, 0.05], [3.5, 0.55], [4.0, 0.4], [4.4, 0.75], [5.2, 0.7], [5.8, 1]];
+  for (let i = 1; i < keys.length; i++) if (w <= keys[i][0]) { const [t0, v0] = keys[i - 1], [t1, v1] = keys[i]; return v0 + (v1 - v0) * easeIO((w - t0) / (t1 - t0)); }
+  return 1;
 }
 function tuckFrame(f, dt, t) {
-  const k = f.t, P = f.path, Tw = f.Tw, o = { eye: EYE, pitch: 0, roll: 0 };
+  const k = f.t, P = f.path, o = { eye: EYE, pitch: 0, roll: 0 };
   const say = (n, text, ms = 2600) => { if (f.phase < n) { f.phase = n; showToast(text, ms); } };
   const nan = hollow.cine ?? (hollow.cine = { x: 0, z: 0, y: 0, level: 0, yaw: 0, speed: 0, lean: 0.05 });
   const bed = P.bed, S = house.spawn;
-  const walkEnd = Tw;
-  if (k < walkEnd) {
-    const s = Math.min(P.len, Math.max(0, k - 0.8) * P.speed), u = s / P.len;
-    const here = P.sample(s), ahead = P.sample(s + 1.4);
-    const want = Math.atan2(-(ahead.x - here.x), -(ahead.z - here.z));
-    if (Math.hypot(ahead.x - here.x, ahead.z - here.z) > 0.3) P.yaw += angleDiff(want, P.yaw) * Math.min(1, dt * 4);
-    const lb = bump(u, 0.07, 0.22);     // now and then she looks back at Nanny
-    player.pos.x = here.x; player.pos.z = here.z; player.y = here.y; player.level = here.level;
-    const toNan = Math.atan2(-(nan.x - here.x), -(nan.z - here.z));
-    player.yaw = P.yaw + angleDiff(toNan, P.yaw) * lb; player.pitch = -0.05 * lb;
-    const moving = k > 0.8 && s < P.len;
-    o.eye = EYE + (moving ? Math.sin(k * 7.4) * 0.03 : 0);
-    o.pitch = moving ? Math.sin(k * 7.4 + 1) * 0.008 : 0;
-    o.roll = moving ? Math.sin(k * 3.7) * 0.01 : 0;
-    const behind = P.sample(s - (1.2 + 0.25 * Math.sin(k * 0.9)));
-    const before = P.sample(s - 2.2);
+  const D = P.vmax;
+  // ---- walking in: eased start, slower on the stairs, a long gentle stop ----
+  if (f.arrive === null) {
+    const here = P.sample(f.s), ahead = P.sample(f.s + 0.6), steep = Math.abs(ahead.y - here.y) > 0.05;
+    const remain = P.len - f.s;
+    const want = k < 1.2 ? 0 : D * (steep ? 0.7 : 1) * easeIO(Math.min(1, (k - 1.2) / 1.6)) * (0.18 + 0.82 * easeIO(Math.min(1, remain / 2.4)));
+    f.v += (want - f.v) * damp(4, dt);
+    f.s = Math.min(P.len, f.s + f.v * dt);
+    if (P.len - f.s < 0.03) { f.arrive = k; f.v = 0; }
+    const u = f.s / P.len;
+    // she follows a stride and a half behind, a little loose
+    f.nanV = f.v;
+    f.nanS += (Math.max(-1.4, f.s - 1.35) - f.nanS) * damp(5, dt);
+    const behind = P.sample(f.nanS), before = P.sample(f.nanS - 1.0);
     nan.x = behind.x; nan.z = behind.z; nan.y = behind.y; nan.level = behind.level;
-    nan.yaw = Math.atan2(here.x - before.x, here.z - before.z); nan.speed = moving ? P.speed : 0; nan.lean = 0.08;
-    // her footsteps and the front door shutting
-    if (k > 0.25 && !f.door) { f.door = true; house.onSound('doorClose'); }
-    if (moving) { P.stepT -= dt; if (P.stepT <= 0) { P.stepT = 0.62; entitySound('step', 0.45); } }
-    fadeEl.style.opacity = String(1 - smooth(0.3, 1.6, k));
+    nan.yaw = Math.atan2(behind.x - before.x, behind.z - before.z); nan.speed = Math.max(0, f.v) * 0.95 + (f.v > 0.1 ? 0 : 0); nan.lean = 0.08;
+    // the head: eased onto the way ahead, with the odd look back at her
+    const far = P.sample(f.s + 1.6);
+    if (Math.hypot(far.x - here.x, far.z - here.z) > 0.2) f.yaw += angleDiff(Math.atan2(-(far.x - here.x), -(far.z - here.z)), f.yaw) * damp(3.2, dt);
+    const lbWant = u > 0.1 && u < 0.3 ? 1 : 0;
+    f.look += (lbWant - f.look) * damp(lbWant ? 2.2 : 1.6, dt);
+    const toNan = Math.atan2(-(nan.x - here.x), -(nan.z - here.z));
+    f.camYaw = f.yaw + angleDiff(toNan, f.yaw) * f.look * 0.92 + Math.sin(k * 0.7) * 0.012;
+    player.pos.x = here.x; player.pos.z = here.z; player.y = here.y; player.level = here.level;
+    player.yaw = f.camYaw; player.pitch = -0.04 * f.look + (steep ? 0.1 : 0);
+    // a walking head: it dips twice a stride and sways once
+    const amp = Math.min(1, f.v / D);
+    f.bob += dt * f.v * 4.1;
+    o.eye = EYE + Math.sin(f.bob * 2) * 0.026 * amp + Math.sin(k * 1.1) * 0.004;
+    o.pitch = Math.sin(f.bob * 2 + 0.6) * 0.007 * amp;
+    o.roll = Math.sin(f.bob) * 0.009 * amp + Math.sin(k * 0.6) * 0.004;
+    f.stepAcc += dt * f.v * 4.1 * 2;
+    if (f.stepAcc > Math.PI) { f.stepAcc -= Math.PI; entitySound('step', 0.22); }
+    if (k > 0.3 && !f.door) { f.door = true; house.onSound('doorClose'); }
+    fadeEl.style.opacity = String(1 - easeIO(Math.min(1, Math.max(0, (k - 0.2) / 1.8))));
     say(1, 'Come along, dear. Nearly home.', 2800);
-    if (u > 0.45) say(2, 'Up the stairs we go.', 2600);
+    if (u > 0.42) say(2, 'Up the stairs we go.', 2600);
     if (u > 0.8) say(3, 'Good girl. Good boy. Whoever you are.', 2600);
-    return o;
+    if (f.arrive === null) return o;
+    nan.speed = 0;
   }
-  // at the bed
-  const q = k - Tw, T1 = 3.6;                       // from T1 on she tucks you in and hums
-  const toBed = smooth(0.0, 1.4, q), lie = smooth(1.2, 3.0, q);
+  // ---- at the bed ----
+  const q = k - f.arrive, T1 = 3.6;
+  const toBed = easeIO(Math.min(1, q / 1.7)), lie = easeIO(Math.min(1, Math.max(0, (q - 1.3) / 2.0)));
   const foot = { x: bed.x, z: bed.z + 1.35 }, pillow = { x: bed.x, z: bed.z - 0.25 };
   const px = S.x + (foot.x - S.x) * toBed, pz = S.z + (foot.z - S.z) * toBed;
   player.pos.x = px + (pillow.x - px) * lie; player.pos.z = pz + (pillow.z - pz) * lie;
   player.y = levelY(house.spawnLevel); player.level = house.spawnLevel;
-  const face = smooth(1.2, 3.2, q) * (1 - smooth(T1 + 1.0, T1 + 2.6, q));     // you turn to look at her while she tucks you in
-  player.yaw += angleDiff(-1.25 * face, player.yaw) * Math.min(1, dt * 3);
-  o.eye = EYE + (0.98 - EYE) * lie;
-  o.pitch = 0.5 * smooth(1.2, 3.0, q) + 0.8 * smooth(T1 + 1.0, T1 + 2.6, q) + Math.sin(k * 0.8) * 0.01;
-  // she comes round to the side of the bed and leans over
-  const side = { x: bed.x + 1.0, z: bed.z - 0.2 }, near = smooth(0.2, 2.2, q);
-  const from = P.sample(P.len - 1.2);
+  const face = easeIO(Math.min(1, Math.max(0, (q - 1.6) / 1.6))) * (1 - easeIO(Math.min(1, Math.max(0, (q - T1 - 1.0) / 1.8))));
+  player.yaw += angleDiff(-1.25 * face, player.yaw) * damp(3.5, dt);
+  // sitting down on the bed, then lying back: the head drops and tips, the world tilts a little
+  const sit = easeIO(Math.min(1, Math.max(0, (q - 1.0) / 1.2)));
+  o.eye = EYE + (1.12 - EYE) * sit + (0.98 - 1.12) * lie + Math.sin(k * 1.3) * 0.004;
+  o.pitch = 0.5 * easeIO(Math.min(1, Math.max(0, (q - 1.5) / 1.8))) + 0.8 * easeIO(Math.min(1, Math.max(0, (q - T1 - 1.0) / 1.8))) - 0.12 * sit * (1 - lie) + Math.sin(k * 0.8) * 0.01;
+  o.roll = -0.05 * lie * face;
+  // she comes round to the side of the bed, leans over and smooths the blanket
+  const side = { x: bed.x + 1.0, z: bed.z - 0.2 }, near = easeIO(Math.min(1, Math.max(0, (q - 0.3) / 2.2)));
+  const from = P.sample(P.len - 1.35);
   nan.x = from.x + (side.x - from.x) * near; nan.z = from.z + (side.z - from.z) * near; nan.y = levelY(house.spawnLevel); nan.level = house.spawnLevel;
   nan.yaw = Math.atan2(bed.x - nan.x, bed.z - 0.25 - nan.z);
-  nan.speed = near < 0.97 ? P.speed * 0.8 : 0; nan.lean = 0.08 + 0.55 * smooth(2.0, 3.4, q);
+  nan.speed = near > 0.02 && near < 0.97 ? P.vmax * 0.75 : 0;
+  nan.lean = 0.08 + 0.58 * easeIO(Math.min(1, Math.max(0, (q - 2.0) / 1.6)));
+  nan.tuck = easeIO(Math.min(1, Math.max(0, (q - 2.6) / 0.8))) * (1 - easeIO(Math.min(1, Math.max(0, (q - T1 - 2.4) / 0.8))));
   if (q > 1.5) say(4, 'Sweet dreams. And don\'t you go wandering.', 3400);
-  lull.vol = 0.2 + 0.7 * smooth(0, 3, q);
+  lull.vol = 0.2 + 0.7 * easeIO(Math.min(1, q / 3));
   if (q > T1 + 0.4) say(5, 'Nanny will be right outside.', 2800);
-  // blackout
-  const out = smooth(T1 + 1.2, T1 + 3.2, q);
-  o.roll = Math.sin(q * 1.3) * 0.03 * out;
-  fadeEl.style.opacity = String(out);
-  const asleep = T1 + 3.2;                          // black from here
-  if (q > asleep + 0.1 && !f.gone) { f.gone = true; hollow.cine = null; hollow.spawn(player); lull.vol = 0.12; house.onSound('doorClose'); }
-  // waking up in the dark: slow blinks, then the lids settle
-  const wk = q - (asleep + 0.8);
-  if (wk > 0) {
-    lidT.hidden = lidB.hidden = false;
-    const e = eyeOpen(Math.min(wk * 1.35 + 0.4, 8.0));
-    lidT.style.height = lidB.style.height = (50 * (1 - e)) + '%';
-    renderer.domElement.style.filter = `blur(${(10 * (1 - smooth(0.5, 5.0, wk)) + (1 - e) * 3).toFixed(1)}px)`;
-    fadeEl.style.opacity = String(1 - smooth(0, 1.0, wk));
-    o.pitch = 1.3 - 0.1 * smooth(2, 5, wk); player.yaw += angleDiff(0, player.yaw) * Math.min(1, dt * 2) + 0.07 * dt * smooth(1, 4, wk);
-    say(6, 'Where... where am I?', 2200);
+  // falling asleep: the lids droop and flutter, the picture goes soft, then dark
+  const sleepy = Math.min(1, Math.max(0, (q - T1 - 0.6) / 2.8));
+  const asleep = T1 + 3.4;                          // black from here
+  if (q < asleep + 0.1) {
+    const flutter = 1 - 0.18 * Math.sin(q * 5.5) * (1 - sleepy) * easeIO(Math.min(1, Math.max(0, (q - T1) / 0.8)));
+    const lid = 1 - easeIO(sleepy) * flutter;
+    lidT.hidden = lidB.hidden = sleepy <= 0;
+    lidT.style.height = lidB.style.height = (50 * lid) + '%';
+    renderer.domElement.style.filter = `blur(${(5 * sleepy * sleepy).toFixed(1)}px) brightness(${(1 - 0.35 * sleepy).toFixed(2)})`;
+    vignette.style.opacity = (0.75 * sleepy).toFixed(3);
+    fadeEl.style.opacity = String(easeIO(Math.min(1, Math.max(0, (q - (asleep - 0.8)) / 0.9))));
   }
-  // then it goes black
-  const fadeOut = asleep + 0.8 + 5.2;
-  if (q > fadeOut) { fadeEl.style.opacity = String(smooth(fadeOut, fadeOut + 0.9, q)); lull.on = q < fadeOut + 0.9; }
-  if (q > fadeOut + 1.4) endTuck(f);
+  if (q > asleep + 0.1 && !f.gone) {
+    f.gone = true; hollow.cine = null; hollow.spawn(player); lull.vol = 0.12; house.onSound('doorClose');
+    lidT.style.height = lidB.style.height = '50%';
+  }
+  // ---- waking up in the dark bedroom ----
+  const w = q - (asleep + 1.1);
+  if (w > 0) {
+    lidT.hidden = lidB.hidden = false;
+    const e = wakeLids(w);
+    lidT.style.height = (50 * (1 - e)) + '%'; lidB.style.height = (50 * (1 - e) * 0.85) + '%';
+    const focus = easeIO(Math.min(1, Math.max(0, (w - 1.6) / 3.6)));
+    renderer.domElement.style.filter = `blur(${(11 * (1 - focus) + (1 - e) * 3).toFixed(1)}px) saturate(${(0.35 + 0.65 * focus).toFixed(2)}) brightness(${(0.8 + 0.2 * focus).toFixed(2)})`;
+    vignette.style.opacity = (0.8 * (1 - focus * 0.7)).toFixed(3);
+    fadeEl.style.opacity = String(1 - easeIO(Math.min(1, w / 1.4)));
+    // the heartbeat slows; the ceiling swims, then the head rolls toward the door and lifts off the pillow
+    const toDoor = Math.atan2(-(P.doorAt.x - player.pos.x), -(P.doorAt.z - player.pos.z));
+    const turn = easeIO(Math.min(1, Math.max(0, (w - 2.4) / 2.6))), lift = easeIO(Math.min(1, Math.max(0, (w - 3.2) / 2.2)));
+    player.yaw += angleDiff(toDoor * turn, player.yaw) * damp(2.2, dt);
+    o.pitch = 1.2 * (1 - turn) + 0.15 * turn + Math.sin(w * 1.5) * 0.02 * (1 - focus);
+    o.roll = Math.sin(w * 1.1) * 0.05 * (1 - focus) - 0.04 * turn * (1 - lift);
+    o.eye = 0.98 + 0.32 * lift;
+    o.pos = 0;
+    if (!f.beat1 || w - f.beat1 > 1.5 + 0.25 * Math.min(1, w / 5)) { f.beat1 = w; entitySound('beat', 0.35 * (1 - focus * 0.6)); }
+    if (w > 4.6) say(6, 'Where... where am I?', 2400);
+    if (w > 4.0 && !f.creak) { f.creak = true; house.onSound('doorOpen'); }
+    lull.vol = 0.12 * (1 - easeIO(Math.min(1, Math.max(0, (w - 3) / 3))));
+    const out = easeIO(Math.min(1, Math.max(0, (w - 6.4) / 1.1)));   // then it goes black
+    if (w > 6.4) fadeEl.style.opacity = String(out);
+    if (w > 7.9) endTuck(f);
+  }
   return o;
 }
-
 // the overlay canvas: light rays at the front door, stars at the hatch, speed streaks in the car
 function resizeFx() { fxEl.width = innerWidth; fxEl.height = innerHeight; }
 addEventListener('resize', resizeFx);
@@ -1433,14 +1496,14 @@ function frame() {
   if (wake.active) {
     wake.t += dt;
     if (wake.t > 1.6) wake.skippable = true;
-    const rise = smooth(5.2, 7.9, wake.t);
+    const rise = easeIO(Math.min(1, Math.max(0, (wake.t - 4.8) / 3.2)));
     eye = 0.2 + (EYE - 0.2) * rise;
     pitchAdd = (1 - rise) * 1.0 + Math.sin(wake.t * 1.1) * 0.05 * (1 - rise);
     rollAdd = (1 - rise) * 0.3 + Math.sin(wake.t * 1.7) * 0.04 * (1 - rise);
-    const o = eyeOpen(wake.t);
-    lidT.style.height = lidB.style.height = (50 * (1 - o)) + '%';
-    renderer.domElement.style.filter = `blur(${(12 * (1 - smooth(1.0, 6.6, wake.t)) + (1 - o) * 4).toFixed(1)}px)`;
-    vignette.style.opacity = (0.8 * (1 - smooth(4.0, 8.0, wake.t))).toFixed(3);
+    const o = wakeLids(wake.t), focus = easeIO(Math.min(1, Math.max(0, (wake.t - 1.4) / 4.2)));
+    lidT.style.height = (50 * (1 - o)) + '%'; lidB.style.height = (50 * (1 - o) * 0.85) + '%';
+    renderer.domElement.style.filter = `blur(${(11 * (1 - focus) + (1 - o) * 3).toFixed(1)}px) saturate(${(0.35 + 0.65 * focus).toFixed(2)}) brightness(${(0.8 + 0.2 * focus).toFixed(2)})`;
+    vignette.style.opacity = (0.8 * (1 - focus * 0.8) * (1 - rise)).toFixed(3);
     if (wake.t >= wake.dur) endWake();
   }
 
@@ -1530,8 +1593,9 @@ function frame() {
     if (driving && driving.kind !== 'caught' && driving.kind !== 'fall' && driving.kind !== 'tuck') drawFx(driving);
     if (driving && (driving.kind === 'caught' || driving.kind === 'fall')) bloodDrips(dt);
   }
+  if (tuckFadeIn) { tuckFadeIn.t += dt; fadeEl.style.opacity = String(1 - easeIO(Math.min(1, tuckFadeIn.t / 1.6))); if (tuckFadeIn.t > 1.7) { tuckFadeIn = null; fadeEl.style.opacity = '0'; showToast('Where am I?', 2600); } }
   if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
-  vignette.style.opacity = wake.active ? vignette.style.opacity : (hideE * 0.95).toFixed(3);
+  vignette.style.opacity = wake.active || driving?.kind === 'tuck' ? vignette.style.opacity : (hideE * 0.95).toFixed(3);
   camera.position.set(player.pos.x, player.y + eye + bob, player.pos.z);
   camera.rotation.set(player.pitch + pitchAdd, player.yaw, rollAdd, 'YXZ');
 
