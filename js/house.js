@@ -78,7 +78,11 @@ const LEVELS = [
       { item: 'kidsbed', side: 'E', at: [20.85, 3.0] }, { item: 'toybox', side: 'N', at: [14.0, -1.65] },
       { item: 'smalltable', at: [13.0, 7.0], turn: 0 }, { item: 'drawers', side: 'S', at: [14.0, 14.05] },
     ],
-    granny: ['D', 'N', 'M', 'K', 'H'],   // Granny's furniture fills these rooms
+    granny: ['D', 'N', 'M', 'K', 'H', 'Q'],   // Granny's furniture fills these rooms
+    grannyCopies: [   // her television and sofa, set down again in the middle living room
+      { from: [14.0, 20.7, -12.7, -9.0], shift: [-14.0, 0] },
+      { from: [10.5, 13.6, -10.2, -6.8], shift: [-14.0, 0] },
+    ],
     furnishing: {},
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
   },
@@ -95,16 +99,18 @@ const LEVELS = [
     doors: [['x', -1.65, -3.1, 0.5], ['x', -1.65, 1.2, 2.9], ['x', -1.65, 4.6, 7.0], ['z', -6.25, -1.65, 2.0], ['z', 7.35, 9.6, 13.0], ['x', -1.65, 13.0, 16.8]],
     roles: { A: 'bedroom', B: 'bedroom', C: 'closet', D: 'bathroom', L: 'hall', F: 'kids' },
     looks: { D: { walls: [0, 6], floors: [6], tint: 0xeeeeee } },   // the bathroom: pale walls, tiles
-    spawnAt: [-10.0, -6.0],
+    spawnAt: [-10.0, -3.0],
     fixed: [
-      { item: 'roundtable', at: [-14.5, -8.0], turn: 0, vase: true }, { item: 'bed', side: 'N', at: [-10.0, -12.75] },   // your bed: Nanny tucks you in here
-      { item: 'nightstand', side: 'N', at: [-7.6, -12.75] }, { item: 'drawers', side: 'S', at: [-6.0, -1.65] },
+      { item: 'roundtable', at: [-14.5, -8.0], turn: 0, vase: true }, { item: 'drawers', side: 'S', at: [-6.0, -1.65] },
       { item: 'drawers', side: 'N', at: [16.5, -12.75] },
-      { item: 'bathtub', side: 'N', at: [-17.0, -1.65] }, { item: 'toilet', side: 'W', at: [-19.7, 6.0] }, { item: 'sink', side: 'W', at: [-19.7, 10.0] },
-      { item: 'kidsbed', side: 'E', at: [20.85, 6.0] }, { item: 'toybox', side: 'S', at: [14.0, 14.05] }, { item: 'smalltable', at: [13.0, 8.0], turn: 0 },
+      { item: 'toybox', side: 'S', at: [14.0, 14.05] }, { item: 'smalltable', at: [13.0, 8.0], turn: 0 },
       { item: 'drawers', side: 'W', at: [-6.25, 10.0] },
     ],
-    granny: ['A', 'B'],
+    granny: ['A', 'B', 'D', 'F', 'L'],   // her bathroom, her dressers and wardrobes
+    grannyCopies: [   // her beds: yours against the north wall of the start bedroom (head to the wall), Nanny's in the big bedroom
+      { from: [-19.7, -16.0, -9.5, -1.8], at: [-10.0, -8.85], turn: 2, moved: true, bed: 0.62, hide: 0.26 },
+      { from: [0.8, 8.4, -12.7, -9.0], at: [12.0, -10.85], turn: 0, moved: true, hide: 0.26 },
+    ],
     guarantee: [{ item: 'trashcan', room: 'A' }],   // the trash can stands against a wall of the start bedroom
     furnishing: {},
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
@@ -388,6 +394,7 @@ export function buildHouse(renderer, seed = 1) {
   const hideSpots = [];
   const roomDoors = [];
   let vaseStart = null;
+  let bedInfo = null;   // the bed Nanny tucks you into: its middle, size and height
   let carSeat = null;   // where the driver sits, once the car is placed
   const wobbles = [];   // dropped vases, falling and wobbling
   const shootables = []; // panes that can be shot out
@@ -1032,35 +1039,67 @@ export function buildHouse(renderer, seed = 1) {
         placeItem(fb, ITEMS[g.item], base, ang);
       }
 
-      // Granny's own furniture fills what is left: a piece is used when it sits wholly inside one of the
-      // listed rooms and clears the doorways, the stairs and the pieces we placed by hand
-      if (cfg.granny) {
-        const byMat = new Map();
-        for (const [fl, mi, vs, vc, is, tc, x0, x1, y0, y1, z0, z1] of grannyFurniture.pieces) {
-          if (fl !== level) continue;
-          const rect = { minX: (x0 - MX) * SH, maxX: (x1 - MX) * SH, minZ: (z0 - MZ) * SH, maxZ: (z1 - MZ) * SH };
+      // Granny's own furniture. First the copies we ask for: a group of her pieces (picked by where they stood in her
+      // house) is turned and set down somewhere else. Then the rest of her pieces fill what is left: each is used when it
+      // sits wholly inside one of the listed rooms and clears the doorways, the stairs and the pieces placed before it.
+      if ((cfg.granny || cfg.grannyCopies) && !(typeof location !== 'undefined' && location.hash.includes('nogf'))) {
+        const byMat = new Map(), moved = new Set(), PS = grannyFurniture.pieces;
+        const add = (mi, entry) => { if (!byMat.has(mi)) byMat.set(mi, []); byMat.get(mi).push(entry); };
+        const toWorld = (x0, x1, z0, z1) => ({ minX: (x0 - MX) * SH, maxX: (x1 - MX) * SH, minZ: (z0 - MZ) * SH, maxZ: (z1 - MZ) * SH });
+        for (const cp of cfg.grannyCopies ?? []) {
+          const [x0, x1, z0, z1] = cp.from, ids = [];
+          PS.forEach((p, i) => { if (p[0] === level && (p[6] + p[7]) / 2 >= x0 && (p[6] + p[7]) / 2 <= x1 && (p[10] + p[11]) / 2 >= z0 && (p[10] + p[11]) / 2 <= z1) ids.push(i); });
+          if (!ids.length) continue;
+          let lx0 = 1e9, lx1 = -1e9, lz0 = 1e9, lz1 = -1e9;
+          for (const i of ids) { const p = PS[i]; lx0 = Math.min(lx0, p[6]); lx1 = Math.max(lx1, p[7]); lz0 = Math.min(lz0, p[10]); lz1 = Math.max(lz1, p[11]); }
+          const turn = cp.turn ?? 0, ang = turn * Math.PI / 2;
+          const gcx = (lx0 + lx1) / 2, gcz = (lz0 + lz1) / 2, at = cp.shift ? [gcx + cp.shift[0], gcz + cp.shift[1]] : cp.at;
+          const tf = { c: Math.round(Math.cos(ang)), s: Math.round(Math.sin(ang)), gcx, gcz, tx: at[0], tz: at[1] };
+          const ww = turn % 2 ? lz1 - lz0 : lx1 - lx0, dd = turn % 2 ? lx1 - lx0 : lz1 - lz0;
+          const rect = toWorld(at[0] - ww / 2, at[0] + ww / 2, at[1] - dd / 2, at[1] + dd / 2);
+          if (keep.some(o => hits({ minX: rect.minX - 0.05, maxX: rect.maxX + 0.05, minZ: rect.minZ - 0.05, maxZ: rect.maxZ + 0.05 }, o))) continue;   // never across a doorway
+          for (const i of ids) { add(PS[i][1], [PS[i][2], PS[i][3], PS[i][4], PS[i][5], tf]); if (cp.moved) moved.add(i); }
+          const col = { ...rect, level }; colliders.push(col); furn.push(col);
+          const cxw = (rect.minX + rect.maxX) / 2, czw = (rect.minZ + rect.maxZ) / 2;
+          if (cp.bed) bedInfo = { x: cxw, z: czw, halfLen: (rect.maxZ - rect.minZ) / 2, halfWid: (rect.maxX - rect.minX) / 2, topY: cp.bed, level };
+          if (cp.hide) {   // an invisible box over the bed: look at it to hide underneath
+            const proxy = new THREE.Mesh(new THREE.BoxGeometry(rect.maxX - rect.minX, 0.8, rect.maxZ - rect.minZ), new THREE.MeshBasicMaterial({ visible: false }));
+            proxy.position.set(cxw, Y + 0.4, czw); group.add(proxy);
+            const spot = { x: cxw, z: czw, level, eye: cp.hide };
+            spot.target = { kind: 'hide', spot }; proxy.userData.hide = spot; pickables.push(proxy); hideSpots.push(spot);
+          }
+        }
+        PS.forEach((piece, pi) => {
+          const [fl, mi, vs, vc, is, tc, x0, x1, y0, y1, z0, z1] = piece;
+          if (fl !== level || moved.has(pi) || !cfg.granny) return;
+          const rect = toWorld(x0, x1, z0, z1);
           const shrunk = { minX: rect.minX + 0.04, maxX: rect.maxX - 0.04, minZ: rect.minZ + 0.04, maxZ: rect.maxZ - 0.04 };
           const corners = [[shrunk.minX, shrunk.minZ], [shrunk.maxX, shrunk.minZ], [shrunk.minX, shrunk.maxZ], [shrunk.maxX, shrunk.maxZ]];
           const room = roomAt(...corners[0]);
-          if (!room || !cfg.granny.includes(room) || !corners.every(([x, z]) => roomAt(x, z) === room)) continue;
-          const tall = (y1 - y0) * SH > 0.35 && (x1 - x0) * SH > 0.12 && (z1 - z0) * SH > 0.12;
+          if (!room || !cfg.granny.includes(room) || !corners.every(([x, z]) => roomAt(x, z) === room)) return;
+          const tall = (y1 - y0) * SH > 0.35 && (x1 - x0) * SH > 0.12 && (z1 - z0) * SH > 0.12, flat = (y1 - y0) * SH < 0.12;
           const fit = { minX: rect.minX - 0.08, maxX: rect.maxX + 0.08, minZ: rect.minZ - 0.08, maxZ: rect.maxZ + 0.08 };
-          if (keep.some(o => hits(fit, o)) || (tall && furn.some(o => hits(fit, o)))) continue;
+          if (keep.some(o => hits(fit, o)) || ((tall || flat) && furn.some(o => hits(fit, o)))) return;
           if (tall) { const col = { ...rect, level }; colliders.push(col); furn.push(col); }
-          if (!byMat.has(mi)) byMat.set(mi, []);
-          byMat.get(mi).push([vs, vc, is, tc]);
-        }
+          add(mi, [vs, vc, is, tc, null]);
+        });
         for (const [mi, list] of byMat) {
           let nv = 0, ni = 0;
           for (const [, vc, , tc] of list) { nv += vc; ni += tc * 3; }
           const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(ni);
           let vo = 0, io = 0;
-          for (const [vs, vc, is, tc] of list) {
+          for (const [vs, vc, is, tc, tf] of list) {
             for (let k = 0; k < vc; k++) {
-              pos[(vo + k) * 3] = (GF.pos[(vs + k) * 3] - MX) * SH;
+              let X = GF.pos[(vs + k) * 3], Z = GF.pos[(vs + k) * 3 + 2], nx = GF.nor[(vs + k) * 3], nz = GF.nor[(vs + k) * 3 + 2];
+              if (tf) {   // a copy: turned about its own middle, then set down at the new spot
+                const dX = X - tf.gcx, dZ = Z - tf.gcz;
+                X = tf.tx + tf.c * dX + tf.s * dZ; Z = tf.tz - tf.s * dX + tf.c * dZ;
+                const rx = tf.c * nx + tf.s * nz; nz = -tf.s * nx + tf.c * nz; nx = rx;
+              }
+              pos[(vo + k) * 3] = (X - MX) * SH;
               pos[(vo + k) * 3 + 1] = Y + GF.pos[(vs + k) * 3 + 1] * SH;
-              pos[(vo + k) * 3 + 2] = (GF.pos[(vs + k) * 3 + 2] - MZ) * SH;
-              nor.set(GF.nor.subarray((vs + k) * 3, (vs + k) * 3 + 3), (vo + k) * 3);
+              pos[(vo + k) * 3 + 2] = (Z - MZ) * SH;
+              nor[(vo + k) * 3] = nx; nor[(vo + k) * 3 + 1] = GF.nor[(vs + k) * 3 + 1]; nor[(vo + k) * 3 + 2] = nz;
               uv.set(GF.uv.subarray((vs + k) * 2, (vs + k) * 2 + 2), (vo + k) * 2);
             }
             for (let k = 0; k < tc * 3; k++) idx[io + k] = GF.idx[is + k] + vo;
@@ -1501,6 +1540,7 @@ export function buildHouse(renderer, seed = 1) {
   const FALL = 0.8, BOUNCE = 0.3;
   const api = {
     group, colliders, rooms, size, stairs, mannequins, traps, pushBoxes,
+    get bed() { return bedInfo; },
     levels: LEVELS.map(l => l.name),
     spawn: new THREE.Vector3(mx(spawnAt[0]), levelY(spawnLevel), mz(spawnAt[1])),
     spawnLevel,

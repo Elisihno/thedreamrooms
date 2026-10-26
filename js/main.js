@@ -611,7 +611,7 @@ function buildTuck() {
       if (Math.hypot(cx - p.x, cz - p.z) < 1.5) { house.openDoorFor(rd, sample(d - 1), true); opened.push(rd); }
     }
   }
-  const bed = house.hideSpots.filter(h => h.level === house.spawnLevel && h.eye < 0.3).sort((a, b) => Math.hypot(a.x - house.spawn.x, a.z - house.spawn.z) - Math.hypot(b.x - house.spawn.x, b.z - house.spawn.z))[0];
+  const bed = house.bed ?? (sp => ({ x: sp.x, z: sp.z, halfLen: 0.98, halfWid: 0.75, topY: 0.72 }))(house.hideSpots.filter(h => h.level === house.spawnLevel && h.eye < 0.3).sort((a, b) => Math.hypot(a.x - house.spawn.x, a.z - house.spawn.z) - Math.hypot(b.x - house.spawn.x, b.z - house.spawn.z))[0]);
   // the bedroom door she will leave by: the nearest door on that floor
   const exitDoor = house.roomDoors.filter(d => d.level === house.spawnLevel).sort((a, b) => Math.hypot((a.axis === 'x' ? a.mid : a.f) - bed.x, (a.axis === 'x' ? a.f : a.mid) - bed.z) - Math.hypot((b.axis === 'x' ? b.mid : b.f) - bed.x, (b.axis === 'x' ? b.f : b.mid) - bed.z))[0];
   const doorAt = exitDoor ? { x: exitDoor.axis === 'x' ? exitDoor.mid : exitDoor.f, z: exitDoor.axis === 'x' ? exitDoor.f : exitDoor.mid } : { x: bed.x, z: bed.z + 4 };
@@ -710,7 +710,8 @@ function tuckFrame(f, dt, t) {
   // ---- at the bed ----
   const q = k - f.arrive, T1 = 3.6;
   const toBed = easeIO(Math.min(1, q / 1.7)), lie = easeIO(Math.min(1, Math.max(0, (q - 1.3) / 2.0)));
-  const foot = { x: bed.x, z: bed.z + 1.35 }, pillow = { x: bed.x, z: bed.z - 0.25 };
+  const foot = { x: bed.x, z: bed.z + bed.halfLen + 0.55 }, pillow = { x: bed.x, z: bed.z - bed.halfLen + 0.85 };
+  const eyeSit = bed.topY + 0.62, eyeLie = bed.topY + 0.36;
   const px = S.x + (foot.x - S.x) * toBed, pz = S.z + (foot.z - S.z) * toBed;
   player.pos.x = px + (pillow.x - px) * lie; player.pos.z = pz + (pillow.z - pz) * lie;
   player.y = levelY(house.spawnLevel); player.level = house.spawnLevel;
@@ -718,14 +719,14 @@ function tuckFrame(f, dt, t) {
   player.yaw += angleDiff(-1.25 * face, player.yaw) * damp(3.5, dt);
   // sitting down on the bed, then lying back: the head drops and tips, the world tilts a little
   const sit = easeIO(Math.min(1, Math.max(0, (q - 1.0) / 1.2)));
-  o.eye = EYE + (1.12 - EYE) * sit + (0.98 - 1.12) * lie + Math.sin(k * 1.3) * 0.004;
+  o.eye = EYE + (eyeSit - EYE) * sit + (eyeLie - eyeSit) * lie + Math.sin(k * 1.3) * 0.004;
   o.pitch = 0.5 * easeIO(Math.min(1, Math.max(0, (q - 1.5) / 1.8))) + 0.8 * easeIO(Math.min(1, Math.max(0, (q - T1 - 1.0) / 1.8))) - 0.12 * sit * (1 - lie) + Math.sin(k * 0.8) * 0.01;
   o.roll = -0.05 * lie * face;
   // she comes round to the side of the bed, leans over and smooths the blanket
-  const side = { x: bed.x + 1.0, z: bed.z - 0.2 }, near = easeIO(Math.min(1, Math.max(0, (q - 0.3) / 2.2)));
+  const side = { x: bed.x + bed.halfWid + 0.5, z: bed.z - bed.halfLen + 1.5 }, near = easeIO(Math.min(1, Math.max(0, (q - 0.3) / 2.2)));
   const from = P.sample(P.len - 1.35);
   nan.x = from.x + (side.x - from.x) * near; nan.z = from.z + (side.z - from.z) * near; nan.y = levelY(house.spawnLevel); nan.level = house.spawnLevel;
-  nan.yaw = Math.atan2(bed.x - nan.x, bed.z - 0.25 - nan.z);
+  nan.yaw = Math.atan2(pillow.x - nan.x, pillow.z - nan.z);
   nan.speed = near > 0.02 && near < 0.97 ? P.vmax * 0.75 : 0;
   nan.lean = 0.08 + 0.58 * easeIO(Math.min(1, Math.max(0, (q - 2.0) / 1.6)));
   nan.tuck = easeIO(Math.min(1, Math.max(0, (q - 2.6) / 0.8))) * (1 - easeIO(Math.min(1, Math.max(0, (q - T1 - 2.4) / 0.8))));
@@ -764,7 +765,7 @@ function tuckFrame(f, dt, t) {
     player.yaw += angleDiff(toDoor * turn, player.yaw) * damp(2.2, dt);
     o.pitch = 1.2 * (1 - turn) + 0.15 * turn + Math.sin(w * 1.5) * 0.02 * (1 - focus);
     o.roll = Math.sin(w * 1.1) * 0.05 * (1 - focus) - 0.04 * turn * (1 - lift);
-    o.eye = 0.98 + 0.32 * lift;
+    o.eye = eyeLie + 0.32 * lift;
     o.pos = 0;
     if (!f.beat1 || w - f.beat1 > 1.5 + 0.25 * Math.min(1, w / 5)) { f.beat1 = w; entitySound('beat', 0.35 * (1 - focus * 0.6)); }
     if (w > 4.6) say(6, 'Where... where am I?', 2400);
@@ -1306,7 +1307,7 @@ function showDesc() {
 }
 
 function applyLook() {
-  ambient.intensity = settings.dark ? 0.55 : 1.05;
+  ambient.intensity = hashFlags.has('bright') ? 3.2 : settings.dark ? 0.55 : 1.05;
   const q = { low: 0.6, medium: 0.85, high: Math.min(devicePixelRatio, 2) }[settings.quality] ?? 1;
   renderer.setPixelRatio(q); renderer.setSize(innerWidth, innerHeight);
 }
@@ -1656,3 +1657,4 @@ window.__player = player;
 // if something throws, say so on screen (and keep the message) so it can be reported
 addEventListener('error', e => { const b = document.getElementById('errbox'); if (b) { b.hidden = false; b.textContent = `Error: ${e.message}\n${(e.error?.stack ?? '').split('\n').slice(0, 4).join('\n')}`; } });
 addEventListener('unhandledrejection', e => { const b = document.getElementById('errbox'); if (b) { b.hidden = false; b.textContent = `Error: ${e.reason?.message ?? e.reason}`; } });
+window.__ambient = ambient;
