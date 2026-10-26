@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Boarded</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; font-family: system-ui, sans-serif; color: #e8e2d8; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .hud { position: fixed; pointer-events: none; text-shadow: 0 1px 4px #000; }
+  #top { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); text-align: center; }
+  #phase { font: 700 12px system-ui; letter-spacing: .18em; text-transform: uppercase; opacity: .75; }
+  #timer { font: 400 28px Georgia, serif; letter-spacing: .08em; }
+  #carry { top: max(10px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); font: 600 15px system-ui; text-align: right; }
+  #ents { top: max(10px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); font: 600 11px system-ui; line-height: 1.55; opacity: .85; }
+  #ents .open { color: #ff6a5a; }
+  #ents .full { color: #9fd49f; }
+  #prompt { left: 50%; bottom: 30%; transform: translateX(-50%); font: 600 15px system-ui; text-align: center; white-space: nowrap; }
+  #bar { position: fixed; left: 50%; bottom: calc(30% - 14px); width: 120px; height: 5px; margin-left: -60px; background: rgba(255,255,255,.18); display: none; }
+  #bar i { display: block; height: 100%; width: 0; background: #d9c9a4; }
+  #dot { left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: rgba(255,255,255,.45); }
+  #toast { left: 50%; top: 22%; transform: translateX(-50%); font: italic 400 17px Georgia, serif; text-align: center; opacity: 0; transition: opacity .4s; width: 80vw; }
+  #vig { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(120,0,0,.65) 100%); opacity: 0; }
+  #hideov { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,.2) 12%, rgba(0,0,0,.97) 70%); opacity: 0; transition: opacity .25s; }
+  #flash { position: fixed; inset: 0; pointer-events: none; background: #000; opacity: 0; transition: opacity 1.2s; }
+  /* touch controls */
+  #stick { position: fixed; display: none; width: 130px; height: 130px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); pointer-events: none; }
+  #knob { position: absolute; left: 40px; top: 40px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.35); }
+  .btn { position: fixed; z-index: 3; display: none; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font: 700 14px system-ui; letter-spacing: .06em; touch-action: none; }
+  #btnAct { right: max(22px, env(safe-area-inset-right)); bottom: max(26px, env(safe-area-inset-bottom)); width: 92px; height: 92px; border: 2px solid rgba(255,220,160,.7); background: rgba(150,100,40,.4); }
+  #btnRun { right: max(130px, env(safe-area-inset-right)); bottom: max(34px, env(safe-area-inset-bottom)); width: 64px; height: 64px; border: 2px solid rgba(255,255,255,.4); background: rgba(255,255,255,.1); }
+  .btn.on { background: rgba(255,230,180,.45); }
+  .touch .btn { display: flex; }
+  /* screens */
+  .screen { position: fixed; inset: 0; z-index: 9; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: rgba(0,0,0,.86); padding: 24px; }
+  .screen[hidden] { display: none; }
+  .screen h1 { margin: 0 0 8px; font: 400 clamp(48px, 14vw, 110px) Georgia, serif; letter-spacing: .14em; text-transform: uppercase; text-shadow: 0 0 26px rgba(170,0,0,.65); animation: flick 7s infinite; }
+  .screen h2 { margin: 0 0 8px; font: 400 clamp(30px, 8vw, 54px) Georgia, serif; letter-spacing: .08em; }
+  .screen p { margin: 4px 0; max-width: 460px; opacity: .8; line-height: 1.45; }
+  .screen button { margin-top: 22px; padding: 14px 34px; border-radius: 4px; border: 1px solid rgba(255,255,255,.4); background: rgba(255,255,255,.1); color: #fff; font: 400 20px Georgia, serif; letter-spacing: .2em; text-transform: uppercase; cursor: pointer; }
+  .how { margin-top: 14px; font-size: 13px; opacity: .6; }
+  @keyframes flick { 0%, 91%, 100% { opacity: 1; } 92% { opacity: .3; } 93% { opacity: 1; } 95% { opacity: .5; } 96% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .screen h1 { animation: none; } }
+</style>
+</head>
+<body>
+<div class="hud" id="top"><div id="phase"></div><div id="timer"></div></div>
+<div class="hud" id="carry"></div>
+<div class="hud" id="ents"></div>
+<div class="hud" id="dot"></div>
+<div class="hud" id="prompt"></div>
+<div id="bar"><i></i></div>
+<div class="hud" id="toast"></div>
+<div id="vig"></div>
+<div id="hideov"></div>
+<div id="stick"><div id="knob"></div></div>
+<div class="btn" id="btnRun">RUN</div>
+<div class="btn" id="btnAct">USE</div>
+<div id="flash"></div>
+
+<div class="screen" id="title">
+  <h1>Boarded</h1>
+  <p>Night is falling and Mother Marrow is coming home.<br>Nail planks over every door and window. Whatever you leave weak, she will find.</p>
+  <button id="play">Play</button>
+  <p class="how" id="howTouch">Left side: move · Right side: look · Hold USE to take planks, nail them up, or hide</p>
+  <p class="how" id="howKey">WASD move · Mouse look · Shift run · Hold E or click to use</p>
+</div>
+<div class="screen" id="over" hidden>
+  <h2 id="overH"></h2>
+  <p id="overP"></p>
+  <button id="overB"></button>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
