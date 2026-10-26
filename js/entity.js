@@ -48,7 +48,7 @@ function buildNav(house) {
   const GW = Math.ceil(house.size.w / RES), GD = Math.ceil(house.size.d / RES), G = GW * GD;
   const L = house.levels.length;
   const blocked = new Uint8Array(L * G);
-  const skip = new Set([...house.roomDoors.map(d => d.col), ...house.mannequins.map(m => m.col)]);
+  const skip = new Set([...house.roomDoors.map(d => d.col), ...house.mannequins.map(m => m.col), ...house.pushBoxes.map(b => b.col)]);
   const mark = (lv, x0, x1, z0, z1) => {
     const a = Math.max(0, Math.ceil(x0 / RES - 0.5)), b = Math.min(GW - 1, Math.floor(x1 / RES - 0.5));
     const c = Math.max(0, Math.ceil(z0 / RES - 0.5)), d = Math.min(GD - 1, Math.floor(z1 / RES - 0.5));

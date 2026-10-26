@@ -1399,6 +1399,7 @@ function frame() {
     // forward vector is (-sin, -cos); right is (cos, -sin)
     const vx = (-sin * -fx + cos * fz) * WALK * (settings.pspeed / 100) * mag * dt;
     const vz = (-cos * -fx - sin * fz) * WALK * (settings.pspeed / 100) * mag * dt;
+    player.push = { x: vx, z: vz };
     let [x, z] = collide(player.pos.x + vx, player.pos.z);
     [x, z] = collide(x, player.pos.z + vz);
     player.pos.x = x; player.pos.z = z;
@@ -1423,6 +1424,7 @@ function frame() {
     floorLabel.textContent = house.levels[shownLevel];
   }
 
+  if (!(mag > 0.01 && !hide.spot)) player.push = null;
   const bob = mag > 0.01 && !hide.spot ? Math.sin(t * 8) * 0.03 * mag : 0;
   let eye = hide.spot ? EYE + (hide.spot.eye - EYE) * hideE : EYE;
   let pitchAdd = 0, rollAdd = 0;

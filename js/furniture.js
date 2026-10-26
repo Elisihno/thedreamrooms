@@ -358,10 +358,10 @@ export const ITEMS = {
   dummy: { w: .7, d: .7, tall: false, center: true, colliders: [[.5, .5, 0, 0]], build(b, p) {
     b.cyl(.3, .08, 0, 0, 0, p.dark2);
     b.cyl(.11, .9, 0, .08, 0, p.dark2);
-    b(.36, .75, .22, 0, .85, 0, p.paper);
-    b(.5, .16, .24, 0, 1.35, 0, p.paper);
-    b(.22, .24, .22, 0, 1.55, 0, p.paper);
-    b(.5, .1, .1, 0, 1.2, 0, p.paper);
+    b(.36, .75, .22, 0, .85, 0, p.dummy);
+    b(.5, .16, .24, 0, 1.35, 0, p.dummy);
+    b(.22, .24, .22, 0, 1.55, 0, p.dummy);
+    b(.5, .1, .1, 0, 1.2, 0, p.dummy);
   } },
   // a sealed double door nailed shut: it needs a hammer (later)
   doubledoor: { w: 1.7, d: .18, tall: true, build(b, p) {

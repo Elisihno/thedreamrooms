@@ -34,23 +34,22 @@ const LEVELS = [
     // bigger: scrap metal, and behind the boxes in the east wall a hidden way through
     rooms: [
       { id: 'B', x: [-8.4, 9.5], z: [-8.35, 9.7] },
-      { id: 'H', x: [9.5, 15.5], z: [-1.0, 7.0] },        // the hidden room behind the boxes
+      { id: 'H', x: [-14.5, -8.4], z: [2.0, 8.5] },       // the hidden room behind the boxes
     ],
-    doors: [['z', 9.5, 3.0, 5.5]],
+    doors: [['z', -8.4, 3.0, 6.0]],
+    openings: [['z', -8.4, 3.0, 6.0]],   // no door: the crates hide this way
     windowAt: [['x', -8.35, -1.5, 0.0]],
     roles: { B: 'storage', H: 'storage' },
     fixed: [
       { item: 'circuitbox', side: 'N', at: [0.5, -8.35] },
       { item: 'scrap', at: [-6.0, 6.5], turn: 0 }, { item: 'scrap', at: [7.2, 7.8], turn: 1 }, { item: 'scrap', at: [-2.0, 8.2], turn: 0 },
       { item: 'shelves', side: 'N', at: [-5.5, -8.35] }, { item: 'shelves', side: 'N', at: [4.5, -8.35] },
-      { item: 'boiler', side: 'W', at: [-8.4, 1.0] },
-      { item: 'chest', side: 'E', at: [15.5, 3.0] },       // in the hidden room
-      { item: 'barrel', side: 'E', at: [15.5, 5.5] },
+      { item: 'boiler', side: 'W', at: [-8.4, -3.0] },
+      { item: 'chest', side: 'W', at: [-14.5, 3.5] },       // in the hidden room
+      { item: 'barrel', side: 'W', at: [-14.5, 7.0] },
     ],
-    pushBoxes: [   // slide along the east wall when you walk into them; they hide the doorway
-      { x: 8.55, z: 1.6, size: 0.95, axis: 'z', min: -6.0, max: 7.5 },
-      { x: 8.55, z: 3.4, size: 0.95, axis: 'z', min: -6.0, max: 7.5 },
-    ],
+    // crates you shove by walking into them (model units, size in metres): the first one hides the doorway
+    pushBoxes: [{ at: [-6.9, 4.5], size: 0.95 }, { at: [-6.9, 8.0], size: 0.9 }, { at: [-5.1, 8.6], size: 0.8 }],
     walls: [0, 1, 4, 6], floors: [1, 5, 6],
   },
   {
@@ -69,6 +68,7 @@ const LEVELS = [
     // the front door in the south wall of the hall: a code lock and three padlocks
     exits: [
       { id: 'front', at: ['x', 14.05, -1.2, 2.2], width: 1.5, style: 'wood', locks: [['code', 1.85], ['padlock', 1.5], ['padlock', 1.1], ['padlock', 0.7]] },
+      { id: 'window', at: ['z', -19.7, 2.0, 5.0], width: 1.4, style: 'window', locks: [['padlock', 1.6], ['padlock', 0.9]] },   // the kitchen window: a way out too
     ],
     fixed: [
       // the kitchen: a run of units along the north wall, the fridge and more along the west wall, a table with its chairs
@@ -142,6 +142,8 @@ const LEVELS = [
       { item: 'crates', side: 'N', at: [5.0, -12.75] }, { item: 'covered', side: 'S', at: [-1.5, 3.0] },
       { item: 'electricmachine', side: 'N', at: [14.0, -12.75] }, { item: 'chest', side: 'E', at: [20.85, -9.0] },
     ],
+    trapAt: [[5.2, -6.5]],               // the floor in front of the prison doorway gives way
+    lockedDoors: [['z', -4.0, -8.0, -5.0]],   // the stairwell to the upper attic needs a key
     drops: [['paper', 4.0, -6.0, 0.5]],   // the smiley paper
     furnishing: {},
     walls: [2, 5, 7, 9], floors: [0, 2, 3, 4, 7, 9],
@@ -204,6 +206,12 @@ export const stairs = STAIR_DEFS.map((d, k) => {
   const zb = mz(d.bottom), zt = mz(d.top);
   return { from: k, x0: mx(d.x[0]), x1: mx(d.x[1]), zb, zt, z0: Math.min(zb, zt), z1: Math.max(zb, zt), dir: Math.sign(zt - zb), rise: WALL_H };
 });
+
+let dummyTex = null;
+function dummyTexture() {
+  if (!dummyTex) { dummyTex = new THREE.TextureLoader().load(globalThis.__DR_TEX?.dummy ?? 'assets/textures/dummy.jpg'); dummyTex.colorSpace = THREE.SRGBColorSpace; dummyTex.wrapS = dummyTex.wrapT = THREE.MirroredRepeatWrapping; }
+  return dummyTex;
+}
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -371,6 +379,7 @@ export function buildHouse(renderer, seed = 1) {
   const pick = arr => arr[Math.floor(rand() * arr.length)];
   const mannequins = [];
   const traps = [];      // cracked floor patches that collapse
+  const pushBoxes = [];  // crates that slide when you walk into them
   const parts = [];      // movable furniture parts (drawers, doors, lids)
   const partMeshes = [];
   const pickables = []; // everything the crosshair can land on
@@ -402,6 +411,7 @@ export function buildHouse(renderer, seed = 1) {
   const pal = {
     body: fm(0xc8b8a4), dark2: fm(0x8a7e70), light: fm(0xf0e8dc), white: fm(0xf4f0ea), blood: plain(0x5e0a0a),
     cloth: fm(0xa89288), paper: fm(0xb09a78), dark: plain(0x161312), steel: fm(0x8c949a),
+    dummy: new THREE.MeshLambertMaterial({ map: dummyTexture() }),   // the punching dummy wears the bloodstained plaster texture
   };
 
   LEVELS.forEach((cfg, level) => buildFloor(cfg, level));
@@ -725,13 +735,32 @@ export function buildHouse(renderer, seed = 1) {
       } else if ((!pos || !neg || pos === '#' || neg === '#') && (forcedWin.has(k) || (end - start >= WIN_W + 0.6 && rand() < cfg.windows && !fixedRects.some(q => hits(q, axis === 'x' ? { minX: mid - 0.7, maxX: mid + 0.7, minZ: f - 0.3, maxZ: f + 0.3 } : { minX: f - 0.3, maxX: f + 0.3, minZ: mid - 0.7, maxZ: mid + 0.7 }))))) {
         winEdges.add(k);
         winKeep.push(axis === 'x' ? { minX: mid - WIN_W / 2 - 0.2, maxX: mid + WIN_W / 2 + 0.2, minZ: f - 0.4, maxZ: f + 0.9 } : { minX: f - 0.4, maxX: f + 0.9, minZ: mid - WIN_W / 2 - 0.2, maxZ: mid + WIN_W / 2 + 0.2 }, axis === 'x' ? { minX: mid - WIN_W / 2 - 0.2, maxX: mid + WIN_W / 2 + 0.2, minZ: f - 0.9, maxZ: f + 0.4 } : { minX: f - 0.9, maxX: f + 0.4, minZ: mid - WIN_W / 2 - 0.2, maxZ: mid + WIN_W / 2 + 0.2 });
+        const wy = cfg.barred ? 1.95 : WIN_Y, wh = cfg.barred ? 0.7 : WIN_H;     // basement windows are small and high
         opening(WIN_W);
-        piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, 0, WIN_Y, posMat, negMat, false);
-        piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, WIN_Y + WIN_H, WALL_H, posMat, negMat, false);
+        piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, 0, wy, posMat, negMat, false);
+        piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, wy + wh, WALL_H, posMat, negMat, false);
         const hw = WIN_W / 2;
         colliders.push(axis === 'x'
           ? { minX: mid - hw, maxX: mid + hw, minZ: f - HT, maxZ: f + HT, level }
           : { minX: f - HT, maxX: f + HT, minZ: mid - hw, maxZ: mid + hw, level });
+        if (cfg.barred) {   // jail bars of our own over a black opening
+          const iron = new THREE.MeshLambertMaterial({ color: 0x2c2d30 });
+          const dark = new THREE.Mesh(new THREE.PlaneGeometry(WIN_W, wh), new THREE.MeshBasicMaterial({ color: 0x030304, side: THREE.DoubleSide }));
+          const cx = axis === 'x' ? mid : f, cz = axis === 'x' ? f : mid, cy = Y + wy + wh / 2;
+          dark.position.set(cx, cy, cz);
+          if (axis === 'z') dark.rotation.y = Math.PI / 2;
+          group.add(dark);
+          for (let bx = -hw + 0.1; bx <= hw - 0.05; bx += 0.17) {
+            const bar = new THREE.Mesh(new THREE.BoxGeometry(axis === 'x' ? 0.035 : 0.06, wh, axis === 'x' ? 0.06 : 0.035), iron);
+            bar.position.set(axis === 'x' ? mid + bx : f, cy, axis === 'x' ? f : mid + bx);
+            group.add(bar);
+          }
+          for (const ry of [-wh / 2 + 0.05, wh / 2 - 0.05]) {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(axis === 'x' ? WIN_W : 0.07, 0.05, axis === 'x' ? 0.07 : WIN_W), iron);
+            rail.position.set(cx, cy + ry, cz);
+            group.add(rail);
+          }
+        } else {
         const gm = mat(tex.window[Math.floor(rand() * COUNT.window)], 0xffffff, THREE.DoubleSide);
         if (forcedWin.has(k)) {   // a pane of its own, so it can be shot out
           const pane = new THREE.Mesh(new THREE.PlaneGeometry(WIN_W, WIN_H), gm);
@@ -745,6 +774,7 @@ export function buildHouse(renderer, seed = 1) {
           const glass = placed(new THREE.PlaneGeometry(WIN_W, WIN_H),
             axis === 'x' ? mid : f, Y + WIN_Y + WIN_H / 2, axis === 'x' ? f : mid, 0, axis === 'z' ? Math.PI / 2 : 0);
           batch.add(glass, gm, false);
+        }
         }
       } else {
         piece(axis, a0, a1, f, 0, WALL_H, posMat, negMat);
@@ -784,8 +814,9 @@ export function buildHouse(renderer, seed = 1) {
       const faceMat = new THREE.MeshLambertMaterial({ map: faceTex });
       const edgeMat = new THREE.MeshLambertMaterial({ color: 0x2a1c12 });
       const T = 0.06;
+      const openSet = new Set((cfg.openings ?? []).map(edgeKey)), lockedSet = new Set((cfg.lockedDoors ?? []).map(edgeKey));
       for (const k of doors) {
-        if (exitKeys.has(k)) continue;
+        if (exitKeys.has(k) || openSet.has(k)) continue;
         const dir = k[0], [c, r] = k.slice(1).split(',').map(Number);
         const axis = dir === 'h' ? 'x' : 'z';
         const f = dir === 'h' ? ZS[r] : XS[c], mid = dir === 'h' ? (XS[c] + XS[c + 1]) / 2 : (ZS[r] + ZS[r + 1]) / 2;
@@ -803,6 +834,18 @@ export function buildHouse(renderer, seed = 1) {
           ? { minX: mid - hw, maxX: mid + hw, minZ: f - t, maxZ: f + t, level }
           : { minX: f - t, maxX: f + t, minZ: mid - hw, maxZ: mid + hw, level };
         const door = { kind: 'roomdoor', level, axis, f, mid, dw, hinge, col, open: false, t: 0, sign: 1 };
+        if (lockedSet.has(k)) {   // a padlock on both faces: it needs a key
+          const lockMesh = new THREE.Group();
+          for (const side of [-1, 1]) {
+            const body = new THREE.Mesh(new THREE.BoxGeometry(axis === 'x' ? 0.1 : 0.05, 0.12, axis === 'x' ? 0.05 : 0.1), new THREE.MeshPhongMaterial({ color: 0xb89a32, shininess: 60 }));
+            const shackle = new THREE.Mesh(new THREE.BoxGeometry(axis === 'x' ? 0.06 : 0.03, 0.07, axis === 'x' ? 0.03 : 0.06), new THREE.MeshPhongMaterial({ color: 0x8a8f94 }));
+            body.position.set(axis === 'x' ? dw * 0.85 : side * 0.05, 1.1, axis === 'x' ? side * 0.05 : dw * 0.85);
+            shackle.position.set(body.position.x, 1.19, body.position.z);
+            lockMesh.add(body, shackle);
+          }
+          hinge.add(lockMesh);
+          door.lock = { done: false, mesh: lockMesh };
+        }
         colliders.push(col);   // every door starts closed
         door.target = { kind: 'roomdoor', door };
         slab.userData.roomDoor = door;
@@ -822,7 +865,7 @@ export function buildHouse(renderer, seed = 1) {
       const out = dir === 'h' ? [0, er === rows ? 1 : -1] : [ec === cols ? 1 : -1, 0]; // outward (x, z)
       const inn = [-out[0], -out[1]];
       const metal = ex.style === 'metal';
-      const doorMat = new THREE.MeshLambertMaterial({ map: tex.floor[metal ? 5 : 2], color: metal ? 0x80858a : 0xa07f58 });
+      const doorMat = ex.style === 'window' ? new THREE.MeshLambertMaterial({ map: tex.window[6] }) : new THREE.MeshLambertMaterial({ map: tex.floor[metal ? 5 : 2], color: metal ? 0x80858a : 0xa07f58 });
       const hinge = new THREE.Group();
       hinge.position.set(axis === 'x' ? mid - DW / 2 : f, Y, axis === 'x' ? f : mid - DW / 2);
       group.add(hinge);
@@ -1015,6 +1058,11 @@ export function buildHouse(renderer, seed = 1) {
           break;
         }
       }
+      for (const [X, Z] of cfg.trapAt ?? []) {   // a patch of floor in a fixed place that gives way
+        const x = mx(X), z = mz(Z);
+        furn.push({ minX: x - 0.95, maxX: x + 0.95, minZ: z - 0.95, maxZ: z + 0.95 });
+        makeTrap(level, x, z, Y);
+      }
       fb.flush(group);
     }
 
@@ -1161,6 +1209,16 @@ export function buildHouse(renderer, seed = 1) {
 
     for (const ex of exitList) buildExit(ex);
     buildRoomDoors();
+    for (const pb of cfg.pushBoxes ?? []) {   // crates that slide when you walk into them
+      const size = pb.size, x = mx(pb.at[0]), z = mz(pb.at[1]);
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), new THREE.MeshLambertMaterial({ map: tex.furniture[0], color: 0x9a8466 }));
+      mesh.position.set(x, Y + size / 2, z);
+      group.add(mesh);
+      const col = { minX: x - size / 2, maxX: x + size / 2, minZ: z - size / 2, maxZ: z + size / 2, level };
+      colliders.push(col);
+      furn.push(col);
+      pushBoxes.push({ mesh, col, level, x, z, half: size / 2 });
+    }
     furnish();
     batch.flush(group);
     // lights: one point light for every few metres of room
@@ -1400,7 +1458,7 @@ export function buildHouse(renderer, seed = 1) {
   // A mannequin topples away from the player once they walk up to it.
   const FALL = 0.8, BOUNCE = 0.3;
   const api = {
-    group, colliders, rooms, size, stairs, mannequins, traps,
+    group, colliders, rooms, size, stairs, mannequins, traps, pushBoxes,
     levels: LEVELS.map(l => l.name),
     spawn: new THREE.Vector3(mx(spawnAt[0]), levelY(spawnLevel), mz(spawnAt[1])),
     spawnLevel,
@@ -1432,7 +1490,7 @@ export function buildHouse(renderer, seed = 1) {
     dropItem,
     // the creature pushes a room door open from where it stands
     openDoorFor(door, from, silent) {
-      if (door.open) return;
+      if (door.open || (door.lock && !door.lock.done)) return;
       door.sign = door.axis === 'x' ? (from.z > door.f ? 1 : -1) : (from.x < door.f ? 1 : -1);
       door.open = true;
       const i = colliders.indexOf(door.col);
@@ -1479,7 +1537,14 @@ export function buildHouse(renderer, seed = 1) {
     use(target, held) {
       if (target.kind === 'hide') { api.onHide?.(target.spot); return; }
       if (target.kind === 'exit') { useExit(target.exit, held); return; }
-      if (target.kind === 'roomdoor') { toggleDoor(target.door); return; }
+      if (target.kind === 'roomdoor') {
+        const lk = target.door.lock;
+        if (lk && !lk.done) {
+          if (held === 'key') { lk.done = true; lk.mesh.visible = false; api.onConsume?.('key'); api.onSound?.('unlock'); say('Unlocked.'); } else say('Locked. It needs a key.');
+          return;
+        }
+        toggleDoor(target.door); return;
+      }
       if (target.kind === 'keypad') { api.onKeypad?.(target); return; }
       if (target.kind === 'board') { useBoard(target, held); return; }
       if (target.kind === 'trash') { useTrash(target, held); return; }
@@ -1568,6 +1633,19 @@ export function buildHouse(renderer, seed = 1) {
         sp.mesh.scale.setScalar(1 + sp.t * 8);
         sp.mesh.material.opacity = Math.max(0, 1 - sp.t * 4);
         if (sp.t > 0.3) { sp.mesh.removeFromParent(); sparks.splice(i, 1); }
+      }
+      for (const bx of pushBoxes) {
+        if (player.level !== bx.level || !player.push) continue;
+        const dx = bx.x - player.pos.x, dz = bx.z - player.pos.z, r = bx.half + 0.38;
+        if (Math.abs(dx) > r || Math.abs(dz) > r) continue;
+        const alongX = Math.abs(dx) >= Math.abs(dz), v = alongX ? player.push.x : player.push.z, dir = Math.sign(alongX ? dx : dz);
+        if (v * dir <= 0) continue;
+        const step = Math.min(Math.abs(v), 0.1) * dir, nx = bx.x + (alongX ? step : 0), nz = bx.z + (alongX ? 0 : step);
+        const rect = { minX: nx - bx.half, maxX: nx + bx.half, minZ: nz - bx.half, maxZ: nz + bx.half };
+        if (colliders.some(c => c !== bx.col && c.level === bx.level && rect.minX < c.maxX && rect.maxX > c.minX && rect.minZ < c.maxZ && rect.maxZ > c.minZ)) continue;
+        bx.x = nx; bx.z = nz; bx.mesh.position.x = nx; bx.mesh.position.z = nz;
+        Object.assign(bx.col, rect);
+        if (!bx.scraped || bx.scraped < performance.now() - 450) { bx.scraped = performance.now(); api.onSound?.('doorOpen'); }
       }
       for (const tr of traps) {
         if (tr.state === 'armed') {
