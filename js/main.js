@@ -19,8 +19,8 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0a0e);
-scene.fog = new THREE.FogExp2(0x0a0a0e, 0.05);
-const ambient = new THREE.AmbientLight(0x9a8c88, 2.3);
+scene.fog = new THREE.FogExp2(0x040406, 0.075);
+const ambient = new THREE.AmbientLight(0x7c6e70, 1.05);
 scene.add(ambient);
 
 const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.1, 45);
@@ -670,7 +670,7 @@ function tuckFrame(f, dt, t) {
     return o;
   }
   // at the bed
-  const q = k - Tw;
+  const q = k - Tw, T1 = 3.6;                       // from T1 on she tucks you in and hums
   const toBed = smooth(0.0, 1.4, q), lie = smooth(1.2, 3.0, q);
   const foot = { x: bed.x, z: bed.z + 1.35 }, pillow = { x: bed.x, z: bed.z - 0.25 };
   const px = S.x + (foot.x - S.x) * toBed, pz = S.z + (foot.z - S.z) * toBed;
@@ -686,7 +686,6 @@ function tuckFrame(f, dt, t) {
   nan.x = from.x + (side.x - from.x) * near; nan.z = from.z + (side.z - from.z) * near; nan.y = levelY(house.spawnLevel); nan.level = house.spawnLevel;
   nan.yaw = Math.atan2(bed.x - nan.x, bed.z - 0.25 - nan.z);
   nan.speed = near < 0.97 ? P.speed * 0.8 : 0; nan.lean = 0.08 + 0.55 * smooth(2.0, 3.4, q);
-  const T1 = 3.6;                                   // from here she tucks you in and hums
   if (q > 1.5) say(4, 'Sweet dreams. And don\'t you go wandering.', 3400);
   lull.vol = 0.2 + 0.7 * smooth(0, 3, q);
   if (q > T1 + 0.4) say(5, 'Nanny will be right outside.', 2800);
@@ -1244,7 +1243,7 @@ function showDesc() {
 }
 
 function applyLook() {
-  ambient.intensity = settings.dark ? 1.0 : 2.3;
+  ambient.intensity = settings.dark ? 0.55 : 1.05;
   const q = { low: 0.6, medium: 0.85, high: Math.min(devicePixelRatio, 2) }[settings.quality] ?? 1;
   renderer.setPixelRatio(q); renderer.setSize(innerWidth, innerHeight);
 }

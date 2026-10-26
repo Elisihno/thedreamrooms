@@ -135,8 +135,8 @@ const WIN_W = 1.1, WIN_H = 1.87, WIN_Y = 0.7; // window tiles are ~0.59 aspect
 const TILE_W = 2.5, TILE_H = 4.2;             // world size one texture tile covers
 
 export const levelY = i => (i - GROUND) * WALL_H;
-const WALL_TINTS = [0xffffff, 0xffffff, 0xf2e8da, 0xe6e0d6];   // the wallpapers carry their own colours now; a light tint just varies them
-const FLOOR_TINT = 0xffffff;
+const WALL_TINTS = [0x8f8478, 0x857a70, 0x948476, 0x7c746c];   // the wallpapers carry their own colours now; a light tint just varies them
+const FLOOR_TINT = 0x8a7c72;
 let bloodMat = null;
 function bloodDecal() {
   if (bloodMat) return bloodMat;
