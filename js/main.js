@@ -664,7 +664,7 @@ function wakeLids(w) {
 function tuckFrame(f, dt, t) {
   const k = f.t, P = f.path, o = { eye: EYE, pitch: 0, roll: 0 };
   const say = (n, text, ms = 2600) => { if (f.phase < n) { f.phase = n; showToast(text, ms); } };
-  const nan = hollow.cine ?? (hollow.cine = { x: 0, z: 0, y: 0, level: 0, yaw: 0, speed: 0, lean: 0.05 });
+  const nan = f.gone ? {} : (hollow.cine ?? (hollow.cine = { x: 0, z: 0, y: 0, level: 0, yaw: 0, speed: 0, lean: 0.05 }));   // once she has left she is no longer scripted
   const bed = P.bed, S = house.spawn;
   const D = P.vmax;
   // ---- walking in: eased start, slower on the stairs, a long gentle stop ----
