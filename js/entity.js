@@ -84,7 +84,7 @@ function buildNav(house) {
   const links = new Map();
   for (const st of house.stairs) {
     const xm = (st.x0 + st.x1) / 2;
-    const a = free(st.from, xm, st.z0 - 0.45), b = free(st.from + 1, xm, st.z1 + 0.45);
+    const a = free(st.from, xm, st.zb - st.dir * 0.45), b = free(st.from + 1, xm, st.zt + st.dir * 0.45);
     if (a < 0 || b < 0) continue;
     links.set(a, { to: b, st, up: true });
     links.set(b, { to: a, st, up: false });
@@ -138,7 +138,7 @@ function buildNav(house) {
         const pc = centre(nodes[k - 1]);
         if (pc.level !== c.level) {
           const lk = links.get(nodes[k - 1]), st = lk.st, xm = (st.x0 + st.x1) / 2;
-          const bot = { x: xm, z: st.z0, level: st.from, y: levelY(st.from) }, top = { x: xm, z: st.z1, level: st.from + 1, y: levelY(st.from + 1) };
+          const bot = { x: xm, z: st.zb, level: st.from, y: levelY(st.from) }, top = { x: xm, z: st.zt, level: st.from + 1, y: levelY(st.from + 1) };
           wps.push({ ...pc }, ...(lk.up ? [bot, top] : [top, bot]));
           lastDir = null;
           if (k === nodes.length - 1) wps.push(c);

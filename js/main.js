@@ -1240,7 +1240,7 @@ function frame() {
     const p = player.pos;
     if ((player.level === st.from || player.level === st.from + 1) &&
         p.x > st.x0 && p.x < st.x1 && p.z >= st.z0 && p.z <= st.z1) {
-      const f = (p.z - st.z0) / (st.z1 - st.z0);
+      const f = (p.z - st.zb) / (st.zt - st.zb);
       player.y = levelY(st.from) + f * st.rise;
       player.level = f >= 0.5 ? st.from + 1 : st.from;
       onStair = true;
@@ -1322,7 +1322,7 @@ function frame() {
       if (k > 3.1) { driving = null; endDay(); }
     } else if (f.kind === 'car') {
       // slide into the driver's seat, then the car pulls out through the garage door
-      const seat = { x: 16.1, z: 13.4 };
+      const seat = house.car.seat;
       const settle = smooth(0, 0.9, k), go = Math.max(0, k - 0.9);
       player.pos.x = f.from.x + (seat.x - f.from.x) * settle;
       player.pos.z = f.from.z + (seat.z - f.from.z) * settle + 0.5 * 2.6 * go * go;

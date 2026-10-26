@@ -94,6 +94,9 @@ export const ITEMS = {
     b.cyl(.28, .85, 0, 0, .31, p.dark2);
     for (const y of [.12, .42, .72]) b.cyl(.295, .04, 0, y, .31, p.steel);
   }, colliders: [[.58, .58, 0, .31]] },
+  pillar: { w: .4, d: .4, tall: false, center: true, build(b, p) {
+    b(.4, 3, .4, 0, 0, 0, p.dark2);
+  }, colliders: [[.4, .4, 0, 0]] },
   desk: { w: 1.3, d: 1.2, tall: false, build(b, p, mv) {
     b(1.3, .05, .6, 0, .72, .3, p.body);
     b(.05, .72, .55, -.62, 0, .3, p.dark2);

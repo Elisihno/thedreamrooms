@@ -5,119 +5,134 @@ import { makeVase } from './vase.js';
 import { paperCanvas, crumpledPaperGeometry } from './icons.js';
 
 // ---- layout -------------------------------------------------------------
-// One map per storey, bottom to top. Each letter is a room; every character is one
-// CELL x CELL square. 'S' marks a stairwell that climbs to the storey above (see STAIRS).
-// On the storey above, the stair's two cells plus the cell south of them belong to one
-// room: that is where the stairs arrive.
+// The house follows the plan of "Granny 1 House" (see the README): the rooms, doorways and stairs
+// below are read off that model in its own units and scaled to metres by mx() / mz().
+// Each storey builds its own grid whose lines fall exactly on its walls, so a room is a set of cells
+// and a doorway is one cell edge. Cells outside every room are '#': solid, never seen.
+const SH = 0.5, MX = -19.7, MZ = -12.75;                 // metres per model unit, and the model's north-west corner
+const mx = X => (X - MX) * SH, mz = Z => (Z - MZ) * SH;
+const OUT_X = [-19.7, 20.85], OUT_Z = [-12.75, 14.05];   // the outer walls
+
+// Doorways are ['x', z, x0, x1] (a gap in a wall that runs along x) or ['z', x, z0, z1]; exits use `at` the same way.
+// Fixed items are { item, side, at: [x, z] } (backed onto the wall at that spot) or { item, at, turn } (free-standing).
 const LEVELS = [
   {
     name: 'Basement', windows: 0,
-    // the one basement window: you can shoot it
-    windowEdges: [['v', 0, 4]],
-    roles: { A: 'storage', B: 'storage', C: 'storage', D: 'storage', E: 'storage' },
-    // the power box on the south wall; the hatch in the east wall is the second way out
-    fixed: [{ item: 'circuitbox', cell: [4, 5], side: 'S' }, { item: 'car', cell: [5, 4] }],
-    exits: [
-      { id: 'hatch', edge: ['v', 9, 4], style: 'metal', locks: [['electric', 1.4], ['padlock', 1.05], ['padlock', 0.7]] },
-      // the garage door in line with the car; it only opens once the car is started
-      { id: 'garage', edge: ['h', 5, 6], style: 'metal', width: 2.4, carOnly: true, locks: [] },
+    rooms: [{ id: 'B', x: [-8.4, 9.5], z: [-8.35, 9.7] }],
+    extraX: [-7.0, -4.0],
+    windowAt: [['x', -8.35, -7.0, -4.0]],    // the one basement window: you can shoot it
+    roles: { B: 'storage' },
+    // the power box on the north wall, and the three pillars of Granny's cellar
+    fixed: [
+      { item: 'circuitbox', side: 'N', at: [0.5, -8.35] },
+      { item: 'pillar', at: [-4.2, -4.6] }, { item: 'pillar', at: [4.9, -4.6] }, { item: 'pillar', at: [-4.2, 5.9] },
     ],
+    furnishing: { B: ['shelves', 'crates', 'barrel', 'chest', 'boiler', 'barrel', 'drawers', 'shelves', 'crates', 'barrel'] },
+    drops: [['fuel', 0.0, 2.0, 0.4]],         // the fuel can lies in the open
     walls: [0, 1, 4, 6], floors: [1, 5, 6],
-    map: [
-      'AAAABBBBB',
-      'AAAABBBBB',
-      'AAAABBBBB',
-      'CCCSDDDEE',
-      'CCCSDDDEE',
-      'CCCCDDDEE',
-    ],
   },
   {
     name: 'Base Floor', windows: 0.7,
-    // the plan follows Granny's house: dining room and living room to the north, the kitchen in
-    // the south-west corner, the hall with the front door and both staircases in the middle
-    roles: { P: 'living', Q: 'dining', R: 'kitchen', T: 'living', U: 'hall' },
+    rooms: [
+      { id: 'N', x: [-19.7, 20.85], z: [-12.75, -1.65] },   // dining and living room along the north
+      { id: 'K', x: [-19.7, -6.25], z: [-1.65, 14.05] },    // kitchen
+      { id: 'H', x: [-6.25, 7.35], z: [-1.65, 14.05] },     // the hall: front door and both staircases
+      { id: 'E', x: [7.35, 20.85], z: [-1.65, 14.05] },     // the south-east room, a garage here
+    ],
+    doors: [['x', -1.65, -10.7, -7.3], ['x', -1.65, 8.6, 12.0], ['z', -6.25, 9.6, 13.0], ['z', 7.35, 9.6, 13.0]],
+    roles: { N: 'living', K: 'kitchen', H: 'hall', E: 'garage' },
+    // the front door in the south wall of the hall: a code lock and three padlocks; the back door of the kitchen
+    // (power cut in the cellar); the garage door that only opens for the car
+    exits: [
+      { id: 'front', at: ['x', 14.05, -1.2, 2.2], width: 1.5, style: 'wood', locks: [['code', 1.85], ['padlock', 1.5], ['padlock', 1.1], ['padlock', 0.7]] },
+      { id: 'hatch', at: ['z', -19.7, 2.0, 5.2], width: 1.2, style: 'metal', locks: [['electric', 1.4], ['padlock', 1.05], ['padlock', 0.7]] },
+      { id: 'garage', at: ['x', 14.05, 12.0, 16.8], width: 2.4, style: 'metal', carOnly: true, locks: [] },
+    ],
     fixed: [
-      { item: 'tablechairs', cell: [1, 4] },     // the kitchen table
-      { item: 'livingset', cell: [6, 1] },
-      { item: 'livingset', cell: [7, 4] },
-      // the kitchen: fridge on the outer west wall, units along the south and east walls
-      { item: 'fridge', cell: [0, 5], side: 'W', shift: -1.5 },
-      { item: 'counter', cell: [2, 5], side: 'E', shift: -0.7 },
-      { item: 'counter', cell: [2, 5], side: 'E', shift: 0.7 },
-      { item: 'counter', cell: [2, 5], side: 'S', shift: 0.05 },
-      { item: 'cuttingboard', cell: [2, 5], side: 'S', shift: 0.05 },
-      { item: 'microcounter', cell: [2, 5], side: 'S', shift: -1.1 },
-      { item: 'kitchendrawers', cell: [1, 5], side: 'S', shift: 0.8 },
-      { item: 'stove', cell: [1, 5], side: 'S', shift: -0.3 },
-      { item: 'counter', cell: [1, 5], side: 'S', shift: -1.45 },
-      { item: 'counter', cell: [0, 5], side: 'S', shift: 0.4 },
-      { item: 'kitchendrawers', cell: [0, 5], side: 'S', shift: -0.7 },
+      { item: 'car', at: [14.4, 5.2], turn: 0 },
+      // the kitchen: a run of units along the north wall, the fridge and more along the west wall
+      { item: 'counter', side: 'N', at: [-18.4, -1.65] },
+      { item: 'cuttingboard', side: 'N', at: [-18.4, -1.65] },
+      { item: 'microcounter', side: 'N', at: [-16.2, -1.65] },
+      { item: 'stove', side: 'N', at: [-14.1, -1.65] },
+      { item: 'kitchendrawers', side: 'N', at: [-12.0, -1.65] },
+      { item: 'fridge', side: 'W', at: [-19.7, 11.8] },
+      { item: 'counter', side: 'W', at: [-19.7, 9.7] },
+      { item: 'kitchendrawers', side: 'W', at: [-19.7, 7.7] },
+      { item: 'tablechairs', at: [-12.5, 6.2], turn: 0 },
+      { item: 'grandclock', side: 'N', at: [0.5, -1.65] },
+      { item: 'livingset', at: [-10.0, -7.2], turn: 0 },
+      { item: 'tablechairs', at: [9.5, -7.2], turn: 1 },
     ],
-    // the front door, in the south wall of the hall: three padlocks
-    exits: [{ id: 'front', edge: ['h', 4, 6], style: 'wood', locks: [['code', 1.85], ['padlock', 1.5], ['padlock', 1.1], ['padlock', 0.7]] }],
+    furnishing: {
+      N: ['sofa', 'tvunit', 'bookshelf', 'armchair', 'drawers', 'fireplace', 'armchair', 'drawers', 'bookshelf', 'chair'],
+      H: ['drawers', 'chair'],
+      E: ['shelves', 'crates', 'drawers', 'chest', 'shelves', 'barrel'],
+    },
     walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
-    map: [
-      'QQQQQPPPP',
-      'QQQQQPPPP',
-      'QQQQQPPPP',
-      'RRRUUSTTT',
-      'RRRUUSTTT',
-      'RRRUUUTTT',
-    ],
   },
   {
     name: 'Upper Floor', windows: 0.7, traps: 1,
-    roles: { P: 'bedroom', Q: 'bedroom', R: 'study', T: 'bedroom', U: 'hall', V: 'bathroom' },
-    looks: { V: { walls: [0, 6], floors: [6], tint: 0xeeeeee } },   // the bathroom: pale walls, tiles
-    // the player starts in room P: [col, row] of the spawn cell, plus pieces fixed to a cell
-    spawn: [1, 1],
-    fixed: [{ item: 'roundtable', cell: [1, 0], vase: true }, { item: 'tablechairs', cell: [0, 1], turn: 1 }],
-    // the trash can stands against a wall of the start bedroom, in the first of these cells with a free wall
-    guarantee: [{ item: 'trashcan', cells: [[2, 2], [0, 2], [2, 0], [0, 0]] }],
-    walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
-    map: [
-      'PPPPPQQQR',
-      'PPPPPQQSR',
-      'PPPPPQQSR',
-      'VVVUUUTTT',
-      'VVVUUUTTT',
-      'VVVUUUTTT',
+    rooms: [
+      { id: 'A', x: [-19.7, 0.5], z: [-12.75, -1.65] },     // the big bedroom: you start here
+      { id: 'B', x: [0.5, 15.35], z: [-12.75, -1.65] },
+      { id: 'C', x: [15.35, 20.85], z: [-12.75, -1.65] },
+      { id: 'D', x: [-19.7, -6.25], z: [-1.65, 14.05] },    // the bathroom
+      { id: 'L', x: [-6.25, 7.35], z: [-1.65, 14.05] },     // the landing, with both staircases
+      { id: 'F', x: [7.35, 20.85], z: [-1.65, 14.05] },
     ],
+    doors: [['x', -1.65, -3.1, 0.5], ['x', -1.65, 0.5, 4.6], ['x', -1.65, 16.8, 19.5], ['z', -6.25, -1.65, 2.0], ['z', 7.35, 9.6, 13.0], ['z', 15.35, -11.7, -9.1]],
+    roles: { A: 'bedroom', B: 'bedroom', C: 'study', D: 'bathroom', L: 'hall', F: 'bedroom' },
+    looks: { D: { walls: [0, 6], floors: [6], tint: 0xeeeeee } },   // the bathroom: pale walls, tiles
+    spawnAt: [-10.0, -6.0],
+    fixed: [{ item: 'roundtable', at: [-14.5, -8.0], turn: 0, vase: true }],
+    guarantee: [{ item: 'trashcan', room: 'A' }],   // the trash can stands against a wall of the start bedroom
+    furnishing: {
+      A: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'bookshelf', 'drawers', 'tablechairs'],
+      B: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'roundtable', 'bookshelf'],
+      C: ['desk', 'bookshelf', 'drawers', 'bookshelf'],
+      D: ['bathtub', 'toilet', 'sink', 'drawers'],
+      L: ['drawers', 'chair', 'chair'],
+      F: ['bed', 'nightstand', 'wardrobe', 'drawers', 'chair', 'bookshelf', 'drawers'],
+    },
+    walls: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], floors: [0, 2, 3, 4, 7, 8, 9],
   },
   {
     name: 'Attic', windows: 0.45,
-    roles: { A: 'attic', B: 'attic', C: 'attic', D: 'attic' },
-    mannequins: [[2, 1], [1, 4], [6, 4]], // [col, row] of each mannequin's cell
-    traps: 2,                             // cracked boards that give way under you
-    fixed: [{ item: 'lockbox', cell: [8, 0], side: 'N' }], // holds the shotgun
-    walls: [2, 5, 7, 9], floors: [0, 2, 3, 4, 7, 9],
-    map: [
-      'AAAAABBBB',
-      'AAAAABBBB',
-      'AAAAABBBB',
-      'CCCCCBBBB',
-      'CCCCCDDDD',
-      'CCCCCDDDD',
+    rooms: [
+      { id: 'W', x: [-19.7, -6.25], z: [-12.75, 14.05] },
+      { id: 'M', x: [-6.25, 7.35], z: [-12.75, 14.05] },
+      { id: 'E', x: [7.35, 20.85], z: [-12.75, 14.05] },
     ],
+    doors: [['z', -6.25, 4.0, 7.4], ['z', 7.35, 4.0, 7.4]],
+    roles: { W: 'attic', M: 'attic', E: 'attic' },
+    mannequins: [[-13.0, -5.0], [-1.5, -3.0], [14.0, 9.0]],   // where each mannequin stands
+    traps: 2,                                                  // cracked boards that give way under you
+    fixed: [{ item: 'lockbox', side: 'N', at: [17.0, -12.75] }],   // holds the shotgun
+    furnishing: {
+      W: ['covered', 'chest', 'crates', 'wardrobe', 'drawers', 'chair', 'covered'],
+      M: ['covered', 'chest', 'crates', 'drawers', 'chair'],
+      E: ['covered', 'chest', 'crates', 'wardrobe', 'drawers', 'chair', 'covered'],
+    },
+    drops: [['paper', 15.0, 2.0, 0.5], ['battery', -1.5, 9.0, 1.1]],   // the smiley paper and the car battery
+    walls: [2, 5, 7, 9], floors: [0, 2, 3, 4, 7, 9],
   },
 ];
 export const GROUND = 1; // index of the Base Floor
 
-// stairs[k] climbs from LEVELS[k] to LEVELS[k+1], running south (+z)
-const STAIR_CELLS = [
-  { col: 3, row: 3 },   // basement to ground: in the hall, left of the front door
-  { col: 5, row: 3 },   // ground to upper floor: in the hall, right of the front door
-  { col: 7, row: 1 },
+// stairs[k] climbs from LEVELS[k] to LEVELS[k+1]. x is its width and bottom / top the z where it starts
+// and ends, so it climbs north when top < bottom (the numbers are the model's).
+const STAIR_DEFS = [
+  { x: [4.6, 7.35], bottom: -1.65, top: 6.7 },     // cellar to ground: down the east side of the hall, climbing south
+  { x: [-6.25, -3.1], bottom: 9.6, top: 2.0 },     // ground to upper floor: up the west side of the hall, climbing north
+  { x: [4.6, 7.35], bottom: 9.6, top: 2.0 },       // upper floor to attic
 ];
 
-export const CELL = 3;
 export const WALL_H = 3; // also the height of one storey
 const THICK = 0.2, HT = THICK / 2;
 const DOOR_W = 1.2, DOOR_H = 2.2;
 const WIN_W = 1.1, WIN_H = 1.87, WIN_Y = 0.7; // window tiles are ~0.59 aspect
 const TILE_W = 2.5, TILE_H = 4.2;             // world size one texture tile covers
-const SPAN = 2;                                // stair length in cells
 
 export const levelY = i => (i - GROUND) * WALL_H;
 const WALL_TINTS = [0xffffff, 0xffffff, 0xb4c8ac, 0xcc9e8e, 0xaeb8c8, 0xdcd0b8];   // plain, green, rust, blue-grey, cream
@@ -142,13 +157,10 @@ function bloodDecal() {
 }
 const COUNT = { wall: 10, floor: 10, window: 10, furniture: 1, door: 1 };
 
-export const stairs = STAIR_CELLS.map((s, k) => ({
-  from: k,
-  x0: s.col * CELL, x1: (s.col + 1) * CELL,
-  z0: s.row * CELL, z1: (s.row + SPAN) * CELL,
-  rise: WALL_H,
-  col: s.col, row: s.row,
-}));
+export const stairs = STAIR_DEFS.map((d, k) => {
+  const zb = mz(d.bottom), zt = mz(d.top);
+  return { from: k, x0: mx(d.x[0]), x1: mx(d.x[1]), zb, zt, z0: Math.min(zb, zt), z1: Math.max(zb, zt), dir: Math.sign(zt - zb), rise: WALL_H };
+});
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -325,6 +337,7 @@ export function buildHouse(renderer, seed = 1) {
   const hideSpots = [];
   const roomDoors = [];
   let vaseStart = null;
+  let carSeat = null;   // where the driver sits, once the car is placed
   const wobbles = [];   // dropped vases, falling and wobbling
   const shootables = []; // panes that can be shot out
   const shards = [];     // flying glass
@@ -459,13 +472,10 @@ export function buildHouse(renderer, seed = 1) {
     if (fridgeDoor) place('apple', fridgeDoor);
     const gunBox = holders.find(p => p.tag === 'gunbox');
     if (gunBox) place('shotgun', gunBox);
-    // the smiley-face paper lies in the middle of the attic's east room, always
-    dropItem('paper', 19.5, levelY(3), 7.5, 0.5, 3);
+    // things that lie about in the open: the smiley-face paper in the attic, the fuel can in the cellar, the battery
+    LEVELS.forEach((cfg, lv) => { for (const [type, X, Z, yaw] of cfg.drops ?? []) dropItem(type, mx(X), levelY(lv), mz(Z), yaw, lv); });
     // the vase starts on the start bedroom's round table
     if (vaseStart) dropItem('vase', vaseStart.x, vaseStart.y, vaseStart.z, 0.4, vaseStart.level);
-    // car parts lie on the floor in open rooms: the fuel can in the basement, the battery in the attic
-    dropItem('fuel', 4.5, levelY(0), 13.5, 0.4, 0);
-    dropItem('battery', 10.5, levelY(3), 4.5, 1.1, 3);
     // a kitchen knife in one of the kitchen drawers
     const knifeDrawers = holders.filter(p => p.kind === 'drawer' && p.role === 'kitchen' && !p.hasItem);
     if (knifeDrawers.length) place('knife', pick(knifeDrawers));
@@ -488,105 +498,136 @@ export function buildHouse(renderer, seed = 1) {
   placeLoot();
 
   function buildFloor(cfg, level) {
-    const MAP = cfg.map, Y = levelY(level);
+    const Y = levelY(level);
     const batch = makeBatch();
-    const rows = MAP.length, cols = MAP[0].length;
-    const at = (c, r) => (r < 0 || c < 0 || r >= rows || c >= cols ? null : MAP[r][c]);
     const up = stairs[level];       // stairs leaving this storey
     const down = stairs[level - 1]; // stairs arriving from below
-    const cellsOf = st => (st ? [0, 1].map(i => `${st.col},${st.row + i}`) : []);
-    const ceilHole = new Set(cellsOf(up)), floorHole = new Set(cellsOf(down));
+
+    // ---- this storey's grid: its lines fall exactly on its walls, doorways, stairs and exits ----
+    const xs = new Set(OUT_X.map(mx)), zs = new Set(OUT_Z.map(mz));
+    for (const r of cfg.rooms) { r.x.forEach(v => xs.add(mx(v))); r.z.forEach(v => zs.add(mz(v))); }
+    const gapLines = g => {
+      if (g[0] === 'x') { zs.add(mz(g[1])); xs.add(mx(g[2])); xs.add(mx(g[3])); }
+      else { xs.add(mx(g[1])); zs.add(mz(g[2])); zs.add(mz(g[3])); }
+    };
+    (cfg.doors ?? []).forEach(gapLines);
+    (cfg.exits ?? []).forEach(e => gapLines(e.at));
+    (cfg.windowAt ?? []).forEach(gapLines);
+    for (const st of [up, down]) if (st) { xs.add(st.x0); xs.add(st.x1); zs.add(st.zb); zs.add(st.zt); }
+    (cfg.extraX ?? []).forEach(v => xs.add(mx(v)));
+    (cfg.extraZ ?? []).forEach(v => zs.add(mz(v)));
+    const lineList = set => { const out = []; for (const v of [...set].sort((p, q) => p - q)) if (!out.length || v - out[out.length - 1] > 0.04) out.push(v); return out; };
+    const XS = lineList(xs), ZS = lineList(zs);
+    const cols = XS.length - 1, rows = ZS.length - 1;
+    const findIn = (arr, v) => { for (let i = 0; i < arr.length - 1; i++) if (v >= arr[i] - 1e-6 && v <= arr[i + 1] + 1e-6) return i; return -1; };
+    const colAt = x => findIn(XS, x), rowAt = z => findIn(ZS, z);
+    const MAP = [];
+    for (let r = 0; r < rows; r++) {
+      let line = '';
+      for (let c = 0; c < cols; c++) {
+        const cx = (XS[c] + XS[c + 1]) / 2, cz = (ZS[r] + ZS[r + 1]) / 2;
+        let id = '#';
+        for (const room of cfg.rooms) if (cx > mx(room.x[0]) && cx < mx(room.x[1]) && cz > mz(room.z[0]) && cz < mz(room.z[1])) id = room.id;
+        line += id;
+      }
+      MAP.push(line);
+    }
+    const at = (c, r) => (r < 0 || c < 0 || r >= rows || c >= cols ? null : MAP[r][c]);
+    const roomAt = (x, z) => { const c = colAt(x), r = rowAt(z); return c < 0 || r < 0 ? null : MAP[r][c]; };
+    const holeOf = st => {
+      const out = new Set();
+      if (st) for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const cx = (XS[c] + XS[c + 1]) / 2, cz = (ZS[r] + ZS[r + 1]) / 2;
+        if (cx > st.x0 && cx < st.x1 && cz > st.z0 && cz < st.z1) out.add(`${c},${r}`);
+      }
+      return out;
+    };
+    const ceilHole = holeOf(up), floorHole = holeOf(down);
 
     // per-room look
-    const ids = [...new Set(MAP.join(''))];
+    const ids = [...new Set(MAP.join(''))].filter(id => id !== '#');
     const look = {};
     for (const id of ids) {
       const rc = cfg.looks?.[id] ?? {};
       // each room gets its own wallpaper tint, like the colours of Granny's house
       look[id] = { wall: tex.wall[pick(rc.walls ?? cfg.walls)], floor: tex.floor[pick(rc.floors ?? cfg.floors)], tint: rc.tint ?? pick(WALL_TINTS), sx: 0, sz: 0, n: 0 };
     }
-    const wallMat = id => (id ? mat(look[id].wall, look[id].tint) : outside);
+    const wallMat = id => (id && id !== '#' ? mat(look[id].wall, look[id].tint) : outside);
 
     // which wall edges exist: 'h' = on top of cell (c,r), 'v' = on its left
     const key = (dir, c, r) => `${dir}${c},${r}`;
     const has = (dir, c, r) => (dir === 'h' ? at(c, r) !== at(c, r - 1) : at(c, r) !== at(c - 1, r));
+    // the one cell edge that a gap ['x', z, x0, x1] or ['z', x, z0, z1] fills
+    const near = (arr, v) => arr.findIndex(q => Math.abs(q - v) < 0.06);
+    const edgeKey = g => {
+      const alongX = g[0] === 'x';
+      const line = alongX ? near(ZS, mz(g[1])) : near(XS, mx(g[1]));
+      const a0 = alongX ? near(XS, mx(g[2])) : near(ZS, mz(g[2]));
+      const a1 = alongX ? near(XS, mx(g[3])) : near(ZS, mz(g[3]));
+      if (line < 0 || a0 < 0 || a1 !== a0 + 1) throw new Error(`gap ${g} is not one cell edge of ${cfg.name}`);
+      return alongX ? key('h', a0, line) : key('v', line, a0);
+    };
+    const parseKey = k => [k[0], ...k.slice(1).split(',').map(Number)];
 
-    // doors: random spanning tree over room adjacency, plus a few loops
-    const edgesByPair = new Map();
-    const stairDoor = up ? key('h', up.col, up.row) : null;
-    // wall edges that hand-placed furniture stands against must never get a doorway
-    const reserved = new Set();
-    // a doorway must not open straight onto the hole where the stairs come up
-    if (down) {
-      reserved.add(key('h', down.col, down.row));
-      for (const rr of [down.row, down.row + 1]) { reserved.add(key('v', down.col, rr)); reserved.add(key('v', down.col + 1, rr)); }
-    }
-    for (const f of cfg.fixed ?? []) {
-      const [c, r] = f.cell;
-      if (!f.side) { // a free-standing set (table and chairs) must not stand in front of any doorway of its cell
-        if (ITEMS[f.item]?.center) for (const k of [key('h', c, r), key('h', c, r + 1), key('v', c, r), key('v', c + 1, r)]) reserved.add(k);
-        continue;
-      }
-      reserved.add({ N: key('h', c, r), S: key('h', c, r + 1), W: key('v', c, r), E: key('v', c + 1, r) }[f.side]);
-    }
-    const lastResort = new Map();
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      for (const [dir, nc, nr] of [['h', c, r - 1], ['v', c - 1, r]]) {
-        const a = at(c, r), b = at(nc, nr);
-        if (!b || a === b) continue;
-        // a stairwell opens only on its north end
-        if ((a === 'S' || b === 'S') && key(dir, c, r) !== stairDoor) continue;
-        const pair = [a, b].sort().join('|');
-        if (reserved.has(key(dir, c, r))) { (lastResort.get(pair) ?? lastResort.set(pair, []).get(pair)).push(key(dir, c, r)); continue; }
-        if (!edgesByPair.has(pair)) edgesByPair.set(pair, []);
-        edgesByPair.get(pair).push(key(dir, c, r));
-      }
-    }
-    const pairs = [...edgesByPair.keys()].sort(() => rand() - 0.5);
-    const parent = Object.fromEntries(ids.map(i => [i, i]));
-    const find = x => (parent[x] === x ? x : (parent[x] = find(parent[x])));
+    // doorways and exits are given in the plan; every doorway is one cell edge
     const doors = new Set();
     const winEdges = new Set();
-    for (const p of pairs) {
-      const [a, b] = p.split('|');
-      const list = edgesByPair.get(p);
-      if (find(a) !== find(b)) {
-        parent[find(a)] = find(b);
-        doors.add(pick(list));
-      } else if (rand() < 0.25 && !p.includes('S')) {
-        doors.add(pick(list));
-      }
-    }
-
-    // safety: if the reserved edges left a room cut off, give it a doorway there after all
-    for (const [p, list] of lastResort) {
-      const [a, b] = p.split('|');
-      if (!edgesByPair.has(p) && find(a) !== find(b)) { parent[find(a)] = find(b); doors.add(list[0]); doorLog.warn = (doorLog.warn ?? 0) + 1; }
-    }
-    const forcedWin = new Set((cfg.windowEdges ?? []).map(e => key(...e)));
     const doorWidth = new Map();
-    for (const ex of cfg.exits ?? []) { doors.add(key(...ex.edge)); doorWidth.set(key(...ex.edge), ex.width ?? DOOR_W); } // an exit is a doorway in an outer wall
+    for (const g of cfg.doors ?? []) {
+      const k = edgeKey(g);
+      doors.add(k);
+      doorWidth.set(k, Math.min(1.5, (g[0] === 'x' ? mx(g[3]) - mx(g[2]) : mz(g[3]) - mz(g[2])) - 0.1));
+    }
+    const exitList = (cfg.exits ?? []).map(ex => ({ ...ex, edge: parseKey(edgeKey(ex.at)) }));
+    for (const ex of exitList) { const k = key(...ex.edge); doors.add(k); doorWidth.set(k, ex.width ?? DOOR_W); }
+    const forcedWin = new Set((cfg.windowAt ?? []).map(edgeKey));
     doorLog.push({ level, map: MAP, doors: [...doors], windows: () => [...winEdges] });
+
+    // ---- where things stand: footprints, and the rectangles kept clear ----
+    const GAP = HT + 0.03;
+    const baseOf = f => {   // the item's back-centre and facing angle from its plan entry
+      const X = mx(f.at[0]), Z = mz(f.at[1]);
+      if (!f.side) return [[X, Z], (f.turn ?? 0) * Math.PI / 2];
+      return { N: [[X, Z + GAP], 0], S: [[X, Z - GAP], Math.PI], W: [[X + GAP, Z], Math.PI / 2], E: [[X - GAP, Z], -Math.PI / 2] }[f.side];
+    };
+    const rectsOf = (item, base, ang) => {
+      const cs = Math.round(Math.cos(ang)), sn = Math.round(Math.sin(ang));
+      const xf = (lx, lz) => [base[0] + lx * cs + lz * sn, base[1] - lx * sn + lz * cs];
+      return (item.colliders ?? [[item.w, item.d, 0, item.d / 2]]).map(([w, d, lx, lz]) => {
+        const [ax, az] = xf(lx - w / 2, lz - d / 2), [bx, bz] = xf(lx + w / 2, lz + d / 2);
+        return { minX: Math.min(ax, bx), maxX: Math.max(ax, bx), minZ: Math.min(az, bz), maxZ: Math.max(az, bz) };
+      });
+    };
+    const hits = (a, b, m = 0) => a.minX < b.maxX + m && a.maxX > b.minX - m && a.minZ < b.maxZ + m && a.maxZ > b.minZ - m;
+    const fixedRects = (cfg.fixed ?? []).flatMap(f => { const [bs, an] = baseOf(f); return rectsOf(ITEMS[f.item], bs, an); });
+    const furn = [];      // footprints placed on this storey
+    const keep = [];      // rectangles that stay clear: doorways, stairs, the spawn, things lying about
+    const winKeep = [];   // where windows are, for tall furniture
 
     // floors & ceilings (the stair openings have neither on the storeys they join)
     const ceilTex = tex.floor[3];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      const id = at(c, r), lk = look[id], k = `${c},${r}`;
-      const x = (c + 0.5) * CELL, z = (r + 0.5) * CELL;
-      if (!floorHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(CELL, CELL), x, Y, z, -Math.PI / 2), mat(lk.floor));
-      if (!ceilHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(CELL, CELL), x, Y + WALL_H, z, Math.PI / 2), mat(ceilTex, 0xaaaaaa));
-      lk.sx += x; lk.sz += z; lk.n++;
+      const id = at(c, r), k = `${c},${r}`;
+      const cw = XS[c + 1] - XS[c], ch = ZS[r + 1] - ZS[r];
+      if (id === '#') { // solid ground or rock: nothing to see, nowhere to walk
+        colliders.push({ minX: XS[c], maxX: XS[c + 1], minZ: ZS[r], maxZ: ZS[r + 1], level });
+        continue;
+      }
+      const lk = look[id], x = XS[c] + cw / 2, z = ZS[r] + ch / 2;
+      if (!floorHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(cw, ch), x, Y, z, -Math.PI / 2), mat(lk.floor));
+      if (!ceilHole.has(k)) batch.add(placed(new THREE.PlaneGeometry(cw, ch), x, Y + WALL_H, z, Math.PI / 2), mat(ceilTex, 0xaaaaaa));
+      lk.sx += x * cw * ch; lk.sz += z * cw * ch; lk.n += cw * ch;
     }
 
     // old blood on the floor, here and there
     for (let n = 0; n < (level === GROUND ? 2 : 3); n++) {
       const c = Math.floor(rand() * cols), r = Math.floor(rand() * rows), k = `${c},${r}`;
-      if (floorHole.has(k) || ceilHole.has(k)) continue;
+      if (at(c, r) === '#' || floorHole.has(k) || ceilHole.has(k)) continue;
       const size = 0.9 + rand() * 1.2;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), bloodDecal());
       m.rotation.set(-Math.PI / 2, 0, 0);
       m.rotateZ(rand() * Math.PI * 2);
-      m.position.set((c + 0.2 + rand() * 0.6) * CELL, Y + 0.006, (r + 0.2 + rand() * 0.6) * CELL);
+      m.position.set(XS[c] + (0.2 + rand() * 0.6) * (XS[c + 1] - XS[c]), Y + 0.006, ZS[r] + (0.2 + rand() * 0.6) * (ZS[r + 1] - ZS[r]));
       group.add(m);
     }
 
@@ -622,12 +663,12 @@ export function buildHouse(renderer, seed = 1) {
       const pos = at(c, r);
       if (pos === neg) return;
       const axis = dir === 'h' ? 'x' : 'z';
-      const f = dir === 'h' ? r * CELL : c * CELL; // wall centre line
-      const start = (dir === 'h' ? c : r) * CELL, end = start + CELL;
+      const f = dir === 'h' ? ZS[r] : XS[c]; // wall centre line
+      const start = dir === 'h' ? XS[c] : ZS[r], end = dir === 'h' ? XS[c + 1] : ZS[r + 1];
       const v0 = dir === 'h' ? [c, r] : [c, r], v1 = dir === 'h' ? [c + 1, r] : [c, r + 1];
       const a0 = start - reach(v0[0], v0[1], dir, c, r);
       const a1 = end + reach(v1[0], v1[1], dir, c, r);
-      const mid = start + CELL / 2;
+      const mid = (start + end) / 2;
       const posMat = wallMat(pos), negMat = wallMat(neg);
       const k = key(dir, c, r);
       const opening = w => {
@@ -638,8 +679,9 @@ export function buildHouse(renderer, seed = 1) {
         const dw = doorWidth.get(k) ?? DOOR_W;
         opening(dw);
         piece(axis, mid - dw / 2, mid + dw / 2, f, DOOR_H, WALL_H, posMat, negMat, false);
-      } else if ((!pos || !neg) && (forcedWin.has(k) || rand() < cfg.windows)) {
+      } else if ((!pos || !neg || pos === '#' || neg === '#') && (forcedWin.has(k) || (end - start >= WIN_W + 0.6 && rand() < cfg.windows && !fixedRects.some(q => hits(q, axis === 'x' ? { minX: mid - 0.7, maxX: mid + 0.7, minZ: f - 0.3, maxZ: f + 0.3 } : { minX: f - 0.3, maxX: f + 0.3, minZ: mid - 0.7, maxZ: mid + 0.7 }))))) {
         winEdges.add(k);
+        winKeep.push(axis === 'x' ? { minX: mid - WIN_W / 2 - 0.2, maxX: mid + WIN_W / 2 + 0.2, minZ: f - 0.4, maxZ: f + 0.9 } : { minX: f - 0.4, maxX: f + 0.9, minZ: mid - WIN_W / 2 - 0.2, maxZ: mid + WIN_W / 2 + 0.2 }, axis === 'x' ? { minX: mid - WIN_W / 2 - 0.2, maxX: mid + WIN_W / 2 + 0.2, minZ: f - 0.9, maxZ: f + 0.4 } : { minX: f - 0.9, maxX: f + 0.4, minZ: mid - WIN_W / 2 - 0.2, maxZ: mid + WIN_W / 2 + 0.2 });
         opening(WIN_W);
         piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, 0, WIN_Y, posMat, negMat, false);
         piece(axis, mid - WIN_W / 2, mid + WIN_W / 2, f, WIN_Y + WIN_H, WALL_H, posMat, negMat, false);
@@ -671,24 +713,29 @@ export function buildHouse(renderer, seed = 1) {
       if (r < rows) wallEdge('v', c, r);
     }
 
-    // railings around the opening for the stairs arriving here, open on the south side
-    if (down) {
-      const rail = mat(tex.floor[2], 0x777777);
-      const t = 0.08, w = down.x1 - down.x0, d = down.z1 - down.z0;
-      const add = (x, z, sx, sz) => {
-        batch.box(sx, 1, sz, x, Y + 0.5, z, Array(6).fill(rail));
-        colliders.push({ minX: x - sx / 2, maxX: x + sx / 2, minZ: z - sz / 2, maxZ: z + sz / 2, level });
+    // railings along the stairs: the long sides on the storey the stairs leave, and for stairs arriving
+    // here the sides plus the far end, so the only way onto them is the proper one
+    {
+      const rail = mat(tex.floor[2], 0x777777), t = 0.08;
+      const addRail = (x0, x1, z0, z1) => {
+        batch.box(x1 - x0, 1, z1 - z0, (x0 + x1) / 2, Y + 0.5, (z0 + z1) / 2, Array(6).fill(rail));
+        colliders.push({ minX: x0, maxX: x1, minZ: z0, maxZ: z1, level });
       };
-      add(down.x0 + t / 2, down.z0 + d / 2, t, d);
-      add(down.x1 - t / 2, down.z0 + d / 2, t, d);
-      add(down.x0 + w / 2, down.z0 + t / 2, w, t);
+      for (const st of [up, down]) {
+        if (!st) continue;
+        addRail(st.x0, st.x0 + t, st.z0, st.z1);
+        addRail(st.x1 - t, st.x1, st.z0, st.z1);
+        if (st === down) { if (st.dir > 0) addRail(st.x0, st.x1, st.z0, st.z0 + t); else addRail(st.x0, st.x1, st.z1 - t, st.z1); }
+        else if (st.dir > 0) addRail(st.x0, st.x1, st.z1 - t, st.z1); else addRail(st.x0, st.x1, st.z0, st.z0 + t);   // its top end, under the hole above
+        keep.push({ minX: st.x0 - 0.4, maxX: st.x1 + 0.4, minZ: st.z0 - 1.0, maxZ: st.z1 + 1.0 });
+      }
     }
 
 
     // A hinged door in every doorway between rooms. It swings away from whoever opens it, blocks the
     // way while closed, and opens or closes with the hand cursor.
     function buildRoomDoors() {
-      const exitKeys = new Set((cfg.exits ?? []).map(e => key(...e.edge)));
+      const exitKeys = new Set(exitList.map(e => key(...e.edge)));
       const faceTex = tex.door[0];
       faceTex.wrapS = faceTex.wrapT = THREE.ClampToEdgeWrapping;
       const faceMat = new THREE.MeshLambertMaterial({ map: faceTex });
@@ -698,8 +745,8 @@ export function buildHouse(renderer, seed = 1) {
         if (exitKeys.has(k)) continue;
         const dir = k[0], [c, r] = k.slice(1).split(',').map(Number);
         const axis = dir === 'h' ? 'x' : 'z';
-        const f = (dir === 'h' ? r : c) * CELL, mid = (dir === 'h' ? c : r) * CELL + CELL / 2;
-        const dw = DOOR_W;
+        const f = dir === 'h' ? ZS[r] : XS[c], mid = dir === 'h' ? (XS[c] + XS[c + 1]) / 2 : (ZS[r] + ZS[r + 1]) / 2;
+        const dw = doorWidth.get(k) ?? DOOR_W;
         const hinge = new THREE.Group();
         hinge.position.set(axis === 'x' ? mid - dw / 2 : f, Y, axis === 'x' ? f : mid - dw / 2);
         group.add(hinge);
@@ -727,8 +774,8 @@ export function buildHouse(renderer, seed = 1) {
       const DW = ex.width ?? DOOR_W;
       const [dir, ec, er] = ex.edge;
       const axis = dir === 'h' ? 'x' : 'z';
-      const f = (dir === 'h' ? er : ec) * CELL;                 // wall centre line
-      const mid = (dir === 'h' ? ec : er) * CELL + CELL / 2;    // middle of the doorway
+      const f = dir === 'h' ? ZS[er] : XS[ec];                  // wall centre line
+      const mid = dir === 'h' ? (XS[ec] + XS[ec + 1]) / 2 : (ZS[er] + ZS[er + 1]) / 2;    // middle of the doorway
       const out = dir === 'h' ? [0, er === rows ? 1 : -1] : [ec === cols ? 1 : -1, 0]; // outward (x, z)
       const inn = [-out[0], -out[1]];
       const metal = ex.style === 'metal';
@@ -802,77 +849,84 @@ export function buildHouse(renderer, seed = 1) {
     }
 
 
-    // Furniture sits against walls, one item per cell, never in the stair cells or in
-    // front of a doorway. Cells with a door only take shallow items, so paths stay clear.
-    // Tables with chairs stand free in the middle of a roomy cell without a door.
+    // Furniture: the fixed pieces of the plan first, then each room's own list, backed onto the walls or
+    // standing free, never on top of each other, in front of a doorway or on the stairs.
     function furnish() {
       const fb = makeBatch(1.4, 1.4);
-      const used = new Set([...ceilHole, ...floorHole]);
-      if (down) used.add(`${down.col},${down.row + SPAN}`);
-      if (up) used.add(`${up.col},${up.row - 1}`);
-      for (const [c, r] of cfg.mannequins ?? []) used.add(`${c},${r}`);
-      if (cfg.spawn) used.add(cfg.spawn.join(','));
-      const cellsByRoom = {};
-      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) (cellsByRoom[at(c, r)] ??= []).push([c, r]);
-      const centred = new Set(); // rooms that already hold a free-standing set
-      const hasDoor = (c, r) => [['h', c, r], ['h', c, r + 1], ['v', c, r], ['v', c + 1, r]].some(([d, ec, er]) => doors.has(key(d, ec, er)));
+      // keep clear: doorways and exits, the spawn, things lying about, where mannequins stand
+      for (const k of doors) {
+        const [dir, c, r] = parseKey(k), w = (doorWidth.get(k) ?? DOOR_W) / 2 + 0.3;
+        if (dir === 'h') { const f = ZS[r], m = (XS[c] + XS[c + 1]) / 2; keep.push({ minX: m - w, maxX: m + w, minZ: f - 1.2, maxZ: f + 1.2 }); }
+        else { const f = XS[c], m = (ZS[r] + ZS[r + 1]) / 2; keep.push({ minX: f - 1.2, maxX: f + 1.2, minZ: m - w, maxZ: m + w }); }
+      }
+      const spot = (X, Z, h) => { const x = mx(X), z = mz(Z); keep.push({ minX: x - h, maxX: x + h, minZ: z - h, maxZ: z + h }); };
+      if (cfg.spawnAt) spot(cfg.spawnAt[0], cfg.spawnAt[1], 1.0);
+      for (const [, X, Z] of cfg.drops ?? []) spot(X, Z, 0.7);
+      for (const [X, Z] of cfg.mannequins ?? []) spot(X, Z, 0.8);
+
+      // is the whole footprint inside room `id`?
+      const inside = (id, rects) => rects.every(q => [[q.minX, q.minZ], [q.maxX, q.minZ], [q.minX, q.maxZ], [q.maxX, q.maxZ]].every(([x, z]) => roomAt(x, z) === id));
+      const clear = (rects, item, margin = 0.12) => rects.every(q => !furn.some(o => hits(q, o, margin)) && !keep.some(o => hits(q, o)) && !(item.tall && winKeep.some(o => hits(q, o))));
+      // the stretches of wall a room has, each a line with the room on one side
+      const wallRuns = id => {
+        const runs = new Map();
+        const add = (side, line, a0, a1) => {
+          const k = side + line.toFixed(3);
+          if (!runs.has(k)) runs.set(k, { side, line, spans: [] });
+          runs.get(k).spans.push([a0, a1]);
+        };
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          if (MAP[r][c] !== id) continue;
+          if (at(c, r - 1) !== id) add('N', ZS[r], XS[c], XS[c + 1]);
+          if (at(c, r + 1) !== id) add('S', ZS[r + 1], XS[c], XS[c + 1]);
+          if (at(c - 1, r) !== id) add('W', XS[c], ZS[r], ZS[r + 1]);
+          if (at(c + 1, r) !== id) add('E', XS[c + 1], ZS[r], ZS[r + 1]);
+        }
+        const out = [];
+        for (const run of runs.values()) {
+          run.spans.sort((p, q) => p[0] - q[0]);
+          let cur = null;
+          for (const [a0, a1] of run.spans) {
+            if (cur && a0 <= cur.a1 + 1e-6) cur.a1 = Math.max(cur.a1, a1);
+            else { cur = { side: run.side, line: run.line, a0, a1 }; out.push(cur); }
+          }
+        }
+        return out;
+      };
+      const ANG = { N: 0, S: Math.PI, W: Math.PI / 2, E: -Math.PI / 2 };
+      const wallSpots = (id, item) => {
+        const out = [];
+        for (const run of wallRuns(id)) {
+          for (let p = run.a0 + item.w / 2 + 0.12; p <= run.a1 - item.w / 2 - 0.12 + 1e-6; p += 0.3) {
+            const base = run.side === 'N' ? [p, run.line + GAP] : run.side === 'S' ? [p, run.line - GAP]
+              : run.side === 'W' ? [run.line + GAP, p] : [run.line - GAP, p];
+            const rects = rectsOf(item, base, ANG[run.side]);
+            if (inside(id, rects) && clear(rects, item)) out.push([base, ANG[run.side]]);
+          }
+        }
+        return out;
+      };
+      const freeSpots = (id, item, turn) => {
+        let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (MAP[r][c] === id) {
+          x0 = Math.min(x0, XS[c]); x1 = Math.max(x1, XS[c + 1]); z0 = Math.min(z0, ZS[r]); z1 = Math.max(z1, ZS[r + 1]);
+        }
+        const ang = turn * Math.PI / 2, out = [];
+        for (let x = x0 + 1; x <= x1 - 1; x += 0.5) for (let z = z0 + 1; z <= z1 - 1; z += 0.5) {
+          const rects = rectsOf(item, [x, z], ang);
+          const wide = rects.map(q => ({ minX: q.minX - 0.6, maxX: q.maxX + 0.6, minZ: q.minZ - 0.6, maxZ: q.maxZ + 0.6 }));
+          if (inside(id, wide) && clear(rects, item, 0.5)) out.push([[x, z], ang]);
+        }
+        return out;
+      };
 
       for (const f of cfg.fixed ?? []) {
-        const [c, r] = f.cell;
-        used.add(`${c},${r}`);
-        centred.add(at(c, r));
-        placeItem(fb, ITEMS[f.item], c, r, f.side ?? null, f.turn ?? 0, f.shift ?? 0, !!f.vase);
+        const [base, ang] = baseOf(f);
+        placeItem(fb, ITEMS[f.item], base, ang, !!f.vase);
       }
 
-      // items that must exist: put each against a wall of the first listed cell that has a free one
-      for (const g of cfg.guarantee ?? []) {
-        let done = false;
-        for (const [c, r] of g.cells) {
-          if (used.has(`${c},${r}`)) continue;
-          const edges = [['N', 'h', c, r], ['S', 'h', c, r + 1], ['W', 'v', c, r], ['E', 'v', c + 1, r]];
-          const free = edges.filter(([, d, ec, er]) => has(d, ec, er) && !doors.has(key(d, ec, er)));
-          if (!free.length) continue;
-          used.add(`${c},${r}`);
-          placeItem(fb, ITEMS[g.item], c, r, pick(free)[0]);
-          done = true;
-          break;
-        }
-        if (!done) doorLog.missing = (doorLog.missing ?? []).concat(g.item);
-      }
-
-      for (const [id, role] of Object.entries(cfg.roles ?? {})) {
-        const cells = cellsByRoom[id] ?? [];
-        for (const name of ROLE_ITEMS[role] ?? []) {
-          const item = ITEMS[name];
-          if (item.center) {
-            if (centred.has(id) || cells.length < 6) continue;
-            const free = cells.filter(([c, r]) => !used.has(`${c},${r}`) && !hasDoor(c, r));
-            if (!free.length) continue;
-            const [c, r] = pick(free);
-            used.add(`${c},${r}`);
-            centred.add(id);
-            placeItem(fb, item, c, r, null, rand() < 0.5 ? 0 : 1);
-            continue;
-          }
-          const slots = [];
-          for (const [c, r] of cells) {
-            if (used.has(`${c},${r}`)) continue;
-            const edges = [['N', 'h', c, r], ['S', 'h', c, r + 1], ['W', 'v', c, r], ['E', 'v', c + 1, r]];
-            if (hasDoor(c, r) && item.d > 0.75) continue;
-            for (const [side, d, ec, er] of edges) {
-              const k = key(d, ec, er);
-              if (has(d, ec, er) && !doors.has(k) && !(winEdges.has(k) && item.tall)) slots.push([c, r, side]);
-            }
-          }
-          if (!slots.length) continue;
-          const [c, r, side] = pick(slots);
-          used.add(`${c},${r}`);
-          placeItem(fb, item, c, r, side);
-        }
-      }
-
-      for (const [c, r] of cfg.mannequins ?? []) {
-        const x = (c + 0.5) * CELL, z = (r + 0.5) * CELL;
+      for (const [X, Z] of cfg.mannequins ?? []) {
+        const x = mx(X), z = mz(Z);
         const pivot = new THREE.Group();
         pivot.position.set(x, Y, z);
         const body = buildMannequin(fm(0xd0c8bc));
@@ -881,15 +935,42 @@ export function buildHouse(renderer, seed = 1) {
         group.add(pivot);
         const col = { minX: x - 0.25, maxX: x + 0.25, minZ: z - 0.25, maxZ: z + 0.25, level };
         colliders.push(col);
+        furn.push(col);
         mannequins.push({ pivot, x, z, y: Y, level, col, fell: false, landed: false, t: 0, axis: new THREE.Vector3() });
       }
-      // cracked boards in an empty cell: stepping on them breaks the floor
-      const emptyCells = [];
-      for (const cells of Object.values(cellsByRoom)) for (const [c, r] of cells) if (!used.has(`${c},${r}`) && !hasDoor(c, r)) emptyCells.push([c, r]);
-      for (let n = 0; n < (cfg.traps ?? 0) && emptyCells.length; n++) {
-        const [c, r] = emptyCells.splice(Math.floor(rand() * emptyCells.length), 1)[0];
-        used.add(`${c},${r}`);
-        makeTrap(level, (c + 0.5) * CELL, (r + 0.5) * CELL, Y);
+
+      // items that must exist
+      for (const g of cfg.guarantee ?? []) {
+        const spots = wallSpots(g.room, ITEMS[g.item]);
+        if (!spots.length) { doorLog.missing = (doorLog.missing ?? []).concat(g.item); continue; }
+        const [base, ang] = pick(spots);
+        placeItem(fb, ITEMS[g.item], base, ang);
+      }
+
+      for (const [id, names] of Object.entries(cfg.furnishing ?? {})) {
+        for (const name of names) {
+          const item = ITEMS[name];
+          const spots = item.center ? freeSpots(id, item, rand() < 0.5 ? 0 : 1) : wallSpots(id, item);
+          if (!spots.length) continue;
+          const [base, ang] = pick(spots);
+          placeItem(fb, item, base, ang);
+        }
+      }
+
+      // cracked boards in an empty stretch of floor: stepping on them breaks the floor
+      for (let n = 0; n < (cfg.traps ?? 0); n++) {
+        for (let tries = 0; tries < 80; tries++) {
+          const id = pick(ids), cells = [];
+          for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (MAP[r][c] === id) cells.push([c, r]);
+          const [c, r] = pick(cells);
+          const x = XS[c] + rand() * (XS[c + 1] - XS[c]), z = ZS[r] + rand() * (ZS[r + 1] - ZS[r]);
+          const patch = { minX: x - 0.95, maxX: x + 0.95, minZ: z - 0.95, maxZ: z + 0.95 };
+          const wide = { minX: x - 1.8, maxX: x + 1.8, minZ: z - 1.8, maxZ: z + 1.8 };
+          if (!inside(id, [wide]) || furn.some(o => hits(patch, o, 0.4)) || keep.some(o => hits(patch, o, 0.3))) continue;
+          furn.push(patch);
+          makeTrap(level, x, z, Y);
+          break;
+        }
       }
       fb.flush(group);
     }
@@ -921,15 +1002,13 @@ export function buildHouse(renderer, seed = 1) {
       traps.push({ level, x, z, Y, half: 0.8, cover, hole, state: 'armed', t: 0, creaked: false });
     }
 
-    // side: the wall the item backs onto ('N','S','W','E'), or null for a free-standing item
-    // in the middle of the cell, turned by `turn` quarter turns.
-    function placeItem(fb, item, c, r, side, turn = 0, shift = 0, withVase = false) {
-      const cx = (c + 0.5) * CELL, cz = (r + 0.5) * CELL, gap = HT + 0.03;
-      const base = side === 'N' ? [cx, r * CELL + gap] : side === 'S' ? [cx, (r + 1) * CELL - gap]
-        : side === 'W' ? [c * CELL + gap, cz] : side === 'E' ? [(c + 1) * CELL - gap, cz] : [cx, cz];
-      const ang = side ? { N: 0, S: Math.PI, W: Math.PI / 2, E: -Math.PI / 2 }[side] : turn * Math.PI / 2;
+    // base: where the item's back-centre stands (the middle for a free-standing item); ang: the way it
+    // faces, a multiple of a quarter turn.
+    function placeItem(fb, item, base, ang, withVase = false) {
       const cs = Math.round(Math.cos(ang)), sn = Math.round(Math.sin(ang));
-      if (shift) { base[0] += shift * cs; base[1] -= shift * sn; } // slide along the wall
+      const roomId = roomAt(base[0], base[1]);
+      furn.push(...rectsOf(item, base, ang));
+      if (item === ITEMS.car) carSeat = { x: base[0] - 0.4, z: base[1] - 0.1 };
       // item-local (x across, z out) -> world; the rotation is a multiple of 90 degrees
       const xf = (lx, lz) => [base[0] + lx * cs + lz * sn, base[1] - lx * sn + lz * cs];
       const swap = sn !== 0;
@@ -959,7 +1038,7 @@ export function buildHouse(renderer, seed = 1) {
         const mesh = new THREE.Mesh(partGeometry(boxes, pivot), partMat);
         pg.add(mesh);
         itemGroup.add(pg);
-        const part = { pg, pivot, level, open: false, t: 0, role: cfg.roles?.[at(c, r)], ...extra };
+        const part = { pg, pivot, level, open: false, t: 0, role: cfg.roles?.[roomId], ...extra };
         if (extra.kind === 'drawer') {
           // on top of the drawer box, near its front, so it slides out into view
           const [, h, d, x, y0, zc] = boxes[0];
@@ -1037,13 +1116,22 @@ export function buildHouse(renderer, seed = 1) {
       }
     }
 
-    for (const ex of cfg.exits ?? []) buildExit(ex);
+    for (const ex of exitList) buildExit(ex);
     buildRoomDoors();
     furnish();
     batch.flush(group);
+    // lights: one point light for every few metres of room
     for (const id of ids) {
-      const lk = look[id];
-      rooms.push({ pos: new THREE.Vector3(lk.sx / lk.n, Y + WALL_H - 0.4, lk.sz / lk.n), base: 0.6 + rand() * 0.5, level });
+      const lk = look[id], pts = [];
+      let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (MAP[r][c] === id) { x0 = Math.min(x0, XS[c]); x1 = Math.max(x1, XS[c + 1]); z0 = Math.min(z0, ZS[r]); z1 = Math.max(z1, ZS[r + 1]); }
+      const nx = Math.max(1, Math.round((x1 - x0) / 6)), nz = Math.max(1, Math.round((z1 - z0) / 6));
+      for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+        const x = x0 + (i + 0.5) * (x1 - x0) / nx, z = z0 + (j + 0.5) * (z1 - z0) / nz;
+        if (roomAt(x, z) === id) pts.push([x, z]);
+      }
+      if (!pts.length) pts.push([lk.sx / lk.n, lk.sz / lk.n]);
+      for (const [x, z] of pts) rooms.push({ pos: new THREE.Vector3(x, Y + WALL_H - 0.4, z), base: 0.6 + rand() * 0.5, level });
     }
   }
 
@@ -1054,7 +1142,7 @@ export function buildHouse(renderer, seed = 1) {
     const y0 = levelY(st.from);
     // each step is a slab one rise thick, so no faces overlap
     for (let i = 0; i < steps; i++) {
-      batch.box(w, rise, run, st.x0 + w / 2, y0 + rise * (i + 0.5), st.z0 + run * (i + 0.5), mats);
+      batch.box(w, rise, run, st.x0 + w / 2, y0 + rise * (i + 0.5), st.zb + st.dir * run * (i + 0.5), mats);
     }
     batch.flush(group);
   }
@@ -1062,10 +1150,9 @@ export function buildHouse(renderer, seed = 1) {
   const raycaster = new THREE.Raycaster();
   raycaster.far = 2.3;
   const centre = new THREE.Vector2(0, 0);
-  const spawnLevel = Math.max(0, LEVELS.findIndex(l => l.spawn));
-  const spawnCell = LEVELS[spawnLevel].spawn ?? [4, 1];
-  const first = LEVELS[0].map;
-  const size = { w: first[0].length * CELL, d: first.length * CELL };
+  const spawnLevel = Math.max(0, LEVELS.findIndex(l => l.spawnAt));
+  const spawnAt = LEVELS[spawnLevel].spawnAt;
+  const size = { w: mx(OUT_X[1]), d: mz(OUT_Z[1]) };
   const say = text => api.onMessage?.(text);
 
   function openExit(exit) {
@@ -1147,7 +1234,7 @@ export function buildHouse(renderer, seed = 1) {
   }
 
   // ---- the car: a battery under the hood, fuel in the tank, a key in the ignition ---------
-  const car = { battery: false, fuel: false, started: false };
+  const car = { battery: false, fuel: false, started: false, seat: carSeat };
   function useCar(target, held) {
     if (car.started) return;
     const glow = (wp) => {                       // the headlights come on
@@ -1272,7 +1359,7 @@ export function buildHouse(renderer, seed = 1) {
   const api = {
     group, colliders, rooms, size, stairs, mannequins, traps,
     levels: LEVELS.map(l => l.name),
-    spawn: new THREE.Vector3((spawnCell[0] + 0.5) * CELL, levelY(spawnLevel), (spawnCell[1] + 0.5) * CELL),
+    spawn: new THREE.Vector3(mx(spawnAt[0]), levelY(spawnLevel), mz(spawnAt[1])),
     spawnLevel,
     parts,
     onThud: null,
