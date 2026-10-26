@@ -120,6 +120,7 @@
   #lidT, #lidB { position: fixed; left: 0; right: 0; height: 50%; z-index: 7; background: #000; pointer-events: none; }
   #lidT { top: 0; box-shadow: 0 6px 40px 18px #000; }
   #lidB { bottom: 0; box-shadow: 0 -6px 40px 18px #000; }
+  #errbox { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 20; margin: 0; padding: 8px; max-height: 40%; overflow: auto; font: 11px/1.3 monospace; color: #ffb0b0; background: rgba(40,0,0,.9); white-space: pre-wrap; }
   #fade { position: fixed; inset: 0; z-index: 8; background: #000; opacity: 0; pointer-events: none; }
   body.waking #floor, body.waking #dot, body.waking #inv, body.waking #drop, body.waking #fire, body.waking #use { opacity: 0; }
   #glow { position: fixed; inset: 0; z-index: 7; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
@@ -212,6 +213,7 @@
 <div id="glow"></div>
 <canvas id="fx" hidden></canvas>
 <div id="fade"></div>
+<pre id="errbox" hidden></pre>
 <div id="stick"><div id="knob"></div></div>
 <script type="module" src="js/main.js"></script>
 </body>

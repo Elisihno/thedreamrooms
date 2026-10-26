@@ -1654,3 +1654,7 @@ if (hashFlags.has('tuck') && hollow) { hollowOn = true; hollow.group.visible = t
 window.__camera = camera; window.__hollowCine = () => hollow.cine;
 window.__house = house;
 window.__player = player;
+
+// if something throws, say so on screen (and keep the message) so it can be reported
+addEventListener('error', e => { const b = document.getElementById('errbox'); if (b) { b.hidden = false; b.textContent = `Error: ${e.message}\n${(e.error?.stack ?? '').split('\n').slice(0, 4).join('\n')}`; } });
+addEventListener('unhandledrejection', e => { const b = document.getElementById('errbox'); if (b) { b.hidden = false; b.textContent = `Error: ${e.reason?.message ?? e.reason}`; } });

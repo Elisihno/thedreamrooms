@@ -48,7 +48,7 @@ function buildNav(house) {
   const GW = Math.ceil(house.size.w / RES), GD = Math.ceil(house.size.d / RES), G = GW * GD;
   const L = house.levels.length;
   const blocked = new Uint8Array(L * G);
-  const skip = new Set([...house.roomDoors.map(d => d.col), ...house.mannequins.map(m => m.col), ...house.pushBoxes.map(b => b.col)]);
+  const skip = new Set([...house.roomDoors.filter(d => !d.lock).map(d => d.col), ...house.mannequins.map(m => m.col), ...house.pushBoxes.map(b => b.col)]);
   const mark = (lv, x0, x1, z0, z1) => {
     const a = Math.max(0, Math.ceil(x0 / RES - 0.5)), b = Math.min(GW - 1, Math.floor(x1 / RES - 0.5));
     const c = Math.max(0, Math.ceil(z0 / RES - 0.5)), d = Math.min(GD - 1, Math.floor(z1 / RES - 0.5));
@@ -186,7 +186,26 @@ function buildNav(house) {
     }
     return counts;
   }
-  return { find, randomOn, reach, free, centre, blocked, links };
+  // every cell that can be walked to from a spot (1 = reachable)
+  function reachMask(lv, x, z) {
+    const s = free(lv, x, z), seen = new Uint8Array(L * G);
+    if (s < 0) return seen;
+    const q = [s]; seen[s] = 1;
+    while (q.length) {
+      const n = q.pop(), [l, gx, gz] = parts(n);
+      const go = m => { if (!seen[m]) { seen[m] = 1; q.push(m); } };
+      for (const [dx, dz] of NB) {
+        const nx = gx + dx, nz = gz + dz;
+        if (nx < 0 || nz < 0 || nx >= GW || nz >= GD || blocked[l * G + nz * GW + nx]) continue;
+        if (dx && dz && (blocked[l * G + gz * GW + nx] || blocked[l * G + nz * GW + gx])) continue;
+        go(l * G + nz * GW + nx);
+      }
+      const lk = links.get(n);
+      if (lk) go(lk.to);
+    }
+    return seen;
+  }
+  return { find, randomOn, reach, reachMask, free, centre, blocked, links };
 }
 
 // is there an unbroken line between two spots on a storey (walls and shut doors block it)?
@@ -262,10 +281,11 @@ export function createHollow(house, opts = {}) {
     if (opts.near) {
       c = nav.randomOn(player.level, player.pos, opts.near);
     } else {
-      for (let i = 0; i < 80 && !c; i++) {
+      const mask = nav.reachMask(player.level, player.pos.x, player.pos.z);   // never behind a locked door
+      for (let i = 0; i < 200 && !c; i++) {
         const lv = Math.floor(Math.random() * house.levels.length);
         const cand = nav.randomOn(lv);
-        if (cand && (lv !== player.level || Math.hypot(cand.x - player.pos.x, cand.z - player.pos.z) > 14)) c = cand;
+        if (cand && mask[nav.free(lv, cand.x, cand.z)] && (lv !== player.level || Math.hypot(cand.x - player.pos.x, cand.z - player.pos.z) > 14)) c = cand;
       }
     }
     if (c) place(c);
