@@ -1,5 +1,5 @@
 import * as THREE from '../three.js';
-import { AREAS, HIDING, CAMERAS, FIXTURES, LEVEL_Y, SPIRAL, CEIL } from './layout.js';
+import { AREAS, HIDING, CAMERAS, FIXTURES, LEVEL_Y, SPIRAL, CEIL, BALLPIT } from './layout.js';
 import { getMaterial, getBasic } from '../assets/registry.js';
 import { instanceModel, hasModel, cloneModel, modelSize } from '../assets/models.js';
 import { partySet, instanced } from './partyprops.js';
@@ -271,14 +271,32 @@ export function furnish(w) {
   }
   function playground() {
     const l = '2', y = Y(l);
-    // raised platforms on four posts; the 0.85 m gap underneath is a crawl-under hiding place. Nothing overlaps.
+    // Raised decks on four posts; the 0.85 m gap underneath is a crawl-under hiding place. Faces never overlap.
     const platform = (x0, z0, x1, z1, top, post) => {
       bx(l, x0, z0, x1, z1, 0.15, top, 0.85, { y0: y + 0.85, y1: y + 1.0 });
       for (const [px, pz] of [[x0 + 0.05, z0 + 0.05], [x1 - 0.25, z0 + 0.05], [x0 + 0.05, z1 - 0.25], [x1 - 0.25, z1 - 0.25]]) bx(l, px, pz, px + 0.2, pz + 0.2, 0.85, post);
     };
-    platform(17, 18, 21.5, 22, 'slide_blue', 'slide_red');
-    platform(25, 24, 29.5, 28, 'slide_red', 'slide_blue');
-    platform(29.5, 15.5, 33.5, 19.5, 'slide_blue', 'slide_red');
+    platform(17, 18, 21.5, 22, 'deck_blue', 'deck_red');
+    platform(25, 24, 29.5, 28, 'deck_red', 'deck_blue');
+    // The main tower is walkable: a ramp on its east side leads up, and the slide leaves its south edge.
+    const T = { x0: 29.5, z0: 15.5, x1: 33.5, z1: 19.5 }, top = y + 1.0;
+    platform(T.x0, T.z0, T.x1, T.z1, 'deck_blue', 'deck_red');
+    w.flat([T.x0, T.z0, T.x1, T.z1], top, [], 'tower');
+    const rail = (x0, z0, x1, z1) => bx(l, x0, z0, x1, z1, 0.8, 'padding_squares', 1.0);
+    rail(T.x0, T.z0, T.x1, T.z0 + 0.1);            // north
+    rail(T.x0, T.z0 + 0.1, T.x0 + 0.1, T.z1 - 0.1);  // west
+    rail(T.x1 - 0.1, 17.5, T.x1, T.z1 - 0.1);      // east, from the landing south
+    rail(T.x0, T.z1 - 0.1, 31.0, T.z1);            // south, either side of the slide
+    rail(32.0, T.z1 - 0.1, T.x1, T.z1);
+    // access: a landing beside the tower's north-east corner and a gentle 4.5 m ramp running south from it
+    platform(T.x1, T.z0, 35.1, 17.5, 'deck_blue', 'deck_red');
+    w.flat([T.x1, T.z0, 35.1, 17.5], top, [], 'tower-landing');
+    w.ramp([T.x1, 17.5, 35.1, 22.0], 'z', top, y, 'tower-ramp');
+    wedge(17.5, 22.0, (T.x1 + 35.1) / 2, 1.6, top, y, 'z', 'rubber_studs');
+    // slide: its deck meets the tower's south edge; the sloping part is walkable too
+    put('slide', l, { x: 31.5, z: T.z1 + 1.2, y, s: 0.6, sx: 1.6 });
+    w.flat([31.0, T.z1, 32.0, T.z1 + 0.6], top, [], 'slide-deck');
+    w.ramp([31.0, T.z1 + 0.6, 32.0, T.z1 + 2.4], 'z', top, y, 'slide');
     // two huts with three walls and a roof (hiding places)
     const t = 0.15;
     const hut = (x0, z0, x1, z1, open) => {
@@ -286,20 +304,44 @@ export function furnish(w) {
       if (open !== 'E') bx(l, x1 - t, z0, x1, z1, 1.5, 'padding_squares');
       if (open !== 'N') bx(l, x0 + (open !== 'W' ? t : 0), z0, x1 - (open !== 'E' ? t : 0), z0 + t, 1.5, 'padding_squares');
       if (open !== 'S') bx(l, x0 + (open !== 'W' ? t : 0), z1 - t, x1 - (open !== 'E' ? t : 0), z1, 1.5, 'padding_squares');
-      bx(l, x0, z0, x1, z1, 0.15, 'slide_red', 1.5, { y0: y + 1.5, y1: y + 1.65 });
+      bx(l, x0, z0, x1, z1, 0.15, 'deck_red', 1.5, { y0: y + 1.5, y1: y + 1.65 });
     };
     hut(16, 28.2, 20, 32, 'E'); hut(22.5, 14.1, 26.5, 17, 'S');
-    put('slide', l, { x: 33.9, z: 24.5 }); solid(l, 33.9, 24.5, 0.4, 2.0, 1.9);
+  }
+  // A sloped slab (ramp visual): runs from a to b along `axis`, height hA at a down/up to hB at b, centred on `mid` across.
+  function wedge(a, b, mid, wid, hA, hB, axis, mat) {
+    const len = b - a, rise = hB - hA, ang = Math.atan2(rise, len), L = Math.hypot(len, rise);
+    const geo = new THREE.BoxGeometry(L, 0.1, wid);
+    const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * L * 0.5, uv.getY(i) * wid * 0.5);
+    const m = new THREE.Mesh(geo, getMaterial(mat));
+    m.rotation.z = ang;
+    const cx = (a + b) / 2, cy = (hA + hB) / 2 - 0.05 / Math.cos(ang);
+    if (axis === 'x') { m.position.set(cx, cy, mid); w.group('2').add(m); return; }
+    const g = new THREE.Group(); g.position.set(mid, cy, cx); g.rotation.y = -Math.PI / 2; g.add(m); w.group('2').add(g); return;   // local +x becomes world +z
   }
   function ballPit() {
-    // the supplied inflatable ball pit (x 39.4-43.6, z 17.4-21.6) filled with balls; the secret hatch to the Dining Room is in the north-east corner of the room
-    const l = '2', y = Y(l), cx = 41.5, cz = 19.5, S = 0.85;
-    put('ballpit', l, { x: cx, z: cz, s: S });
-    w.collision.add(cx - 2.12, cz - 2.08, cx + 2.12, cz + 2.08, y, y + 1.0);
-    const cols = [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71, 0x9b59b6, 0xff7eb6];
-    const balls = []; let s = 5;
-    const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-    for (let i = 0; i < 480; i++) balls.push({ x: cx + (rnd() - 0.5) * 3.3, y: y + 0.27 + 0.08 + rnd() * 0.16, z: cz + (rnd() - 0.5) * 3.3, color: cols[i % 6] });
+    // The supplied ball pit, sunk into the floor: only its low rim shows. Walk in anywhere; two ramps lead back out.
+    const l = '2', y = Y(l), { cx, cz, half, depth } = BALLPIT, fy = y - depth;
+    put('ballpit', l, { x: cx, z: cz, s: 0.85, y: y - 0.8 });
+    w.flat([cx - half, cz - half, cx + half, cz + half], fy, [], 'ballpit');
+    const ramps = [[cx - half, cx - half + 1.6, y, fy], [cx + half - 1.6, cx + half, fy, y]];
+    const rz = [cz - 0.65, cz + 0.65];
+    for (const [a, b, hA, hB] of ramps) { w.ramp([a, rz[0], b, rz[1]], 'x', hA, hB, 'ballpit-ramp'); wedge(a, b, cz, 1.3, hA, hB, 'x', 'padding_purple'); }
+    // the floor of balls: a painted layer plus loose balls on top
+    const cv = document.createElement('canvas'); cv.width = cv.height = 256; const g = cv.getContext('2d');
+    g.fillStyle = '#2a1f33'; g.fillRect(0, 0, 256, 256);
+    const cols = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6', '#ff7eb6'];
+    let sd = 11; const rr = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+    for (let i = 0; i < 160; i++) { const px = rr() * 256, py = rr() * 256, r = 17 + rr() * 6, c = cols[i % 6]; for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) { const gr = g.createRadialGradient(px + ox - 5, py + oy - 5, 2, px + ox, py + oy, r); gr.addColorStop(0, '#fff'); gr.addColorStop(0.25, c); gr.addColorStop(1, '#00000088'); g.fillStyle = gr; g.beginPath(); g.arc(px + ox, py + oy, r, 0, 6.3); g.fill(); } }
+    const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(3, 3); tex.colorSpace = THREE.SRGBColorSpace;
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(half * 2, half * 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.set(cx, fy + 0.002, cz); w.group(l).add(floor);
+    const balls = [];
+    for (let i = 0; i < 300; i++) {
+      const bx0 = cx + (rr() - 0.5) * (half * 2 - 0.3), bz0 = cz + (rr() - 0.5) * (half * 2 - 0.3);
+      if (Math.abs(bz0 - cz) < 0.85 && (bx0 < cx - half + 1.75 || bx0 > cx + half - 1.75)) continue;   // keep the ramps clear
+      balls.push({ x: bx0, y: fy + 0.09 + rr() * 0.06, z: bz0, color: cols[i % 6] });
+    }
     const im = new THREE.InstancedMesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 }), balls.length);
     const o = new THREE.Object3D(), c = new THREE.Color();
     balls.forEach((b, i) => { o.position.set(b.x, b.y, b.z); o.updateMatrix(); im.setMatrixAt(i, o.matrix); im.setColorAt(i, c.set(b.color)); });

@@ -175,6 +175,8 @@ export const FIXTURES = {
   prizeCounter: { level: '2', x: 54, z: 1.2, room: 'prize' },
 };
 
+// The ball pit is sunk into the Floor 2 slab: a hole of half-width `half` around (cx, cz), floor `depth` m below the room floor.
+export const BALLPIT = { cx: 41.5, cz: 19.5, half: 1.85, depth: 0.45 };
 export const START = { level: '1', x: 22, z: 23, yaw: -Math.PI / 2 };
 
 export function areaById(level, id) { return AREAS.find(a => a.level === level && a.id === id); }

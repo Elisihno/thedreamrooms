@@ -33,7 +33,8 @@ export async function preloadTextures(onProgress) {
 }
 
 // Returns a (cached) material. Textures tile in world units: geometry UVs are scaled in builder.js.
-const ALIAS = { ceiling: { as: 'concrete_mid', normal: 0.2, color: 0xe6e2da }, stall_paint: { as: 'wall_green_peel', normal: 1, color: 0xffffff, boost: 1.8 }, pipe_paint: { as: 'diamond_plate', normal: 0.6, color: 0xb8a58c } };
+const ALIAS = { ceiling: { as: 'concrete_mid', normal: 0.2, color: 0xe6e2da }, stall_paint: { as: 'wall_green_peel', normal: 1, color: 0xffffff, boost: 1.8 }, pipe_paint: { as: 'diamond_plate', normal: 0.6, color: 0xb8a58c },
+  deck_blue: { as: 'slide_blue', normal: 0.08, color: 0xffffff, rough: 0.7 }, deck_red: { as: 'slide_red', normal: 0.08, color: 0xffffff, rough: 0.7 } };
 
 export function getMaterial(key, extra = {}) {
   const ck = key + JSON.stringify(extra);
@@ -41,7 +42,7 @@ export function getMaterial(key, extra = {}) {
   const alias = ALIAS[key];
   if (alias) {
     const base = getMaterial(alias.as, extra);
-    const m = base.clone(); m.normalScale.set(alias.normal, alias.normal); m.color.setHex(alias.color); if (alias.boost) m.color.multiplyScalar(alias.boost);
+    const m = base.clone(); m.normalScale.set(alias.normal, alias.normal); m.color.setHex(alias.color); if (alias.rough) m.roughness = alias.rough; if (alias.boost) m.color.multiplyScalar(alias.boost);
     cache.set(ck, m); return m;
   }
   const spec = PROCEDURAL[key] || { style: 'concrete', base: '#777' };

@@ -1,5 +1,5 @@
 import * as THREE from '../three.js';
-import { AREAS, OPENINGS, PASSAGES, SPIRAL, LEVELS, LEVEL_Y, CEIL, areaById } from './layout.js';
+import { AREAS, OPENINGS, PASSAGES, SPIRAL, LEVELS, LEVEL_Y, CEIL, BALLPIT, areaById } from './layout.js';
 import { getMaterial } from '../assets/registry.js';
 import { cloneModel, hasModel, instanceModel } from '../assets/models.js';
 import { World, subtractRects } from './builder.js';
@@ -67,6 +67,7 @@ export function buildBuilding(scene) {
   const floorHoles = { B: [], 1: [...wellL], 2: [...wellL], 3: [...wellL] };
   const ceilHoles = { B: [...wellL], 1: [...wellL], 2: [...wellL], 3: [] };
   const ph = passageHoles();
+  floorHoles['2'].push([BALLPIT.cx - BALLPIT.half, BALLPIT.cz - BALLPIT.half, BALLPIT.cx + BALLPIT.half, BALLPIT.cz + BALLPIT.half]);   // sunken ball pit
   for (const l of LEVELS) { floorHoles[l].push(...(ph.floor[l] || [])); ceilHoles[l].push(...(ph.ceil[l] || [])); }
 
   // ---------- shells: floors, ceilings, walls ----------
