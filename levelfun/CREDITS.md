@@ -59,3 +59,6 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 
 ## Textures
 The 26 surface textures were supplied by the project owner (origin and licence to be confirmed). Granny is a game by DVloper; this project is not affiliated.
+
+## Added later
+- **Partygoer Plushie** uses "Balloon Buddy", generated with Meshy AI and supplied by the project owner (check Meshy's terms for your plan before any commercial release). The earlier penguin plush (SunnyBuns, CC-BY-4.0) is no longer used.
