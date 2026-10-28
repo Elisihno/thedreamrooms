@@ -29,10 +29,12 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 | Item: Balloon Popper | [Needle](https://sketchfab.com/3d-models/needle-ebc771189623471b94c8a6b43468d3e0) | linh198 | CC-BY-NC-SA-4.0 |
 | Item: keys | [A Low Poly Key](https://sketchfab.com/3d-models/a-low-poly-key-90df0b2640e04481862aff7d89a66a35) | guest177385 | CC-BY-4.0 |
 | Item: Party Whistle | [Coach Whistle](https://sketchfab.com/3d-models/coach-whistle-3e953bfa5f52463197a6c9cdbaab97fe) | TiimB | CC-BY-4.0 |
+| Item: Partygoer Plushie (penguin) | [Penguin plush](https://sketchfab.com/3d-models/penguin-plush-228fddb7362f42e2a349b84cbe8191b4) | SunnyBuns | CC-BY-4.0 |
 | Item: Screwdriver | [Screwdriver](https://sketchfab.com/3d-models/screwdriver-73cb248ad76d45ee9b638ec4bfea4128) | AlexJJ | CC-BY-4.0 |
 | Item: Wind-Up Toy | [Wind-up Tin Robot - toy](https://sketchfab.com/3d-models/wind-up-tin-robot-toy-db96c5d4efc04a77a88403deacb1619e) | Brian Trepanier | CC-BY-4.0 |
 | Item: Wire Cutters | [Wire Cutters](https://sketchfab.com/3d-models/wire-cutters-c3e56fe7b04a4f2e8991c6e2b2166822) | abdillaamy | CC-BY-4.0 |
 | Kitchen fridges | [Fridge](https://sketchfab.com/3d-models/fridge-c383302237e140668e0a52a9df1a10de) | lagesnpiet | CC-BY-4.0 |
+| Kitchen pots and pans | [3DDecember 2021 - Copper Pots and Pans](https://sketchfab.com/3d-models/3ddecember-2021-copper-pots-and-pans-851f78fc9a994cd5a1c392ce28c9e414) | Jack Kelly | CC-BY-4.0 |
 | Lockers | [Metal Locker](https://sketchfab.com/3d-models/metal-locker-1807cfeea89c4a57997cbe5fce569b53) | Teslov | CC-BY-4.0 |
 | Metal workbenches (basement hiding spots) | [Bloody Metal Table](https://sketchfab.com/3d-models/bloody-metal-table-84bfcdc3459b40fbb9e359dd38abe567) | Muhammet Gündel | CC-BY-4.0 |
 | Office chairs | [Office Chair](https://sketchfab.com/3d-models/office-chair-b8d24c146a6844788c0ba6f7b135e99e) | thethieme | CC-BY-4.0 |

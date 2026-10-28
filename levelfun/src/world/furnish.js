@@ -88,6 +88,7 @@ export function furnish(w) {
   for (let i = 0; i < 5; i++) metalTable('1', 37.4 + i * 1.8, 0.65);
   for (const z of [2.2, 3.2, 6.2]) { put('fridge', '1', { x: 47.45, z, ry: -Math.PI / 2 }); solid('1', 47.45, z, 0.39, 0.37, 1.85); }
   bin('1', 37.2, 11.3); bin('1', 47.3, 9.3);
+  if (hasModel('pots')) put('pots', '1', { x: 39.2, z: 0.65, y: Y('1') + 0.95, s: 0.8 });   // copper pots and pans on the counter
   metalTable('1', 41.5, 5.5); metalTable('1', 43.4, 5.5); metalTable('1', 38.2, 10.3, false); metalTable('1', 42.3, 11.3);
   // Dining Room: three long party tables (start under the middle one), cake, balloons, confetti, bunting
   partySet(w, '1', { tables: [{ x: 22, z: 19.5 }, { x: 22, z: 23, cake: true }, { x: 22, z: 26.5 }], bounds: { x0: 12, x1: 36, z0: 16, z1: 30 }, avoid: [[34, 16.5, 36, 20.5], [35, 21, 36, 23], [35, 27, 36, 29.5]], ceilingBalloons: 28, bunting: true, seed: 5, confetti: 700, tableScale: 1.15 });
