@@ -89,7 +89,7 @@ export function furnish(w) {
   bin('1', 37.2, 11.3); bin('1', 47.3, 9.3);
   metalTable('1', 41.5, 5.5); metalTable('1', 43.4, 5.5); metalTable('1', 38.2, 10.3, false); metalTable('1', 42.3, 11.3);
   // Dining Room: three long party tables (start under the middle one), cake, balloons, confetti, bunting
-  partySet(w, '1', { tables: [{ x: 22, z: 19.5 }, { x: 22, z: 23, cake: true }, { x: 22, z: 26.5 }], bounds: { x0: 12, x1: 36, z0: 16, z1: 30 }, avoid: [[34, 16.5, 36, 20.5], [35, 21, 36, 23], [35, 27, 36, 29.5]], ceilingBalloons: 28, bunting: true, seed: 5, confetti: 700 });
+  partySet(w, '1', { tables: [{ x: 22, z: 19.5 }, { x: 22, z: 23, cake: true }, { x: 22, z: 26.5 }], bounds: { x0: 12, x1: 36, z0: 16, z1: 30 }, avoid: [[34, 16.5, 36, 20.5], [35, 21, 36, 23], [35, 27, 36, 29.5]], ceilingBalloons: 28, bunting: true, seed: 5, confetti: 700, tableScale: 1.15 });
   // Bathrooms: stall row on the north wall (textured), a dirty public toilet in every stall, sinks on the south wall
   const STALL_X0 = 40.17, STALL_W = 1.11, STALL_Z = 17.35;   // six open stalls against the north wall, each 1.12 m wide, 1.22 m deep
   for (let i = 0; i < 6; i++) {
@@ -220,8 +220,16 @@ export function furnish(w) {
     }
     w.collision.add(0, 15.4, 0.3, 18.6, y, y + 2.3);
     bx(l, 0.3, 14.5, 2.5, 19.5, 0.02, 'hazard_stripes', 0, deco);
-    // the four mechanisms (key lock, wire panel, keypad, fuse box) will be placed next to the door when their models arrive
-    w.fixtures.exitMechanisms = [{ id: 'key', z: 13.7 }, { id: 'wires', z: 14.7 }, { id: 'code', z: 20.0 }, { id: 'fuse', z: 21.1 }];
+    // the four mechanisms beside the door (west wall, facing into the room)
+    const panel = (name, id, z, yBase, s, ry, hx, hz, h, yOff = 0) => {
+      put(name, l, { x: 0.1 + hx, z, y: y + yBase - yOff * s, ry, s }); solid(l, 0.1 + hx, z, hx, hz, h, yBase);
+      w.fixtures.exitMechanisms.push({ id, z });
+    };
+    w.fixtures.exitMechanisms = [];
+    panel('breaker2', 'key', 13.6, 1.0, 1.3, Math.PI / 2, 0.24, 0.36, 0.7, 0.5);    // padlocked breaker box: the Exit Key
+    panel('fuse_small', 'wires', 14.7, 1.0, 1.0, Math.PI / 2, 0.25, 0.25, 0.5);     // open junction box with wiring: Wire Cutters
+    panel('keypad', 'code', 19.5, 1.25, 1.6, 0, 0.05, 0.1, 0.32);                   // keypad and card reader: the exit code
+    panel('fuse_tall', 'fuse', 20.7, 0, 1.0, Math.PI / 2, 0.1, 0.14, 1.9);          // post-mounted fuse cabinet: the Exit Fuse
   }
   function elevator() {
     const l = '3', y = Y(l);
@@ -252,22 +260,19 @@ export function furnish(w) {
     put('slide', l, { x: 33.9, z: 24.5 }); solid(l, 33.9, 24.5, 0.4, 2.0, 1.9);
   }
   function ballPit() {
-    const l = '2', y = Y(l);
-    const rim = 0.6, x0 = 38, x1 = 46.4, z0 = 17.2, z1 = 24;
-    const gaps = { N: [40, 42], S: [41, 43.5] };
-    const seg = (a, b, c, d, mat) => bx(l, a, c, b, d, rim, mat);
-    seg(x0, gaps.N[0], z0 - 0.2, z0, 'padding_squares'); seg(gaps.N[1], x1, z0 - 0.2, z0, 'padding_squares');
-    seg(x0, gaps.S[0], z1, z1 + 0.2, 'padding_squares'); seg(gaps.S[1], x1, z1, z1 + 0.2, 'padding_squares');
-    bx(l, x0 - 0.2, z0, x0, z1, rim, 'padding_purple'); bx(l, x1, z0, x1 + 0.2, z1, rim, 'padding_purple');
+    // the supplied inflatable ball pit (x 39.4-43.6, z 17.4-21.6) filled with balls; the secret hatch to the Dining Room is in the north-east corner of the room
+    const l = '2', y = Y(l), cx = 41.5, cz = 19.5, S = 0.85;
+    put('ballpit', l, { x: cx, z: cz, s: S });
+    w.collision.add(cx - 2.12, cz - 2.08, cx + 2.12, cz + 2.08, y, y + 1.0);
     const cols = [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71, 0x9b59b6, 0xff7eb6];
     const balls = []; let s = 5;
     const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-    for (let i = 0; i < 520; i++) balls.push({ x: x0 + rnd() * (x1 - x0), y: y + 0.09 + rnd() * 0.12, z: z0 + rnd() * (z1 - z0), color: cols[i % 6] });
+    for (let i = 0; i < 480; i++) balls.push({ x: cx + (rnd() - 0.5) * 3.3, y: y + 0.27 + 0.08 + rnd() * 0.16, z: cz + (rnd() - 0.5) * 3.3, color: cols[i % 6] });
     const im = new THREE.InstancedMesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 }), balls.length);
     const o = new THREE.Object3D(), c = new THREE.Color();
     balls.forEach((b, i) => { o.position.set(b.x, b.y, b.z); o.updateMatrix(); im.setMatrixAt(i, o.matrix); im.setColorAt(i, c.set(b.color)); });
     im.computeBoundingSphere(); im.userData.optional = true; w.optional.push(im); w.group(l).add(im);
-    bunch(l, 38.5, 14.5, 0.9);
+    bunch(l, 38.2, 14.5, 0.9);
   }
   function hidingSpots() {
     // visible markers are the furniture itself (tables, desks, lockers, huts); the list drives AI/gameplay later

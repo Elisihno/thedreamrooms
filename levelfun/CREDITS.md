@@ -5,9 +5,10 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 | Used for | Model | Author | Licence |
 |---|---|---|---|
 | Arcade machines | [Arcade Machine](https://sketchfab.com/3d-models/arcade-machine-69409b165c2c418c8f78a5b32cec5c02) | Erdem Dağdelen | CC-BY-4.0 |
+| Ball pit | [Deluxe Ballpit](https://sketchfab.com/3d-models/deluxe-ballpit-a324166b7fb645ac9c29d813008de401) | skylajade69 | CC-BY-4.0 |
 | Balloon bunches | [Colorful Balloons](https://sketchfab.com/3d-models/colorful-balloons-27200b6b364f45c085c5e99b891fa5c6) | assetfactory | SKETCHFAB Standard |
 | Bathroom sinks | [Filthy Metal Sink - 4096px²](https://sketchfab.com/3d-models/filthy-metal-sink-4096px2-dcd2b91f54014e95bd488e12f0d54d61) | Mark Peters | CC-BY-4.0 |
-| Bathroom stalls | Toilet Stalls HC (freestd.) from [archibase.net](https://www.archibase.net) (3DS, no author or licence given; converted and textured in-game) | archibase.net | free download |
+| Bathroom stall panels (textured in-game) | [Toilet Stalls](https://sketchfab.com/3d-models/toilet-stalls-0abe5cb1b0e949bcb571a8b8004a5ecc) | Yaiyeondurising | CC-BY-SA-4.0 |
 | Bathroom toilets | [Dirty Public Toilet](https://sketchfab.com/3d-models/dirty-public-toilet-7082a1c21601433d968ea83d33a40c00) | lucianofgatto | CC-BY-4.0 |
 | Boiler Room boilers | [Vintage Boiler](https://sketchfab.com/3d-models/vintage-boiler-8a1a854958604320b172d03e7cfb9768) | HippoStance | CC-BY-4.0 |
 | Breaker panels | [Electrical Breaker Panel Box – LP model](https://sketchfab.com/3d-models/electrical-breaker-panel-box-lp-model-4b12b4e00fc14f95beb55d7016eaf28d) | Nikoleta.Zhecheva | CC-BY-4.0 |
@@ -19,6 +20,10 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 | Doors (every ordinary door) | [door door metal](https://sketchfab.com/3d-models/door-door-metal-b21ec273c1a342568ab9f9ac14291c5b) | ahmagh2e | CC-BY-4.0 |
 | Elevator Room winches | [Winch](https://sketchfab.com/3d-models/winch-8c91b02d23914821b6ef1ec2f8f0bcf1) | ivan_aladin | CC-BY-4.0 |
 | Exit signs | [Exit Sign](https://sketchfab.com/3d-models/exit-sign-8b3950f86df14ec291224f6c868609c3) | ZachWilkins1997 | CC-BY-4.0 |
+| Exit-room fuse box | [Fuse Box 03](https://sketchfab.com/3d-models/fuse-box-03-4e576f25111e4eeb84da51eeed1861fe) | CrazyScans | CC-BY-NC-4.0 |
+| Exit-room key-lock panel | [Electrical Breaker Panel Box – LP model](https://sketchfab.com/3d-models/electrical-breaker-panel-box-lp-model-4b12b4e00fc14f95beb55d7016eaf28d) | Nikoleta.Zhecheva | CC-BY-4.0 |
+| Exit-room keypad | [Simple Keypad](https://sketchfab.com/3d-models/simple-keypad-934c87c0f1a848c288612a189438f675) | trashbinkr | SKETCHFAB Standard |
+| Exit-room wire panel | [Small Fuse Box](https://sketchfab.com/3d-models/small-fuse-box-1818361dc6554d17bef8c0400959f93f) | big guy | CC-BY-4.0 |
 | Floor lamps | [Floor Lamp](https://sketchfab.com/3d-models/floor-lamp-33eb258d9873435690254cfbb0ea46ec) | bilgehan.korkmaz | CC-BY-4.0 |
 | Generator Room generators | [Generator](https://sketchfab.com/3d-models/generator-523c06dad1f64024af3b037b6c30e28c) | InvisibleParrotGames | CC-BY-SA-4.0 |
 | Item: Balloon Popper | [Needle](https://sketchfab.com/3d-models/needle-ebc771189623471b94c8a6b43468d3e0) | linh198 | CC-BY-NC-SA-4.0 |
@@ -45,8 +50,8 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 | Trash cans | [Trash Can](https://sketchfab.com/3d-models/trash-can-0ad3407cd8104ba58f71885c0e58ca9a) | Yury Misiyuk | CC-BY-4.0 |
 
 ## Licence notes (read before publishing or selling)
-- **CC-BY-NC / CC-BY-NC-SA** models (the party table "FNAF Table", the "Needle") must not be used in a commercial release. Replace them before monetising.
-- **SKETCHFAB Standard** (Colorful Balloons) allows use in a project but not redistributing the model on its own; check the licence page.
+- **CC-BY-NC / CC-BY-NC-SA** models (the party table "FNAF Table", the "Needle", the "Fuse Box 03") must not be used in a commercial release. Replace them before monetising.
+- **SKETCHFAB Standard** (Colorful Balloons, Simple Keypad) allows use in a project but not redistributing the model on its own; check the licence page.
 - **CC-BY-4.0** models require the credit above to stay with the game.
 - The electronic fuse model arrived corrupted and is not included yet.
 

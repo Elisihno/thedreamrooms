@@ -74,23 +74,24 @@ let plateGeo, plateMat;
 const TABLE = { halfW: 0.75, top: 0.95 };
 
 // tables: [{x, z, len (model stretch, default 1.5 = 3.3 m), cake}]; bounds: room rect; avoid: rects kept clear.
-export function partySet(w, level, { tables, bounds, avoid = [], ceilingBalloons = 20, bunting = false, seed = 7, confetti = 600 }) {
+export function partySet(w, level, { tables, bounds, avoid = [], ceilingBalloons = 20, bunting = false, seed = 7, confetti = 600, tableScale = 1 }) {
   const parent = w.group(level), y0 = LEVEL_Y[level], r = rng(seed);
+  const top = TABLE.top * tableScale;   // table-top height; underside is 0.1 m lower
   const hit = (x, z, m = 0.9) => avoid.some(a => x > a[0] - m && x < a[2] + m && z > a[1] - m && z < a[3] + m);
   const chairs = [], cups = [], hats = [], plates = [], tableP = [];
   const TINT = [0xffffff, 0xffe3ef, 0xe3f0ff, 0xfff6c9];
   for (const t of tables) {
     const sz = t.len ?? 1.5, half = 1.1 * sz;
-    tableP.push({ x: t.x, y: y0, z: t.z, ry: Math.PI / 2, sz });
-    w.collision.add(t.x - half, t.z - TABLE.halfW, t.x + half, t.z + TABLE.halfW, y0 + 0.85, y0 + 0.95);
+    tableP.push({ x: t.x, y: y0, z: t.z, ry: Math.PI / 2, sz, sy: tableScale });
+    w.collision.add(t.x - half, t.z - TABLE.halfW, t.x + half, t.z + TABLE.halfW, y0 + top - 0.1, y0 + top);
     const n = Math.max(2, Math.floor(half * 2 / 0.85));
     for (let i = 0; i < n; i++) for (const s of [-1, 1]) {
       const cx = t.x + (i - (n - 1) / 2) * 0.85, cz = t.z + s * 1.0;
       chairs.push({ x: cx, y: y0, z: cz, ry: s < 0 ? -Math.PI / 2 : Math.PI / 2 });
       w.collision.add(cx - 0.27, cz - 0.31, cx + 0.27, cz + 0.31, y0, y0 + 0.9);
-      plates.push({ x: cx, y: y0 + TABLE.top + 0.002, z: t.z + s * 0.45, color: TINT[Math.floor(r() * 4)] });
-      cups.push({ x: cx + 0.24, y: y0 + TABLE.top, z: t.z + s * 0.38, ry: r() * 6.28 });
-      if ((i % 2 === 0) === (s < 0)) hats.push({ x: cx - 0.3, y: y0 + TABLE.top, z: t.z + s * 0.5, ry: r() * 6.28 });
+      plates.push({ x: cx, y: y0 + top + 0.002, z: t.z + s * 0.45, color: TINT[Math.floor(r() * 4)] });
+      cups.push({ x: cx + 0.24, y: y0 + top, z: t.z + s * 0.38, ry: r() * 6.28 });
+      if ((i % 2 === 0) === (s < 0)) hats.push({ x: cx - 0.3, y: y0 + top, z: t.z + s * 0.5, ry: r() * 6.28 });
     }
   }
   instanceModel(parent, 'table', tableP);
@@ -104,7 +105,7 @@ export function partySet(w, level, { tables, bounds, avoid = [], ceilingBalloons
   plates.forEach((p, i) => { o.position.set(p.x, p.y, p.z); o.rotation.set(0, r() * 6.28, 0); o.updateMatrix(); pi.setMatrixAt(i, o.matrix); pi.setColorAt(i, col.set(p.color)); });
   pi.castShadow = true; pi.receiveShadow = true; pi.computeBoundingSphere(); pi.userData.optional = true; w.optional.push(pi); parent.add(pi);
 
-  for (const t of tables) if (t.cake) instanceModel(parent, 'cake', [{ x: t.x, y: y0 + TABLE.top, z: t.z, s: 1.4 }]);
+  for (const t of tables) if (t.cake) instanceModel(parent, 'cake', [{ x: t.x, y: y0 + top, z: t.z, s: 1.4 }]);
 
   // balloon bunches tied to the floor (stationary), ceiling balloons
   const { x0, x1, z0, z1 } = bounds;
@@ -121,7 +122,7 @@ export function partySet(w, level, { tables, bounds, avoid = [], ceilingBalloons
   for (let i = 0; i < confetti; i++) {
     const t = tables.length ? tables[Math.floor(r() * tables.length)] : null, onTable = t && i < confetti * 0.2;
     conf.push(onTable
-      ? { x: t.x + (r() - 0.5) * 2.4 * (t.len ?? 1.5) / 1.5, y: y0 + 0.958, z: t.z + (r() - 0.5) * 1.3, ry: r() * 6.28, color: PARTY[Math.floor(r() * PARTY.length)] }
+      ? { x: t.x + (r() - 0.5) * 2.4 * (t.len ?? 1.5) / 1.5, y: y0 + top + 0.008, z: t.z + (r() - 0.5) * 1.3, ry: r() * 6.28, color: PARTY[Math.floor(r() * PARTY.length)] }
       : { x: x0 + 0.3 + r() * (x1 - x0 - 0.6), y: y0 + 0.008, z: z0 + 0.3 + r() * (z1 - z0 - 0.6), ry: r() * 6.28, color: PARTY[Math.floor(r() * PARTY.length)] });
   }
   const cg = new THREE.PlaneGeometry(0.05, 0.03); cg.rotateX(-Math.PI / 2);
