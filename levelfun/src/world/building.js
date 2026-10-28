@@ -8,7 +8,7 @@ import { furnish } from './furnish.js';
 
 const WALL_T = 0.1;
 const DOOR_TOP = 2.25;
-const DOOR_MAT = { red: 'slide_red', blue: 'slide_blue', metal: 'tile_metal' };
+const DOOR_MAT = { red: 'metal_yellow', blue: 'wall_green_peel', metal: 'tile_metal' };
 
 const MOODS = {
   warm:   { color: 0xffe2b0, intensity: 28, distance: 15, flicker: 0.08 },
@@ -34,7 +34,7 @@ class Door {
       leaf.scale.set(L / 1.04, 1, 1.1);
       leaf.position.set(L / 2, 0, 0);
     } else {
-      leaf = new THREE.Mesh(new THREE.BoxGeometry(L, 2.15, 0.07), getMaterial(DOOR_MAT[o.style] || 'slide_red'));
+      leaf = new THREE.Mesh(new THREE.BoxGeometry(L, 2.15, 0.07), getMaterial(DOOR_MAT[o.style] || 'metal_yellow'));
       leaf.position.set(L / 2, 1.075, 0);
       const handle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.14), getMaterial('diamond_plate'));
       handle.position.set(L - 0.15, 1.0, 0); leaf.add(handle);
