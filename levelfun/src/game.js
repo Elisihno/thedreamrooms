@@ -110,6 +110,8 @@ async function enterFullscreen() {
   } catch (e) { /* not supported (e.g. iOS Safari) */ }
 }
 
+// Any way of leaving the start menu counts as starting the game (floor jumps, passage unlock, respawn).
+function startRunning() { if (!running) { running = true; if (isTouch) enterFullscreen(); } }
 $('primary').addEventListener('click', () => {
   const first = !running;
   if (first) { running = true; if (isTouch) enterFullscreen(); }
@@ -120,10 +122,10 @@ $('fs').addEventListener('click', enterFullscreen);
 const SPOTS = { B: { x: 24, z: 4, yaw: -Math.PI / 2 }, 1: { x: 24, z: 8, yaw: -Math.PI / 2 }, 2: { x: 30, z: 11.5, yaw: -Math.PI / 2 }, 3: { x: 24, z: 8, yaw: -Math.PI / 2 } };
 document.querySelectorAll('[data-floor]').forEach(b => b.addEventListener('click', () => {
   const id = b.dataset.floor, sp = SPOTS[id];
-  player.teleport({ x: sp.x, z: sp.z, y: LEVEL_Y[id], yaw: sp.yaw }); setPaused(false);
+  startRunning(); player.teleport({ x: sp.x, z: sp.z, y: LEVEL_Y[id], yaw: sp.yaw }); setPaused(false);
 }));
-$('unlock').addEventListener('click', () => { world.passages.forEach(p => p.open()); setPaused(false); toast('All secret passages opened (test)'); });
-$('respawn').addEventListener('click', () => { player.teleport(startPos); setPaused(false); startWake(); });
+$('unlock').addEventListener('click', () => { startRunning(); world.passages.forEach(p => p.open()); setPaused(false); toast('All secret passages opened (test)'); });
+$('respawn').addEventListener('click', () => { startRunning(); player.teleport(startPos); setPaused(false); startWake(); });
 
 onQuality = () => applyQuality(renderer, settings.quality, pool, world);
 $('sens').addEventListener('input', e => { settings.sensitivity = Number(e.target.value); saveSettings(settings); syncMenu(); });
