@@ -16,7 +16,7 @@ First-person survival horror (Three.js). Lives in this folder; the rest of the r
 ## Models (levelfun/assets/models)
 Optimized from Sketchfab downloads (scaled to metres, origin at bottom-centre, textures shrunk to WebP,
 triangle counts cut for phones): table, chair, cup, cake, party_hat, door, counter, balloons.
-Authors/licences still to be confirmed and credited here. Paper plates are generated in code.
+Paper plates and party hats are generated in code. See `CREDITS.md` for every model's author and licence (two are non-commercial).
 Replace any model by dropping a new .glb with the same name.
 
 ## Textures (levelfun/assets/textures)

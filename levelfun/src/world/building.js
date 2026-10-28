@@ -12,8 +12,8 @@ const DOOR_MAT = { red: 'slide_red', blue: 'slide_blue', metal: 'tile_metal' };
 
 const MOODS = {
   warm:   { color: 0xffe2b0, intensity: 28, distance: 15, flicker: 0.08 },
-  cold:   { color: 0xd4e4ff, intensity: 20, distance: 14, flicker: 0.2 },
-  dim:    { color: 0xffd2a0, intensity: 14, distance: 12, flicker: 0.3 },
+  cold:   { color: 0xd4e4ff, intensity: 28, distance: 15, flicker: 0.2 },
+  dim:    { color: 0xffd2a0, intensity: 18, distance: 13, flicker: 0.3 },
   dark:   { color: 0xffc890, intensity: 10, distance: 12, flicker: 0.6 },
   arcade: { color: 0xc8a0ff, intensity: 24, distance: 15, flicker: 0.15 },
   red:    { color: 0xff8466, intensity: 18, distance: 13, flicker: 0.25 },

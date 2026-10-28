@@ -3,7 +3,10 @@ import { GLTFLoader } from '../../vendor/GLTFLoader.js';
 
 // Model library. Files live in levelfun/assets/models/<name>.glb (optimized with real-world scale,
 // origin at bottom-centre). To upgrade a model, drop a new .glb with the same name.
-export const MODEL_NAMES = ['table', 'chair', 'cup', 'cake', 'party_hat', 'door', 'counter', 'balloons', 'arcade'];
+export const MODEL_NAMES = ['table', 'chair', 'cup', 'cake', 'party_hat', 'door', 'counter', 'balloons', 'arcade',
+  'metal_table', 'slide', 'bench', 'trash_can', 'crate', 'exit_sign', 'fridge', 'locker', 'floor_lamp', 'table_bell'];
+// Item models (picked up in later stages); not loaded until needed.
+export const ITEM_NAMES = ['screwdriver', 'needle', 'wire_cutters', 'key', 'whistle', 'windup_robot'];
 // Some downloads carry stray geometry (the arcade machine's power cord): triangles entirely behind zMin are removed.
 const CLIP = { arcade: { zMin: -0.42 } };
 export const screenMaterials = [];   // animated emissive screens
