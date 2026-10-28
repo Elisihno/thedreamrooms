@@ -18,7 +18,8 @@ export const screenMaterials = [];   // animated emissive screens
 const templates = new Map();
 const loader = new GLTFLoader();
 
-export async function loadModels(names = MODEL_NAMES) {
+export async function loadModels(names = MODEL_NAMES, onProgress) {
+  let done = 0;
   await Promise.all(names.map(async n => {
     const gltf = await loader.loadAsync(new URL(`../../assets/models/${n}.glb`, import.meta.url).href);
     gltf.scene.traverse(o => {
@@ -40,6 +41,8 @@ export async function loadModels(names = MODEL_NAMES) {
     if (n === 'door' || n === 'door_heavy') gltf.scene.traverse(o => { if (o.isMesh && o.material.map) { o.material = o.material.clone(); o.material.color.setScalar(2.4); } });   // the texture is almost black
     if (n === 'stall') gltf.scene.traverse(o => { if (o.isMesh && o.material.name === 'plastic') o.userData.matKey = 'stall_paint'; });   // the source has no textures: painted panels are textured here
     templates.set(n, gltf.scene);
+    onProgress?.(++done / names.length);
+    await new Promise(r => setTimeout(r, 0));   // let the page repaint
   }));
 }
 

@@ -34,12 +34,21 @@ document.querySelectorAll('[data-setting]').forEach(b => b.addEventListener('cli
   document.querySelectorAll('[data-setting]').forEach(x => x.classList.toggle('on', String(settings[x.dataset.setting]) === x.dataset.value));
 }));
 document.querySelectorAll('[data-setting]').forEach(x => x.classList.toggle('on', String(settings[x.dataset.setting]) === x.dataset.value));
+// Start-up progress: models 0-45 %, textures 45-70 %, world build 70-100 %.
+const setLoad = (frac, msg) => { $('loadfill').style.width = Math.round(frac * 100) + '%'; $('loadmsg').textContent = msg; };
+$('primary').disabled = true;
 $('primary').textContent = 'LOADING…';
+setLoad(0.02, 'Loading models…');
+let modelsDone = 0, texDone = 0;
 try {
-  await Promise.all([loadModels(), preloadTextures(p => { $('primary').textContent = 'LOADING ' + Math.round(p * 100) + '%'; })]);
-} catch (e) { $('primary').textContent = 'Load failed'; throw e; }
+  await Promise.all([
+    loadModels(undefined, f => { modelsDone = f; setLoad(0.45 * modelsDone + 0.25 * texDone, `Loading… models ${Math.round(modelsDone * 100)}%, textures ${Math.round(texDone * 100)}%`); }),
+    preloadTextures(f => { texDone = f; setLoad(0.45 * modelsDone + 0.25 * texDone, `Loading… models ${Math.round(modelsDone * 100)}%, textures ${Math.round(texDone * 100)}%`); }),
+  ]);
+} catch (e) { $('primary').textContent = 'Load failed'; $('loadmsg').textContent = 'Load failed: ' + (e && e.message || e); throw e; }
+setLoad(0.72, 'Building the building… (can take a while on phones)');
 $('primary').textContent = 'BUILDING…';
-await new Promise(r => setTimeout(r, 30));   // let the label paint before the (synchronous) build
+await new Promise(r => setTimeout(r, 60));   // let the label paint before the (synchronous) build
 scene.background = new THREE.Color(0x0b0a0c);
 scene.fog = new THREE.FogExp2(0x0b0a0c, 0.02);
 const ambient = new THREE.HemisphereLight(0x8a8aa6, 0x3a2e24, 1.1);
@@ -165,6 +174,8 @@ function frame(now) {
   renderer.render(scene, camera);
 }
 setPaused(true);
+$('primary').disabled = false;
+setLoad(1, 'Ready'); $('loadbar').classList.add('done'); $('loadmsg').classList.add('done');
 requestAnimationFrame(frame);
 
 // Test hook for automated checks.

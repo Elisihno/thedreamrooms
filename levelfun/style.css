@@ -58,3 +58,8 @@ button { font: inherit; color: #fff; }
 @keyframes lids-hide { to { visibility: hidden; } }
 #game.waking { animation: wakeblur 4.2s ease-out forwards; }
 @keyframes wakeblur { 0% { filter: blur(10px) brightness(.6); } 60% { filter: blur(4px) brightness(.9); } 100% { filter: none; } }
+
+#loadbar { height: 10px; margin: 8px 0 2px; background: #333; border-radius: 5px; overflow: hidden; }
+#loadfill { display: block; height: 100%; width: 0; background: #d9c24a; transition: width .15s; }
+#loadbar.done, #loadmsg.done { display: none; }
+#primary:disabled { opacity: .45; }
