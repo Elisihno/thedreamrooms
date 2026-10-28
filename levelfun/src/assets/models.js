@@ -6,7 +6,7 @@ import { GLTFLoader } from '../../vendor/GLTFLoader.js';
 export const MODEL_NAMES = ['table', 'chair', 'cup', 'cake', 'party_hat', 'door', 'counter', 'balloons', 'arcade',
   'metal_table', 'slide', 'bench', 'trash_can', 'crate', 'exit_sign', 'fridge', 'locker', 'floor_lamp', 'table_bell'];
 // Item models (picked up in later stages); not loaded until needed.
-export const ITEM_NAMES = ['screwdriver', 'needle', 'wire_cutters', 'key', 'whistle', 'windup_robot'];
+export const ITEM_NAMES = ['screwdriver', 'needle', 'wire_cutters', 'key', 'whistle', 'windup_robot', 'fuse'];
 // Some downloads carry stray geometry (the arcade machine's power cord): triangles entirely behind zMin are removed.
 const CLIP = { arcade: { zMin: -0.42 } };
 export const screenMaterials = [];   // animated emissive screens

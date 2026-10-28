@@ -13,7 +13,7 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 | Exit signs | [Exit Sign](https://sketchfab.com/3d-models/exit-sign-8b3950f86df14ec291224f6c868609c3) | ZachWilkins1997 | CC-BY-4.0 |
 | Floor lamps | [Floor Lamp](https://sketchfab.com/3d-models/floor-lamp-33eb258d9873435690254cfbb0ea46ec) | bilgehan.korkmaz | CC-BY-4.0 |
 | Heavy doors | [door door metal](https://sketchfab.com/3d-models/door-door-metal-b21ec273c1a342568ab9f9ac14291c5b) | ahmagh2e | CC-BY-4.0 |
-| Item: Balloon Popper | [Needle](https://sketchfab.com/3d-models/needle-ebc771189623471b94c8a6b43468d3e0) | linh198 | CC-BY-NC-SA-4.0 |
+| Item: Fuses | [Electronic Fuse](https://sketchfab.com/3d-models/electronic-fuse-2c09b1e3e1d6475a99172ebe2f18cd51) | Zillious | CC-BY-4.0 |
 | Item: keys | [A Low Poly Key](https://sketchfab.com/3d-models/a-low-poly-key-90df0b2640e04481862aff7d89a66a35) | guest177385 | CC-BY-4.0 |
 | Item: Party Whistle | [Coach Whistle](https://sketchfab.com/3d-models/coach-whistle-3e953bfa5f52463197a6c9cdbaab97fe) | TiimB | CC-BY-4.0 |
 | Item: Screwdriver | [Screwdriver](https://sketchfab.com/3d-models/screwdriver-73cb248ad76d45ee9b638ec4bfea4128) | AlexJJ | CC-BY-4.0 |
@@ -31,11 +31,11 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 | Smiley (the enemy) | [Partygoer](https://sketchfab.com/3d-models/partygoer-ef2b98195e274a409148e2a9f35ceab6) | siren head fan | CC-BY-4.0 |
 | Trash cans | [Trash Can](https://sketchfab.com/3d-models/trash-can-0ad3407cd8104ba58f71885c0e58ca9a) | Yury Misiyuk | CC-BY-4.0 |
 
-## Licence notes (read before publishing or selling)
-- **CC-BY-NC / CC-BY-NC-SA** models (the party table "FNAF Table", the "Needle") must not be used in a commercial release. Replace them before monetising.
+## Licence notes
+- This is a private fan game. If it is ever published or sold, replace the **CC-BY-NC** party table ("FNAF Table") first; non-commercial licences do not allow commercial use.
 - **SKETCHFAB Standard** (Colorful Balloons) allows use in a project but not redistributing the model on its own; check the licence page.
 - **CC-BY-4.0** models require the credit above to stay with the game.
-- The electronic fuse model arrived corrupted and is not included yet.
+- The Balloon Popper (nail) and the paper plates, party hats, ball-pit balls and confetti are generated in code or by script, not third-party models.
 
 ## Textures
 The 26 surface textures were supplied by the project owner (origin and licence to be confirmed). Granny is a game by DVloper; this project is not affiliated.
