@@ -18,15 +18,20 @@ export function furnish(w) {
     bx(l, x0, z0, x1, z1, 0.1, top, 0.85, { y0: Y(l) + 0.85, y1: Y(l) + 0.95 });
     bx(l, x0, z0, x0 + 0.08, z1, 0.85, mat); bx(l, x1 - 0.08, z0, x1, z1, 0.85, mat); bx(l, x0, z0, x1, z0 + 0.08, 0.85, mat);
   };
-  const shelf = (l, x0, z0, x1, z1, mat = 'tile_metal', h = 2.0) => {
-    bx(l, x0, z0, x1, z1, h, mat);
-    const horiz = x1 - x0 >= z1 - z0;
-    for (const y of [0.55, 1.15, 1.75]) {   // items sitting on the shelves (visual)
-      const n = Math.floor((horiz ? x1 - x0 : z1 - z0) / 0.7);
-      for (let i = 0; i < n; i++) {
-        const a = 0.2 + i * 0.7, c = i % 3 === 0 ? 'wood' : i % 3 === 1 ? 'metal_yellow' : 'diamond_plate';
-        if (horiz) bx(l, x0 + a, z1 - 0.02, x0 + a + 0.45, z1 + 0.16, 0.3, c, y, deco); else bx(l, x1 - 0.02, z0 + a, x1 + 0.16, z0 + a + 0.45, 0.3, c, y, deco);
-      }
+  // the room containing a point (used to turn shelves and sofas away from the nearest wall)
+  const roomAt = (l, x, z) => AREAS.find(r => r.level === l && x >= r.rect[0] && x <= r.rect[2] && z >= r.rect[1] && z <= r.rect[3]);
+  const facing = (l, x0, z0, x1, z1) => {
+    const r = roomAt(l, (x0 + x1) / 2, (z0 + z1) / 2)?.rect || [x0, z0, x1, z1], alongX = (x1 - x0) >= (z1 - z0);
+    if (alongX) return ((z0 + z1) / 2 - r[1] < r[3] - (z0 + z1) / 2) ? 0 : Math.PI;            // +z or -z
+    return ((x0 + x1) / 2 - r[0] < r[2] - (x0 + x1) / 2) ? Math.PI / 2 : -Math.PI / 2;           // +x or -x
+  };
+  // metal shelving units (the model is 1.55 x 0.55 x 2 m) laid end to end along the long side of the old box footprint
+  const shelf = (l, x0, z0, x1, z1) => {
+    const alongX = (x1 - x0) >= (z1 - z0), len = alongX ? x1 - x0 : z1 - z0, n = Math.max(1, Math.round(len / 1.55)), ry = facing(l, x0, z0, x1, z1);
+    for (let i = 0; i < n; i++) {
+      const cx = alongX ? x0 + (i + 0.5) * len / n : (x0 + x1) / 2, cz = alongX ? (z0 + z1) / 2 : z0 + (i + 0.5) * len / n;
+      put('shelf', l, { x: cx, z: cz, ry, sx: len / n / 1.55 });
+      solid(l, cx, cz, alongX ? len / n / 2 : 0.275, alongX ? 0.275 : len / n / 2, 2.0);
     }
   };
   // model props are collected per level and instanced at the end
@@ -69,7 +74,13 @@ export function furnish(w) {
   const screen = (l, x, y, z, w2, h2, d2, color) => w.box({ level: l, x, y: Y(l) + y, z, w: w2, h: h2, d: d2, mat: color, basic: true, collide: false, cast: false, receive: false });
   const bunch = (l, x, z, s = 1) => instanceModel(w.group(l), 'balloons', [{ x, y: Y(l), z, ry: x * 3.1, s }]);
   const bench = (l, x0, z0, x1, z1) => { bx(l, x0, z0, x1, z1, 0.45, 'wood'); };
-  const couch = (l, x0, z0, x1, z1, mat = 'padding_purple') => { bx(l, x0, z0, x1, z1, 0.5, mat); if (x1 - x0 > z1 - z0) bx(l, x0, z0, x1, z0 + 0.25, 0.5, mat, 0.5); else bx(l, x0, z0, x0 + 0.25, z1, 0.5, mat, 0.5); };
+  const couch = (l, x0, z0, x1, z1) => {
+    const alongX = (x1 - x0) >= (z1 - z0), len = alongX ? x1 - x0 : z1 - z0, n = Math.max(1, Math.round(len / 2)), ry = facing(l, x0, z0, x1, z1);
+    for (let i = 0; i < n; i++) {
+      const cx = alongX ? x0 + (i + 0.5) * len / n : (x0 + x1) / 2, cz = alongX ? (z0 + z1) / 2 : z0 + (i + 0.5) * len / n;
+      put('sofa', l, { x: cx, z: cz, ry, sx: Math.min(1.2, len / n / 2) }); solid(l, cx, cz, alongX ? len / n / 2 : 0.48, alongX ? 0.48 : len / n / 2, 0.8);
+    }
+  };
   const arcade = (l, x, z, faceS, color, scr) => {
     const x0 = x - 0.45, x1 = x + 0.45, z0 = faceS ? z : z - 0.75, z1 = faceS ? z + 0.75 : z;
     bx(l, x0, z0, x1, z1, 1.75, color);
@@ -104,7 +115,7 @@ export function furnish(w) {
   for (const x of [41.4, 43.0, 44.6, 46.2]) { put('sink', '1', { x, z: 25.7, y: Y('1') + 0.5, ry: Math.PI }); solid('1', x, 25.7, 0.23, 0.2, 0.65, 0.45); }
   // Security Room: monitor wall + desk (no hiding spot here)
   for (const z of [18.6, 20.6, 22.6]) { desk('1', 59.35, z, Math.PI / 2); officeChair('1', 58.35, z + 0.15, Math.PI / 2); }
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) screen('1', 59.85, 1.25 + r * 0.55, 17.8 + c * 2.2, 0.04, 0.45, 1.9, r === 1 ? 0x2c6b5c : 0x1f4f46);
+  for (const z of [18.6, 20.6, 22.6]) { put('crt', '1', { x: 59.4, z, y: Y('1') + 0.69, ry: Math.PI }); put('crt', '1', { x: 59.4, z: z - 0.5, y: Y('1') + 0.69, ry: Math.PI }); }
   breaker('1', 50, 25.9, 'N'); breaker('1', 52, 25.9, 'N');
   // Supply Closet: shelves + crates (keeps the ladder corner free)
   shelf('1', 49, 26.1, 57, 26.8); shelf('1', 49, 32.1, 57, 32.9, 'diamond_plate');

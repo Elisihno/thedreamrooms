@@ -84,7 +84,7 @@ export const OPENINGS = [
   D('1', 'x', 12, 53.4, 54.6, 'door', 'blue'),   // Corridor <-> Party Preparation Room
   D('1', 'x', 16, 36.4, 38.6, 'arch'),           // Corridor <-> Corridor (south)
   D('1', 'z', 39, 20, 21.2, 'door', 'blue'),     // Corridor <-> Bathrooms
-  D('1', 'x', 16, 53.4, 54.6, 'heavy', 'metal'), // Corridor <-> Security Room (turning handle)
+  D('1', 'x', 16, 53.35, 55.45, 'heavy', 'metal'), // Corridor <-> Security Room (turning handle)
   D('1', 'z', 36, 21.4, 22.6, 'door', 'red'),    // Dining Room <-> Corridor
   D('1', 'x', 26, 36.4, 38.6, 'arch'),           // Corridor <-> Corridor (far south)
   D('1', 'z', 36, 27, 29.4, 'arch'),             // Dining Room <-> Corridor (far south)

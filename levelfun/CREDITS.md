@@ -14,12 +14,13 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 | Cake | [Birthday Cake](https://sketchfab.com/3d-models/birthday-cake-2df3b4d4e0a142389c651fe69d60d6e9) | 3DMish | CC-BY-4.0 |
 | Chairs | [Foldable chair](https://sketchfab.com/3d-models/foldable-chair-ef0d0c9207e14d9182b713764e35bc90) | 1.raphael.wanders.2.mi.ma | CC-BY-4.0 |
 | Crates | [Wooden Crate](https://sketchfab.com/3d-models/wooden-crate-2a3ac54357bb4b92bfbc119111c09fd1) | Memorie | CC-BY-4.0 |
+| CRT monitors | [CRT Monitor](https://sketchfab.com/3d-models/crt-monitor-d65167cdb74a458e9931ba3f88f4b5e7) | charlel | CC-BY-4.0 |
 | Cups | [paper cup](https://sketchfab.com/3d-models/paper-cup-a65de1111c664e9b8873dbcf6ea2b17b) | OPREXT | CC-BY-4.0 |
+| Doors (every ordinary door) | [door door metal](https://sketchfab.com/3d-models/door-door-metal-b21ec273c1a342568ab9f9ac14291c5b) | ahmagh2e | CC-BY-4.0 |
 | Elevator Room winches | [Winch](https://sketchfab.com/3d-models/winch-8c91b02d23914821b6ef1ec2f8f0bcf1) | ivan_aladin | CC-BY-4.0 |
 | Exit signs | [Exit Sign](https://sketchfab.com/3d-models/exit-sign-8b3950f86df14ec291224f6c868609c3) | ZachWilkins1997 | CC-BY-4.0 |
 | Floor lamps | [Floor Lamp](https://sketchfab.com/3d-models/floor-lamp-33eb258d9873435690254cfbb0ea46ec) | bilgehan.korkmaz | CC-BY-4.0 |
 | Generator Room generators | [Generator](https://sketchfab.com/3d-models/generator-523c06dad1f64024af3b037b6c30e28c) | InvisibleParrotGames | CC-BY-SA-4.0 |
-| Heavy doors | [door door metal](https://sketchfab.com/3d-models/door-door-metal-b21ec273c1a342568ab9f9ac14291c5b) | ahmagh2e | CC-BY-4.0 |
 | Item: Balloon Popper | [Needle](https://sketchfab.com/3d-models/needle-ebc771189623471b94c8a6b43468d3e0) | linh198 | CC-BY-NC-SA-4.0 |
 | Item: keys | [A Low Poly Key](https://sketchfab.com/3d-models/a-low-poly-key-90df0b2640e04481862aff7d89a66a35) | guest177385 | CC-BY-4.0 |
 | Item: Party Whistle | [Coach Whistle](https://sketchfab.com/3d-models/coach-whistle-3e953bfa5f52463197a6c9cdbaab97fe) | TiimB | CC-BY-4.0 |
@@ -37,7 +38,10 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 | Playground slide | [Slide For Animal Mountain Crossing](https://sketchfab.com/3d-models/slide-for-animal-mountain-crossing-5519f19766b14268b4ee76f4575226d2) | zhussainy1 | CC-BY-4.0 |
 | Reception and prize counters | [Renal Reception Counter 001](https://sketchfab.com/3d-models/renal-reception-counter-001-c1621ffe8ce64220a5e9da63f68f4b61) | ebenvanrensburg | CC-BY-4.0 |
 | Reception bell | [Table Bell](https://sketchfab.com/3d-models/table-bell-77f2ea17b4c84fe1a8d2aec02caa9de3) | gla_bot | CC-BY-4.0 |
+| Security room heavy door | [Door Metal door window](https://sketchfab.com/3d-models/door-metal-door-window-10c8a0789ed3474baf53b8a185809cb7) | ahmagh2e | CC-BY-4.0 |
+| Shelving | [Metal Shelf - 5MB](https://sketchfab.com/3d-models/metal-shelf-5mb-1621362eb54d4571a49323ceb74f80fb) | Mehdi Shahsavan | CC-BY-4.0 |
 | Smiley (the enemy) | [Partygoer](https://sketchfab.com/3d-models/partygoer-ef2b98195e274a409148e2a9f35ceab6) | siren head fan | CC-BY-4.0 |
+| Sofas | [Old Sofa](https://sketchfab.com/3d-models/old-sofa-3fe7ed15c42e48b8820792e8cef64f93) | glezova | CC-BY-4.0 |
 | Trash cans | [Trash Can](https://sketchfab.com/3d-models/trash-can-0ad3407cd8104ba58f71885c0e58ca9a) | Yury Misiyuk | CC-BY-4.0 |
 
 ## Licence notes (read before publishing or selling)

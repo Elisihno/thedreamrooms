@@ -8,7 +8,6 @@ import { furnish } from './furnish.js';
 
 const WALL_T = 0.1;
 const DOOR_TOP = 2.25;
-const DOOR_MAT = { red: 'metal_yellow', blue: 'wall_green_peel', metal: 'tile_metal' };
 
 const MOODS = {
   warm:   { color: 0xffe2b0, intensity: 28, distance: 15, flicker: 0.08 },
@@ -28,16 +27,16 @@ class Door {
     this.pivot.position.set(isX ? o.a : o.c, y0, isX ? o.c : o.a);
     this.base = isX ? 0 : -Math.PI / 2;
     this.pivot.rotation.y = this.base;
+    // every door uses the supplied metal door model; the security room's heavy door is the double door with windows
+    const heavy = o.kind === 'heavy', key = heavy ? 'door_heavy' : 'door';
     let leaf;
-    if (o.kind === 'heavy' && hasModel('door')) {
-      leaf = cloneModel('door');
-      leaf.scale.set(L / 1.04, 1, 1.1);
+    if (hasModel(key)) {
+      leaf = cloneModel(key);
+      leaf.scale.set(L / (heavy ? 2.1 : 1.04), heavy ? 1.1 : 1.07, 1);
       leaf.position.set(L / 2, 0, 0);
     } else {
-      leaf = new THREE.Mesh(new THREE.BoxGeometry(L, 2.15, 0.07), getMaterial(DOOR_MAT[o.style] || 'metal_yellow'));
+      leaf = new THREE.Mesh(new THREE.BoxGeometry(L, 2.15, 0.07), getMaterial('tile_metal'));
       leaf.position.set(L / 2, 1.075, 0);
-      const handle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.14), getMaterial('diamond_plate'));
-      handle.position.set(L - 0.15, 1.0, 0); leaf.add(handle);
     }
     leaf.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
     this.pivot.add(leaf);
