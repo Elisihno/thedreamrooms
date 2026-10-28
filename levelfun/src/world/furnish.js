@@ -47,8 +47,22 @@ export function furnish(w) {
   const picnic = (l, x, z, ry = 0) => { put('bench', l, { x, z, ry }); solid(l, x, z, ry ? 0.87 : 0.9, ry ? 0.9 : 0.87, 0.7); };
   const lamp = (l, x, z) => { put('floor_lamp', l, { x, z }); solid(l, x, z, 0.2, 0.2, 1.6); };
   const exitSign = (l, x, y, z, ry) => put('exit_sign', l, { x, z, y: Y(l) + y, ry });
-  const machine = (l, x0, z0, x1, z1, h, mat, y = 0) => bx(l, x0, z0, x1, z1, h, mat, y);
-  const pipe = (l, x0, z0, x1, z1, y, mat = 'metal_yellow') => bx(l, x0, z0, x1, z1, 0.18, mat, y, deco);
+    // pipe run (the pipe model, 1.65 m sections laid end to end) between two corners of the old box footprint
+  const pipe = (l, x0, z0, x1, z1, y) => {
+    const alongX = (x1 - x0) >= (z1 - z0), len = alongX ? x1 - x0 : z1 - z0, n = Math.max(1, Math.round(len / 1.65));
+    for (let i = 0; i < n; i++) put('pipe_long', l, { x: alongX ? x0 + (i + 0.5) * len / n : (x0 + x1) / 2, z: alongX ? (z0 + z1) / 2 : z0 + (i + 0.5) * len / n, y: Y(l) + y - 0.05, ry: alongX ? Math.PI / 2 : 0, sz: len / n / 1.65 });
+  };
+  // wall-mounted breaker panel (model is 0.55 x 0.5 x 0.37; front = +z). cx,cz = centre of its back; face = direction it faces
+  const breaker = (l, x, z, face, yBase = 1.1, s = 1.3) => {
+    const ry = { S: 0, E: Math.PI / 2, N: Math.PI, W: -Math.PI / 2 }[face], d = 0.37 * s / 2 + 0.02;
+    const cx = x + (face === 'E' ? d : face === 'W' ? -d : 0), cz = z + (face === 'S' ? d : face === 'N' ? -d : 0);
+    put('breaker', l, { x: cx, z: cz, y: Y(l) + yBase - 0.5 * s, ry, s });   // model starts 0.5 m above its own origin
+    const alongX = face === 'S' || face === 'N';
+    solid(l, cx, cz, alongX ? 0.36 : d, alongX ? d : 0.36, 0.7, yBase - 0.05);
+  };
+  const desk = (l, x, z, ry = 0) => { put('desk', l, { x, z, ry }); const r = Math.abs(Math.sin(ry)) > 0.5; solid(l, x, z, r ? 0.42 : 1.0, r ? 1.0 : 0.42, 0.7); };
+  const officeChair = (l, x, z, ry = 0) => { put('chair_office', l, { x, z, ry }); solid(l, x, z, 0.28, 0.28, 0.9); };
+  const winch = (l, x, z, ry = 0) => { put('winch', l, { x, z, ry }); const r = Math.abs(Math.sin(ry)) > 0.5; solid(l, x, z, r ? 0.95 : 0.85, r ? 0.85 : 0.95, 0.96); };
   const screen = (l, x, y, z, w2, h2, d2, color) => w.box({ level: l, x, y: Y(l) + y, z, w: w2, h: h2, d: d2, mat: color, basic: true, collide: false, cast: false, receive: false });
   const bunch = (l, x, z, s = 1) => instanceModel(w.group(l), 'balloons', [{ x, y: Y(l), z, ry: x * 3.1, s }]);
   const bench = (l, x0, z0, x1, z1) => { bx(l, x0, z0, x1, z1, 0.45, 'wood'); };
@@ -63,34 +77,39 @@ export function furnish(w) {
 
   // ============================== FLOOR 1 ==============================
   // Reception: desk (hiding spot), couches, balloons
-  hideDesk('1', 4, 2.4, 11, 3.9);
+  put('counter', '1', { x: 7.6, z: 2.7, s: 1.5 }); solid('1', 7.6, 2.7, 1.9, 0.38, 0.95); metalTable('1', 3.2, 2.8);
   couch('1', 0.3, 6, 1.3, 10); couch('1', 3.5, 9.7, 8, 10.7, 'tile_metal');
   bx('1', 5, 5.5, 6, 6.5, 0.5, 'wood'); bunch('1', 2, 2); bunch('1', 10.5, 10.5);
   // Main Party Hall: stage with curtain, gift table (hiding), banquet tables
   bx('1', 24, 0.1, 34.5, 3.3, 0.5, 'wood'); bx('1', 24, 0.1, 34.5, 0.5, 2.6, 'padding_purple', 0.5, deco);
   partySet(w, '1', { tables: [{ x: 28, z: 11, len: 1.2 }, { x: 20, z: 11.5, len: 1.0 }], bounds: { x0: 12, x1: 36, z0: 0, z1: 16 }, avoid: [stairRect, [35, 3, 36, 5], [35, 12, 36, 16]], ceilingBalloons: 14, seed: 11, confetti: 500 });
   // Kitchen: counters, island with knee space (hiding), fridges
-  bx('1', 36.2, 0.1, 47.9, 0.9, 0.9, 'tile_metal'); bx('1', 36.2, 0.1, 47.9, 0.9, 0.06, 'diamond_plate', 0.9, deco);
+  for (let i = 0; i < 5; i++) metalTable('1', 37.4 + i * 1.8, 0.65);
   for (const z of [2.2, 3.2, 6.2]) { put('fridge', '1', { x: 47.45, z, ry: -Math.PI / 2 }); solid('1', 47.45, z, 0.39, 0.37, 1.85); }
   bin('1', 37.2, 11.3); bin('1', 47.3, 9.3);
-  hideDesk('1', 39.5, 4.5, 43.5, 6.5, 'tile_metal', 'diamond_plate');
-  bx('1', 37, 9, 39.5, 11.7, 0.9, 'tile_metal'); bx('1', 41, 11.1, 43.5, 11.9, 0.9, 'tile_metal');
+  metalTable('1', 41.5, 5.5); metalTable('1', 43.4, 5.5); metalTable('1', 38.2, 10.3, false); metalTable('1', 42.3, 11.3);
   // Dining Room: three long party tables (start under the middle one), cake, balloons, confetti, bunting
   partySet(w, '1', { tables: [{ x: 22, z: 19.5 }, { x: 22, z: 23, cake: true }, { x: 22, z: 26.5 }], bounds: { x0: 12, x1: 36, z0: 16, z1: 30 }, avoid: [[34, 16.5, 36, 20.5], [35, 21, 36, 23], [35, 27, 36, 29.5]], ceilingBalloons: 28, bunting: true, seed: 5, confetti: 700 });
-  // Bathrooms: stalls along the north wall, sinks along the south wall
-  for (let i = 0; i < 5; i++) { const x = 40.2 + i * 1.5; bx('1', x, 16.1, x + 0.06, 18.1, 1.8, 'tile_metal', 0.2); bx('1', x + 1.44, 16.1, x + 1.5, 18.1, 1.8, 'tile_metal', 0.2); bx('1', x + 0.06, 18.04, x + 1.44, 18.1, 1.7, 'tile_metal', 0.35, deco); bx('1', x + 0.5, 16.3, x + 1.0, 16.9, 0.4, 'tile_metal'); }
-  bx('1', 40.5, 25.1, 47.5, 25.9, 0.9, 'tile_metal'); bx('1', 40.5, 25.1, 47.5, 25.9, 0.04, 'diamond_plate', 0.9, deco);
+  // Bathrooms: stall row on the north wall (textured), a dirty public toilet in every stall, sinks on the south wall
+  const STALL_X0 = 40.17, STALL_W = 1.11, STALL_Z = 17.35;   // six open stalls against the north wall, each 1.12 m wide, 1.22 m deep
+  for (let i = 0; i < 6; i++) {
+    const sx = STALL_X0 + STALL_W * (i + 0.5);
+    put('stall', '1', { x: sx, z: STALL_Z - 0.61 });
+    put('toilet', '1', { x: sx, z: 16.1 + 0.4 }); solid('1', sx, 16.5, 0.21, 0.365, 0.8);
+  }
+  for (let k = 0; k <= 6; k++) solid('1', STALL_X0 + STALL_W * k, 16.73, 0.03, 0.63, 1.9);
+  for (const x of [41.4, 43.0, 44.6, 46.2]) { put('sink', '1', { x, z: 25.7, y: Y('1') + 0.5, ry: Math.PI }); solid('1', x, 25.7, 0.23, 0.2, 0.65, 0.45); }
   // Security Room: monitor wall + desk (no hiding spot here)
-  bx('1', 57.6, 17, 59.9, 25, 0.8, 'tile_metal');
+  for (const z of [18.6, 20.6, 22.6]) { desk('1', 59.35, z, Math.PI / 2); officeChair('1', 58.35, z + 0.15, Math.PI / 2); }
   for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) screen('1', 59.85, 1.25 + r * 0.55, 17.8 + c * 2.2, 0.04, 0.45, 1.9, r === 1 ? 0x2c6b5c : 0x1f4f46);
-  bx('1', 55.2, 20, 56.2, 21, 0.45, 'tile_metal'); bx('1', 49, 24.5, 51, 25.9, 1.9, 'panel_concrete');
+  breaker('1', 50, 25.9, 'N'); breaker('1', 52, 25.9, 'N');
   // Supply Closet: shelves + crates (keeps the ladder corner free)
   shelf('1', 49, 26.1, 57, 26.8); shelf('1', 49, 32.1, 57, 32.9, 'diamond_plate');
   crate('1', 51, 29.5, 0.9); crate('1', 52.2, 29.5, 0.7); crate('1', 51.6, 29.5, 0.7, 0.9); crate('1', 55.5, 30, 1.0);
   // Emergency Exit Room: exit door, four mechanisms, warning stripes
   exitFixtures();
   // Party Preparation Room: assembly bench, hiding bench, shelves, boxes
-  bx('1', 53, 0.2, 59, 1.5, 0.95, 'wood'); bx('1', 53, 0.2, 59, 1.5, 0.06, 'metal_yellow', 0.95, deco);
+  metalTable('1', 55, 0.8); metalTable('1', 56.9, 0.8);
   metalTable('1', 51, 9.6);
   shelf('1', 58.8, 3, 59.8, 10.5, 'wood'); shelf('1', 48.2, 2, 49.2, 7, 'wood');
   crate('1', 55.5, 5, 0.9); crate('1', 56.5, 5.4, 0.7); bunch('1', 51, 4, 0.9);
@@ -122,7 +141,6 @@ export function furnish(w) {
   }
   for (let i = 0; i < 6; i++) { const x = 29 + i * 1.8; addMachine(x, 4.4, true); addMachine(x, 5.5 + asz.z, false); }
   instanceModel(w.group('2'), 'arcade', placements);
-  bx('2', 40.5, 8, 44, 9.7, 0.7, 'padding_purple'); bx('2', 26, 9.2, 28, 9.8, 0.4, 'wood');
   // Prize Counter: counter model, plush shelves, token spot
   if (hasModel('counter')) { instanceModel(w.group('2'), 'counter', [{ x: 54, y: Y('2'), z: 1.2, s: 1.5 }]); w.collision.add(52.1, 0.1, 55.9, 1.55, Y('2'), Y('2') + 0.95); }
   shelf('2', 58.8, 1.5, 59.8, 8.5, 'wood'); shelf('2', 49, 8.8, 53, 9.8, 'wood', 1.8);
@@ -141,7 +159,7 @@ export function furnish(w) {
   partySet(w, '3', { tables: [{ x: 28, z: 11, len: 1.1 }, { x: 22, z: 13, len: 0.8 }], bounds: { x0: 12, x1: 36, z0: 0, z1: 16 }, avoid: [stairRect, [35, 5, 36, 10]], ceilingBalloons: 5, seed: 31, bunting: true, confetti: 250 });
   locker('3', 33.8, 0.35, 'S', 3); crate('3', 14, 12, 0.9); crate('3', 14.9, 12.2, 0.7);
   // Staff Office: lockers, desks (one with knee space), cabinets
-  locker('3', 0.45, 2, 'E', 4); hideDesk('3', 7.5, 8.4, 10.5, 9.8, 'wood'); bx('3', 4, 4, 7, 5.2, 0.8, 'wood'); bx('3', 10.2, 1, 11.8, 3, 1.4, 'tile_metal');
+  locker('3', 0.45, 2, 'E', 4); metalTable('3', 9, 9.1); desk('3', 5.5, 4.6); officeChair('3', 5.5, 5.6, Math.PI); locker('3', 10.4, 0.9, 'S', 2);
   couch('3', 3, 10.2, 6, 11.4, 'tile_metal');
   // Surveillance Archives: shelf rows
   shelf('3', 37, 1.1, 46, 1.9, 'tile_metal'); shelf('3', 37, 4.3, 46, 5.1, 'tile_metal'); locker('3', 47.55, 1, 'W', 2); screen('3', 36.15, 1.4, 3, 0.03, 0.6, 1.0, 0x1f4f46);
@@ -151,11 +169,11 @@ export function furnish(w) {
   for (const [x, z] of [[38, 11.5], [39.2, 11.5], [38.6, 14], [41, 16.5], [43.5, 11.2]]) { crate('3', x, z, 1.0); }
   crate('3', 38.6, 11.5, 0.9, 1.0); locker('3', 38.2, 18.6, 'N', 3);
   // Maintenance Office: workbench + elevator door + parts
-  bx('3', 50, 4.3, 56, 5.5, 0.95, 'wood'); bx('3', 50, 4.3, 56, 5.5, 0.06, 'metal_yellow', 0.95, deco);
-  shelf('3', 49, 11, 54, 11.9, 'tile_metal'); bx('3', 57.5, 8.2, 59.9, 9.2, 0.5, 'panel_concrete');
+  metalTable('3', 51.5, 6.2); metalTable('3', 53.4, 6.2); breaker('3', 56, 4.1, 'S'); breaker('3', 57.8, 4.1, 'S');
+  shelf('3', 49, 11, 54, 11.9, 'tile_metal');
   elevator();
   // Elevator Room: machinery
-  machine('3', 50, 15, 54, 18, 1.6, 'tile_metal'); machine('3', 55, 15.5, 58, 17, 2.2, 'panel_concrete'); machine('3', 50, 20.5, 59, 22, 1.2, 'metal_yellow');
+  winch('3', 52, 16.6); winch('3', 56.6, 17.2, Math.PI / 2); for (const x of [51, 53.2, 55.4]) breaker('3', x, 23.9, 'N');
   pipe('3', 48.2, 14.1, 59.8, 14.4, 2.3);
   // Birthday Chamber: the main table with the cake
   partySet(w, '3', { tables: [{ x: 24, z: 23, len: 1.5, cake: true }], bounds: { x0: 12, x1: 36, z0: 16, z1: 30 }, ceilingBalloons: 12, seed: 41, bunting: true, confetti: 500 });
@@ -163,23 +181,24 @@ export function furnish(w) {
   // ============================== BASEMENT ==============================
   // Basement Hall and Generator Room
   pipe('B', 12.2, 0.1, 35.8, 0.4, 2.3); pipe('B', 12.2, 7.4, 35.8, 7.7, 2.0, 'panel_concrete'); crate('B', 33.5, 6.5, 0.9);
-  machine('B', 21, 14, 27.5, 19, 2.0, 'padding_purple'); machine('B', 22, 13.4, 26.5, 14, 2.6, 'panel_concrete');
-  screen('B', 24, 1.5, 19.02, 1.4, 0.5, 0.04, 0x2fe0a0);
-  for (const [x, z] of [[14, 20.5], [15.2, 20.5], [34, 9.5], [34, 20.5]]) bx('B', x - 0.35, z - 0.35, x + 0.35, z + 0.35, 1.0, 'metal_yellow');
+  put('generator', 'B', { x: 24, z: 16.5, ry: Math.PI / 2, s: 1.4 }); solid('B', 24, 16.5, 1.4, 0.65, 1.16);
+  put('generator', 'B', { x: 31.5, z: 11, ry: Math.PI / 2 }); solid('B', 31.5, 11, 1.0, 0.47, 0.83);
+  for (const x of [17, 20, 27, 30]) breaker('B', x, 21.9, 'N');
+  w.light({ level: 'B', x: 24, y: Y('B') + 2.5, z: 16.5, color: 0xffc080, intensity: 26, distance: 10, flicker: 0.2, lamp: false });
+  for (const [x, z] of [[14, 20.5], [15.2, 20.5], [34, 9.5], [34, 20.5]]) crate('B', x, z, 0.8);
   pipe('B', 12.2, 8.2, 35.8, 8.5, 2.3);
   // Electrical Room: cabinets and a workbench (hiding spot)
-  for (let i = 0; i < 4; i++) bx('B', 0.2 + i * 1.6, 0.2, 1.5 + i * 1.6, 0.9, 2.1, 'wall_green_peel');
-  bx('B', 11.0, 4, 11.8, 10, 2.1, 'wall_green_peel'); metalTable('B', 6, 9);
+  for (let i = 0; i < 4; i++) breaker('B', 1.6 + i * 1.7, 0.1, 'S'); locker('B', 11.55, 4, 'W', 5); metalTable('B', 6, 9);
   // Maintenance Storage: shelves, workbench (hiding spot), crates; ladder corner kept clear
   shelf('B', 37, 0.2, 46, 1.0, 'tile_metal'); metalTable('B', 38, 8.5); crate('B', 46.5, 3, 0.9); crate('B', 46.5, 4.1, 0.7);
   // Boiler Room: tanks and pipes (shaft corner kept clear)
-  bx('B', 50.5, 2, 54, 5.5, 2.3, 'metal_yellow'); bx('B', 55.5, 2, 58.5, 4.5, 2.3, 'padding_purple'); pipe('B', 49, 0.2, 59.8, 0.5, 2.4, 'panel_concrete'); pipe('B', 49, 8, 56, 8.3, 0.4);
+  w.light({ level: 'B', x: 54.5, y: Y('B') + 2.4, z: 6, color: 0xff7a50, intensity: 24, distance: 10, flicker: 0.3, lamp: false });
+  put('boiler', 'B', { x: 52.5, z: 3.8 }); solid('B', 52.5, 3.8, 0.73, 0.54, 2.5); put('boiler', 'B', { x: 56.8, z: 3.6, ry: 0.2 }); solid('B', 56.8, 3.6, 0.73, 0.54, 2.5); pipe('B', 49, 0.2, 59.8, 0.5, 2.4, 'panel_concrete'); pipe('B', 49, 8, 56, 8.3, 0.4);
   // Hidden Records Room: filing cabinets
-  for (let i = 0; i < 3; i++) bx('B', 1 + i * 3.4, 15, 3.8 + i * 3.4, 15.8, 1.5, 'tile_metal');
-  for (let i = 0; i < 3; i++) bx('B', 1 + i * 3.4, 24, 3.8 + i * 3.4, 24.8, 1.5, 'tile_metal');
+  locker('B', 1.2, 14.45, 'S', 8); locker('B', 1.2, 25.55, 'N', 8);
 
   // ---- extra model props ----
-  put('table_bell', '1', { x: 9.6, z: 2.7, y: Y('1') + 0.95 });
+  put('table_bell', '1', { x: 8.4, z: 2.7, y: Y('1') + 0.93 });
   lamp('1', 1, 1.3); lamp('1', 11, 6); lamp('1', 35, 15); lamp('2', 22.5, 1.2); lamp('2', 49, 9); lamp('3', 13, 15); lamp('3', 11, 11);
   picnic('1', 7, 7.8, 0); picnic('2', 55, 6, Math.PI / 2);
   bin('1', 59, 15.2); bin('1', 37.2, 13); bin('2', 3, 11.7); bin('2', 59, 11.7); bin('1', 38.4, 25.2); bin('3', 47.3, 8.4); bin('B', 13, 7); bin('B', 47, 16);
@@ -204,7 +223,7 @@ export function furnish(w) {
     bx(l, 0.3, 14.5, 2.5, 19.5, 0.02, 'hazard_stripes', 0, deco);
     // mechanisms (positions only for now): key lock, wire panel, keypad, fuse box
     const specs = [[13.2, 'panel_concrete', 0x2a2a2a], [14.2, 'wall_green_peel', 0x2a2a2a], [19.6, 'panel_concrete', 0x38ff6a], [20.7, 'wall_green_peel', 0xff3a2a]];
-    specs.forEach(([z, mat, lamp]) => { bx(l, 0.1, z, 0.35, z + 0.8, 0.7, mat, 0.9, deco); screen(l, 0.38, 1.9 - 0.9 + 0.4, z + 0.4, 0.03, 0.12, 0.3, lamp); });
+    specs.forEach(([z, mat, lamp]) => { put('cabinet', l, { x: 0.18, z: z + 0.4, y: y + 1.0, ry: Math.PI / 2, s: 1.3 }); screen(l, 0.38, 1.0 + 0.62 * 1.3 + 0.1, z + 0.4, 0.03, 0.1, 0.3, lamp); });
     w.fixtures.exitMechanisms = ['key', 'wires', 'code', 'fuse'];
   }
   function elevator() {

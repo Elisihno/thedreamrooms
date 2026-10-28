@@ -130,11 +130,11 @@ export const OPENINGS = [
 const H = (level, room, kind, x, z) => ({ level, room, kind, x, z });
 export const HIDING = [
   H('1', 'dining', 'table', 22, 19.5), H('1', 'dining', 'table', 22, 23), H('1', 'dining', 'table', 22, 26.5),
-  H('1', 'kitchen', 'counter', 41, 6), H('1', 'reception', 'desk', 8, 3.2),
-  H('1', 'hall', 'table', 28, 11), H('1', 'bath', 'stall', 46, 18), H('1', 'prep', 'workbench', 51, 9.6),
+  H('1', 'kitchen', 'table', 41.5, 5.5), H('1', 'reception', 'table', 3.2, 2.8),
+  H('1', 'hall', 'table', 28, 11), H('1', 'bath', 'stall', 45.17, 16.9), H('1', 'prep', 'workbench', 51, 9.6),
   H('2', 'playground', 'tunnel', 20, 20), H('2', 'playground', 'tunnel', 27, 26),
   H('2', 'playground', 'tunnel', 31, 17.5), H('2', 'playground', 'nook', 18, 30), H('2', 'playground', 'nook', 24, 15.5),
-  H('3', 'staff', 'locker', 1.2, 3), H('3', 'staff', 'desk', 9, 9), H('3', 'archives', 'locker', 46.6, 2),
+  H('3', 'staff', 'locker', 1.2, 3), H('3', 'staff', 'table', 9, 9.1), H('3', 'archives', 'locker', 46.6, 2),
   H('3', 'storage3', 'locker', 37, 12), H('3', 'birthday', 'table', 24, 23), H('3', 'celeb', 'locker', 34.5, 2),
   H('B', 'electrical', 'workbench', 6, 9), H('B', 'mstorage', 'workbench', 38, 8.5),
 ];

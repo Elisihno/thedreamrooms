@@ -5,7 +5,8 @@ import { getMaterial } from './registry.js';
 // Model library. Files live in levelfun/assets/models/<name>.glb (optimized with real-world scale,
 // origin at bottom-centre). To upgrade a model, drop a new .glb with the same name.
 export const MODEL_NAMES = ['table', 'chair', 'cup', 'cake', 'party_hat', 'door', 'counter', 'balloons', 'arcade',
-  'metal_table', 'slide', 'bench', 'trash_can', 'crate', 'exit_sign', 'fridge', 'locker', 'floor_lamp', 'table_bell', 'spiral'];
+  'metal_table', 'slide', 'bench', 'trash_can', 'crate', 'exit_sign', 'fridge', 'locker', 'floor_lamp', 'table_bell', 'spiral',
+  'stall', 'toilet', 'sink', 'boiler', 'generator', 'breaker', 'winch', 'desk', 'chair_office', 'cabinet', 'pipe_long'];
 // Item models (picked up in later stages); not loaded until needed.
 export const ITEM_NAMES = ['screwdriver', 'needle', 'wire_cutters', 'key', 'whistle', 'windup_robot', 'fuse'];
 // Some downloads carry stray geometry (the arcade machine's power cord): triangles entirely behind zMin are removed.
@@ -21,12 +22,17 @@ export async function loadModels(names = MODEL_NAMES) {
     gltf.scene.traverse(o => {
       if (!o.isMesh) return;
       if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
-      if (o.material) { o.material.envMapIntensity = 0.4; }
+      if (o.material) {   // no environment map in the scene: fully metallic surfaces would render black
+        o.material.envMapIntensity = 0.4;
+        if (o.material.metalness > 0.4) o.material.metalness = 0.4;
+        if (o.material.roughness < 0.35) o.material.roughness = 0.35;
+      }
     });
     gltf.scene.updateMatrixWorld(true);
     if (CLIP[n]) clipModel(gltf.scene, CLIP[n]);
     if (n === 'arcade') prepArcade(gltf.scene);
     if (n === 'spiral') prepSpiral(gltf.scene);
+    if (n === 'stall') gltf.scene.traverse(o => { if (o.isMesh && o.material.name === 'plastic') o.userData.matKey = 'stall_paint'; });   // the source has no textures: painted panels are textured here
     templates.set(n, gltf.scene);
   }));
 }
