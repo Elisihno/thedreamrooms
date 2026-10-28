@@ -2,6 +2,8 @@ import * as THREE from './three.js';
 import { CFG } from './config.js';
 
 const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+const WAKE = 4.2; // seconds
+const ease = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 
 export class Player {
   constructor(camera, world, input) {
@@ -13,6 +15,7 @@ export class Player {
     this.lean = 0;
     this.vx = 0; this.vz = 0;
     this.bob = 0; this.speed = 0;
+    this.wakeT = WAKE;
     camera.rotation.order = 'YXZ';
   }
 
@@ -24,19 +27,27 @@ export class Player {
     this.vx = this.vz = 0; this.lean = 0;
   }
 
+  // Wake-up: starts lying on the floor looking up at the table underside, then rises to a crouch.
+  wake() { this.wakeT = 0; }
+  get waking() { return this.wakeT < WAKE; }
+
   update(dt) {
     const P = CFG.player, inp = this.input, col = this.world.collision;
     const look = inp.consumeLook();
+    const waking = this.waking;
+    if (waking) this.wakeT += dt;
+    const wk = waking ? this.wakeT / WAKE : 1;
     this.yaw -= look.x;
     this.pitch = clamp(this.pitch - look.y, -CFG.look.pitchLimit, CFG.look.pitchLimit);
 
     // Crouch / stand (cannot stand up under a low ceiling or table).
     if (inp.crouch) this.crouched = true;
     else if (this.crouched && !col.overlaps(this.pos.x, this.pos.z, P.radius, this.pos.y + P.stepUp, this.pos.y + P.hStand)) this.crouched = false;
-    this.eye += ((this.crouched ? P.eyeCrouch : P.eyeStand) - this.eye) * Math.min(1, dt * 10);
+    if (waking) this.eye = 0.22 + (P.eyeCrouch - 0.22) * ease((wk - 0.25) / 0.75);
+    else this.eye += ((this.crouched ? P.eyeCrouch : P.eyeStand) - this.eye) * Math.min(1, dt * 10);
 
     // Movement
-    const m = inp.move, sp = this.crouched ? P.crouch : P.walk;
+    const m = wk < 0.6 ? { x: 0, y: 0 } : inp.move, sp = this.crouched ? P.crouch : P.walk;
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     const tx = (-s * m.y + c * m.x) * sp, tz = (-c * m.y - s * m.x) * sp;
     const k = Math.min(1, dt * P.accel);
@@ -66,6 +77,7 @@ export class Player {
       this.pos.x + rx * P.leanOffset * this.lean,
       camY + bobY,
       this.pos.z + rz * P.leanOffset * this.lean);
-    this.camera.rotation.set(this.pitch, this.yaw, -this.lean * P.leanRoll);
+    const drowsy = 1 - ease((wk - 0.2) / 0.8);
+    this.camera.rotation.set(this.pitch + drowsy * 0.75, this.yaw + Math.sin(this.wakeT * 2.1) * 0.08 * drowsy, -this.lean * P.leanRoll + drowsy * 0.25 * Math.sin(this.wakeT * 1.3));
   }
 }

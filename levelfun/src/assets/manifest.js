@@ -14,7 +14,7 @@ export const TEXTURE_KEYS = [
   'carpet_arcade', 'padding_playground', 'padding_wall', 'concrete_floor', 'wall_maintenance',
   'tile_kitchen_floor', 'tile_kitchen_wall', 'tile_bath_floor', 'tile_bath_wall', 'door_red',
   'door_blue', 'door_industrial', 'door_roller', 'wood', 'counter_reception', 'stairs',
-  'railing', 'panel_electrical', 'shelf_metal', 'wall_office',
+  'railing', 'panel_electrical', 'shelf_metal', 'wall_office', 'tablecloth',
 ];
 
 export const AVAILABLE_TEXTURES = [];
@@ -22,11 +22,11 @@ export const AVAILABLE_MODELS = [];
 
 // Where each key falls back to when it has no image yet: a procedural style + tint.
 export const PROCEDURAL = {
-  wallpaper_main:      { style: 'wallpaper', base: '#a8975a', alt: '#b5a566' },
+  wallpaper_main:      { style: 'wallpaper', base: '#c2b070', alt: '#cfc080' },
   wallpaper_secondary: { style: 'wallpaper', base: '#9a7f70', alt: '#7f93a0' },
-  wallpaper_accent:    { style: 'wallpaper', base: '#a89c6a', alt: '#a89c6a' },
+  wallpaper_accent:    { style: 'wallpaper', base: '#d2bf80', alt: '#c8b574' },
   ceiling_tiles:       { style: 'ceiling' },
-  carpet_party:        { style: 'carpet', base: '#241f4a' },
+  carpet_party:        { style: 'carpet', base: '#332d70' },
   carpet_arcade:       { style: 'carpet', base: '#1c1a3a' },
   padding_playground:  { style: 'padding', base: '#a23a30' },
   padding_wall:        { style: 'padding', base: '#2f4f8a' },
@@ -47,4 +47,5 @@ export const PROCEDURAL = {
   panel_electrical:    { style: 'metal', base: '#4c6a58' },
   shelf_metal:         { style: 'metal', base: '#7a7a76' },
   wall_office:         { style: 'wood', base: '#5a4026' },
+  tablecloth:          { style: 'cloth', base: '#efebe0' },
 };

@@ -63,6 +63,12 @@ function setPaused(p) {
   syncMenu();
 }
 
+// Wake-up: eyelids open, vision clears, and the player rises from the floor.
+function startWake() {
+  player.wake();
+  for (const el of [$('lids'), canvas]) { el.classList.remove('waking'); void el.offsetWidth; el.classList.add('waking'); }
+}
+
 async function enterFullscreen() {
   try {
     const el = document.documentElement;
@@ -72,11 +78,13 @@ async function enterFullscreen() {
 }
 
 $('primary').addEventListener('click', () => {
-  if (!running) { running = true; if (isTouch) enterFullscreen(); }
+  const first = !running;
+  if (first) { running = true; if (isTouch) enterFullscreen(); }
   setPaused(false);
+  if (first) startWake();
 });
 $('fs').addEventListener('click', enterFullscreen);
-$('respawn').addEventListener('click', () => { player.teleport(world.start); setPaused(false); });
+$('respawn').addEventListener('click', () => { player.teleport(world.start); setPaused(false); startWake(); });
 
 document.querySelectorAll('[data-setting]').forEach(b => b.addEventListener('click', () => {
   const k = b.dataset.setting, v = b.dataset.value;

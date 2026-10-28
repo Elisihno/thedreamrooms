@@ -1,4 +1,4 @@
-export const BUILD = 'stage1-r1';
+export const BUILD = 'stage1-r2';
 
 export const CFG = {
   player: {
@@ -16,8 +16,8 @@ export const CFG = {
   },
   look: { mouse: 0.0022, touchPerScreenHeight: 3.0, pitchLimit: 1.45 },
   quality: {
-    low:    { pixelRatio: 0.75, antialias: false, shadows: false, texSize: 512,  aniso: 1, maxLights: 4 },
-    medium: { pixelRatio: 1.0,  antialias: true,  shadows: false, texSize: 512,  aniso: 4, maxLights: 6 },
+    low:    { pixelRatio: 0.75, antialias: false, shadows: false, texSize: 512,  aniso: 1, maxLights: 5 },
+    medium: { pixelRatio: 1.0,  antialias: true,  shadows: false, texSize: 512,  aniso: 4, maxLights: 7 },
     high:   { pixelRatio: 1.75, antialias: true,  shadows: true,  texSize: 1024, aniso: 8, maxLights: 8 },
   },
   defaults: { quality: 'medium', sensitivity: 1, fov: 70, crouchMode: 'toggle', debug: true },

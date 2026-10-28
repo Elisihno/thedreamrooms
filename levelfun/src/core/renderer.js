@@ -5,7 +5,7 @@ import { allMaterials } from '../assets/registry.js';
 export function createRenderer(canvas, quality) {
   const r = new THREE.WebGLRenderer({ canvas, antialias: CFG.quality[quality].antialias, powerPreference: 'high-performance' });
   r.toneMapping = THREE.ACESFilmicToneMapping;
-  r.toneMappingExposure = 1.1;
+  r.toneMappingExposure = 1.3;
   r.shadowMap.type = THREE.PCFSoftShadowMap;
   return r;
 }

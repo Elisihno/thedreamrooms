@@ -22,6 +22,14 @@ function grunge(ctx, s, r, n, a) {
 }
 
 const STYLES = {
+  cloth(ctx, s, r, p) {
+    ctx.fillStyle = p.base; ctx.fillRect(0, 0, s, s);
+    ctx.strokeStyle = 'rgba(120,110,95,0.10)'; ctx.lineWidth = 1;
+    for (let i = 0; i < s; i += 4) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, s); ctx.moveTo(0, i); ctx.lineTo(s, i); ctx.stroke(); }
+    const cols = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'];
+    for (let i = 0; i < 22; i++) { ctx.fillStyle = cols[i % 5]; ctx.globalAlpha = 0.35; ctx.fillRect(r() * s, r() * s, 6, 3); }
+    ctx.globalAlpha = 1; grunge(ctx, s, r, 10, 0.12); speckle(ctx, s, r, s * 4, 0.12);
+  },
   wallpaper(ctx, s, r, p) {
     ctx.fillStyle = p.base; ctx.fillRect(0, 0, s, s);
     const w = s / 8;
