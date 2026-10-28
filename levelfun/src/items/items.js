@@ -271,7 +271,8 @@ export class ItemSystem {
     it.outline.visible = false; if (this.targetItem === it) this.targetItem = null;
     this.hand.add(it.mesh); this.glow(it.mesh, 0.4);
     const h = it.def.hold || {};
-    it.mesh.position.set(...(h.pos || (it.holdQuat ? [0.2, -0.22, -0.42] : [0.22, -0.26, -0.5])));
+    it.mesh.position.set(0, 0, -0.5);   // the hand group places it on screen (see update)
+    it.mesh.scale.setScalar(Math.min(1, 0.24 / it.def.size));   // big things are held a little smaller so they stay clear of the buttons
     if (it.holdQuat) it.mesh.quaternion.copy(it.holdQuat); else it.mesh.rotation.set(...(h.rot || [0.35, -0.5, 0.1]));
     this.dirty = true; if (!silent) this.save();
   }
@@ -280,7 +281,7 @@ export class ItemSystem {
     const it = this.held; if (!it) return null;
     const eye = this.camera.position, d = this.camera.getWorldDirection(this._d);
     this.hand.remove(it.mesh); this.scene.add(it.mesh); this.glow(it.mesh, 0.2);
-    it.mesh.quaternion.identity(); it.mesh.rotation.set(0, Math.random() * 6.28, 0);
+    it.mesh.quaternion.identity(); it.mesh.rotation.set(0, Math.random() * 6.28, 0); it.mesh.scale.setScalar(1);
     const flat = Math.hypot(d.x, d.z) || 1;
     it.x = eye.x + d.x / flat * 0.45; it.z = eye.z + d.z / flat * 0.45; it.y = eye.y - 0.35;
     it.vx = d.x * speed; it.vz = d.z * speed; it.vy = d.y * speed + lift;
@@ -314,7 +315,10 @@ export class ItemSystem {
     // the held item sways with your steps
     if (this.held) {
       const k = Math.min(1, player.speed / 2.4), b = player.bob;
-      this.hand.position.set(Math.sin(b * 0.5) * 0.02 * k, -Math.abs(Math.sin(b)) * 0.02 * k, 0);
+      // the held item sits at a fixed spot on screen: between the lean-right button and the USE / DROP buttons
+      const th = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)), d = 0.5;
+      const bx = (2 * 0.73 - 1) * th * this.camera.aspect * d, by = -(2 * 0.74 - 1) * th * d;
+      this.hand.position.set(bx + Math.sin(b * 0.5) * 0.02 * k, by - Math.abs(Math.sin(b)) * 0.02 * k, 0);
       this.hand.rotation.set(Math.sin(b) * 0.04 * k, 0, Math.sin(b * 0.5) * 0.08 * k);
     } else this.hand.position.set(0, 0, 0);
     if (this.dirty && this.time - (this.lastSave || 0) > 30) { this.lastSave = this.time; this.save(); }

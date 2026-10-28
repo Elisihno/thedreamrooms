@@ -33,7 +33,7 @@ export const ITEMS = {
   // ---- additional items ----
   needle:          { name: 'Balloon Popper', build: 'glb:needle', size: 0.2, where: ['dining', 'hall', 'partya', 'partyb'], tool: true, loud: 0.1 },
   turning_handle:  { name: 'Turning Handle', build: 'turningHandle', size: 0.22, where: ['prep', 'kitchen', 'reception', 'supply'], loud: 0.4 },
-  plush:           { name: 'Partygoer Plushie', build: 'glb:plush', size: 0.34, count: 2, where: ['birthday', 'celeb', 'archives', 'playground', 'landing'], loud: 0.05, hold: { pos: [0.2, -0.3, -0.5] } },
+  plush:           { name: 'Partygoer Plushie', build: 'glb:plush', size: 0.34, count: 2, where: ['birthday', 'celeb', 'archives', 'playground', 'landing'], loud: 0.05, hold: { rot: [0, -0.4, 0] } },
   music_box:       { name: 'Birthday Music Box', build: 'musicBox', size: 0.16, where: ['partyb', 'partya', 'birthday'], loud: 0.5 },
   whistle:         { name: 'Party Whistle', build: 'glb:whistle', size: 0.1, where: ['hall', 'dining', 'playground'], loud: 0.3 },
   windup_toy:      { name: 'Wind-Up Toy', build: 'glb:windup_robot', size: 0.2, where: ['partyb', 'playground', 'ballpit'], loud: 0.3 },
