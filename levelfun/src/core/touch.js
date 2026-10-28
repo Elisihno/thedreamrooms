@@ -7,7 +7,17 @@ export function initTouch(input, ui, settings) {
   const pts = new Map();
   let stickId = null, cx = 0, cy = 0, R = 60;
 
-  const setStickVisible = on => stick.classList.toggle('active', on);
+  // The ring is always visible at a home spot (bottom-left); a touch in the left zone moves it under the thumb.
+  const radius = () => Math.max(50, Math.min(90, Math.min(innerWidth, innerHeight) * 0.14));
+  function placeHome() {
+    const u = Math.max(40, Math.min(74, Math.min(innerWidth, innerHeight) * 0.105));
+    R = radius();
+    stick.style.left = Math.max(R + 12, 2.8 * u) + 'px'; stick.style.top = (innerHeight - Math.max(R + 12, 2.2 * u)) + 'px';
+    stick.style.setProperty('--r', R + 'px');
+    knob.style.transform = 'translate(-50%,-50%)';
+  }
+  placeHome(); addEventListener('resize', () => { if (stickId === null) placeHome(); });
+  const setStickVisible = on => stick.classList.toggle('held', on);
 
   function press(btn, down) {
     btn.classList.toggle('down', down);
@@ -27,7 +37,7 @@ export function initTouch(input, ui, settings) {
     if (btn) { pts.set(e.pointerId, { role: 'btn', btn }); press(btn, true); return; }
     if (stickId === null && e.clientX < innerWidth * 0.42) {
       stickId = e.pointerId;
-      R = Math.max(50, Math.min(90, Math.min(innerWidth, innerHeight) * 0.14));
+      R = radius();
       cx = e.clientX; cy = e.clientY;
       stick.style.left = cx + 'px'; stick.style.top = cy + 'px';
       stick.style.setProperty('--r', R + 'px');
@@ -65,7 +75,7 @@ export function initTouch(input, ui, settings) {
     pts.delete(e.pointerId);
     if (p.role === 'btn') press(p.btn, false);
     else if (p.role === 'move') {
-      stickId = null; input.touchMove.x = 0; input.touchMove.y = 0; setStickVisible(false);
+      stickId = null; input.touchMove.x = 0; input.touchMove.y = 0; setStickVisible(false); placeHome();
     }
   }
   ui.addEventListener('pointerup', end);
@@ -76,6 +86,6 @@ export function initTouch(input, ui, settings) {
     pts.forEach(p => { if (p.btn) press(p.btn, false); });
     pts.clear(); stickId = null;
     input.touchMove.x = 0; input.touchMove.y = 0; input.touchLeanL = false; input.touchLeanR = false;
-    setStickVisible(false);
+    setStickVisible(false); placeHome();
   };
 }
