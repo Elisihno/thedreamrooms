@@ -44,12 +44,12 @@ export function playGame(id, canvas, { onWin, onExit }) {
   };
   canvas.addEventListener('pointerdown', down); addEventListener('keydown', key);
 
-  function frame(now) {
+  function run(now) {
     if (stopped) return;
-    raf = requestAnimationFrame(frame);
     window.__arcFrames = (window.__arcFrames || 0) + 1;
     try { tick(now); } catch (e) { const m = document.getElementById('amsg'); if (m) m.textContent = 'Game error: ' + (e && e.message || e); stopped = true; }
   }
+  function frame(now) { if (stopped) return; raf = requestAnimationFrame(frame); run(now); }
   function tick(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
     const am = document.getElementById('amsg'); if (am && am.textContent === 'LOADING GAME…') am.textContent = '';
@@ -76,9 +76,12 @@ export function playGame(id, canvas, { onWin, onExit }) {
     }
   }
   raf = requestAnimationFrame(frame);
-  return function stop() { stopped = true; cancelAnimationFrame(raf); canvas.removeEventListener('pointerdown', down); removeEventListener('keydown', key); };
+  // Fallback: if the browser never calls requestAnimationFrame for this overlay, drive the game from a timer instead.
+  let timer = 0;
+  window.__arcFrames = 0;
+  const seen = setTimeout(() => { if (!window.__arcFrames) timer = setInterval(() => run(performance.now()), 33); }, 600);
+  return function stop() { clearTimeout(seen); clearInterval(timer); stopped = true; cancelAnimationFrame(raf); canvas.removeEventListener('pointerdown', down); removeEventListener('keydown', key); };
 }
-
 const IMPL = {
   // ---- Pop the Balloons: 30 seconds, pop 15 ----
   pop() {
