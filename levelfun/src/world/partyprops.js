@@ -1,4 +1,5 @@
 import * as THREE from '../three.js';
+import { instanceModel } from '../assets/models.js';
 
 // Party dressing for the Dining Room (also a stand-in for later rooms): white-clothed long tables,
 // chairs, place settings, cake, balloons (stationary), confetti, bunting. Everything repeated is
@@ -48,78 +49,80 @@ function bannerTexture(text) {
   return t;
 }
 
-// Adds a long tablecloth table (collider = top slab at 0.85-0.95 m so a crouched player fits under).
-export function addTable(world, x, z, len = 3.2, wid = 1.0) {
-  world.box({ x, y: 0.9, z, w: len, h: 0.1, d: wid, mat: 'tablecloth', tile: 1, y0: 0.85, y1: 0.95 });
-  for (const s of [-1, 1]) world.box({ x, y: 0.84, z: z + s * (wid / 2 + 0.01), w: len, h: 0.22, d: 0.02, mat: 'tablecloth', tile: 1, collide: false });
-  for (const lx of [-len / 2 + 0.15, len / 2 - 0.15]) for (const lz of [-wid / 2 + 0.1, wid / 2 - 0.1])
-    world.box({ x: x + lx, y: 0.4, z: z + lz, w: 0.07, h: 0.8, d: 0.07, mat: 'wood', collide: false, cast: false });
+// Paper party plate (built in code): dished lathe with a printed rim, tinted per instance.
+function plateGeometry() {
+  const pts = [[0, 0], [0.075, 0.0], [0.098, 0.006], [0.118, 0.02], [0.122, 0.024], [0.119, 0.026], [0.098, 0.011], [0.0, 0.004]]
+    .map(([x, y]) => new THREE.Vector2(x, y));
+  const g = new THREE.LatheGeometry(pts, 28);
+  const p = g.attributes.position, uv = g.attributes.uv;
+  for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / 0.244 + 0.5, p.getZ(i) / 0.244 + 0.5);
+  g.computeVertexNormals();
+  return g;
 }
+function plateTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = '#f6f3ea'; x.fillRect(0, 0, 256, 256);
+  const cols = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'];
+  for (let i = 0; i < 20; i++) {
+    const a = i / 20 * Math.PI * 2;
+    x.fillStyle = cols[i % 5]; x.beginPath(); x.arc(128 + Math.cos(a) * 100, 128 + Math.sin(a) * 100, 8, 0, 7); x.fill();
+  }
+  x.strokeStyle = '#d9c9a0'; x.lineWidth = 3; x.beginPath(); x.arc(128, 128, 78, 0, 7); x.stroke();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+// Long party table: 1.5 m wide, 2.75 m long, cloth top at 0.95 m. Collision is only the top slab
+// (0.85-0.95 m) so a crouched player (0.8 m) fits underneath.
+const TABLE = { half: 1.375, halfW: 0.75, top: 0.95 };
 
 export function addDiningDecor(world, scene, { tables, bounds }) {
   const r = rng(7);
-  const seats = [], backs = [], legs = [], plates = [], cups = [], hats = [];
+  instanceModel(scene, 'table', tables.map(t => ({ x: t.x, z: t.z, ry: Math.PI / 2, sz: 1.25 })));
+  const chairs = [], cups = [], hats = [], plates = [], tints = [];
+  const TINT = [0xffffff, 0xffe3ef, 0xe3f0ff, 0xfff6c9];
   for (const t of tables) {
-    addTable(world, t.x, t.z);
-    for (const dx of [-1, 0, 1]) for (const s of [-1, 1]) {
-      const cx = t.x + dx, cz = t.z + s * 0.95, col = PARTY[Math.floor(r() * PARTY.length)];
-      seats.push({ x: cx, y: 0.45, z: cz, sx: 0.46, sy: 0.05, sz: 0.46, color: col });
-      backs.push({ x: cx, y: 0.72, z: cz + s * 0.21, sx: 0.46, sy: 0.5, sz: 0.04, color: col });
-      for (const [lx, lz] of [[-.19, -.19], [.19, -.19], [-.19, .19], [.19, .19]]) legs.push({ x: cx + lx, y: 0.21, z: cz + lz, sx: 0.04, sy: 0.42, sz: 0.04, color: 0x6b6258 });
-      world.collision.add(cx - 0.25, cz - 0.25, cx + 0.25, cz + 0.25, 0, 0.95);
-      plates.push({ x: cx, y: 0.953, z: t.z + s * 0.28 });
-      cups.push({ x: cx + 0.22, y: 1.0, z: t.z + s * 0.2, color: PARTY[Math.floor(r() * PARTY.length)] });
-      hats.push({ x: cx - 0.2, y: 1.03, z: t.z + s * 0.32, color: PARTY[Math.floor(r() * PARTY.length)] });
+    world.collision.add(t.x - TABLE.half, t.z - TABLE.halfW, t.x + TABLE.half, t.z + TABLE.halfW, 0.85, 0.95);
+    for (const dx of [-0.85, 0, 0.85]) for (const s of [-1, 1]) {
+      const cx = t.x + dx, cz = t.z + s * 1.0;
+      chairs.push({ x: cx, z: cz, ry: s < 0 ? -Math.PI / 2 : Math.PI / 2 });   // chairs face +x natively
+      world.collision.add(cx - 0.27, cz - 0.31, cx + 0.27, cz + 0.31, 0, 0.9);
+      plates.push({ x: cx, y: TABLE.top + 0.002, z: t.z + s * 0.45, color: TINT[Math.floor(r() * 4)] });
+      cups.push({ x: cx + 0.24, y: TABLE.top, z: t.z + s * 0.38, ry: r() * 6.28 });
+      if ((dx === 0) !== (s < 0)) hats.push({ x: cx - 0.3, y: TABLE.top, z: t.z + s * 0.5, ry: r() * 6.28 });
     }
   }
-  const white = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 });
-  instanced(scene, new THREE.BoxGeometry(1, 1, 1), white, seats);
-  instanced(scene, new THREE.BoxGeometry(1, 1, 1), white, backs);
-  instanced(scene, new THREE.BoxGeometry(1, 1, 1), white, legs, { receive: false });
-  instanced(scene, new THREE.CylinderGeometry(0.13, 0.11, 0.015, 16), new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.3 }), plates);
-  instanced(scene, new THREE.CylinderGeometry(0.04, 0.03, 0.1, 10), white, cups);
-  instanced(scene, new THREE.ConeGeometry(0.06, 0.17, 10), white, hats);
+  instanceModel(scene, 'chair', chairs);
+  instanceModel(scene, 'cup', cups, { receive: false });
+  instanceModel(scene, 'party_hat', hats, { receive: false });
+  const pm = new THREE.MeshStandardMaterial({ map: plateTexture(), roughness: 0.6, side: THREE.DoubleSide });
+  const pi = new THREE.InstancedMesh(plateGeometry(), pm, plates.length);
+  const o = new THREE.Object3D(), col = new THREE.Color();
+  plates.forEach((p, i) => { o.position.set(p.x, p.y, p.z); o.rotation.set(0, r() * 6.28, 0); o.updateMatrix(); pi.setMatrixAt(i, o.matrix); pi.setColorAt(i, col.set(p.color)); });
+  pi.castShadow = true; pi.receiveShadow = true; pi.frustumCulled = false;
+  scene.add(pi);
 
   // Cake on the middle table.
   const mid = tables[Math.floor(tables.length / 2)];
-  const cake = new THREE.Group();
-  const tier = (rad, h, y, col) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, h, 24), new THREE.MeshStandardMaterial({ color: col, roughness: 0.5 })); m.position.y = y; m.castShadow = true; cake.add(m); };
-  tier(0.24, 0.12, 0.06, 0xfff1d6); tier(0.17, 0.1, 0.17, 0xff9fc4);
-  for (let i = 0; i < 5; i++) {
-    const a = i / 5 * Math.PI * 2, can = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.07, 6), new THREE.MeshStandardMaterial({ color: PARTY[i] }));
-    can.position.set(Math.cos(a) * 0.09, 0.27, Math.sin(a) * 0.09); cake.add(can);
-    const fl = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffe07a }));
-    fl.position.set(Math.cos(a) * 0.09, 0.32, Math.sin(a) * 0.09); cake.add(fl);
-  }
-  cake.position.set(mid.x, 0.95, mid.z);
-  scene.add(cake);
+  instanceModel(scene, 'cake', [{ x: mid.x, y: TABLE.top, z: mid.z, s: 1.4 }]);
 
-  // Balloons: stationary. Ceiling layer + bunches tied to table ends and room corners.
-  const bal = [], strings = [];
-  const bunch = (bx, bz, n) => {
-    strings.push(bx, 0.06, bz, bx, 1.2, bz);
-    for (let i = 0; i < n; i++) {
-      const x = bx + (r() - 0.5) * 0.7, y = 1.6 + r() * 0.8, z = bz + (r() - 0.5) * 0.7;
-      bal.push({ x, y, z, sy: 1.18, color: PARTY[Math.floor(r() * PARTY.length)] });
-      strings.push(x, y - 0.27, z, bx, 1.2, bz);
-    }
-    world.box({ x: bx, y: 0.04, z: bz, w: 0.16, h: 0.08, d: 0.16, mat: 'concrete_floor', collide: false });
-  };
-  for (const t of tables) { bunch(t.x - 1.75, t.z, 6); bunch(t.x + 1.75, t.z, 6); }
+  // Balloon bunches tied to the floor (stationary) at table ends and room corners.
   const { x0, x1, z0, z1 } = bounds;
-  for (const [bx, bz] of [[x0 + 0.6, z0 + 0.6], [x0 + 0.6, z1 - 0.6], [x1 - 0.6, z0 + 0.6], [x1 - 0.6, z1 - 0.6]]) bunch(bx, bz, 8);
-  for (let i = 0; i < 40; i++) bal.push({ x: x0 + 0.5 + r() * (x1 - x0 - 1), y: 2.6 + r() * 0.25, z: z0 + 0.5 + r() * (z1 - z0 - 1), sy: 1.18, color: PARTY[Math.floor(r() * PARTY.length)] });
+  const bunches = [];
+  for (const t of tables) { bunches.push({ x: t.x - 2.0, z: t.z, ry: r() * 6.28 }, { x: t.x + 2.0, z: t.z, ry: r() * 6.28 }); }
+  for (const [bx, bz] of [[x0 + 0.8, z0 + 0.8], [x0 + 0.8, z1 - 0.8], [x1 - 0.8, z0 + 0.8], [x1 - 0.8, z1 - 0.8]]) bunches.push({ x: bx, z: bz, ry: r() * 6.28, s: 1.1 });
+  instanceModel(scene, 'balloons', bunches);
+  // Loose balloons at the ceiling.
+  const bal = [];
+  for (let i = 0; i < 28; i++) bal.push({ x: x0 + 0.5 + r() * (x1 - x0 - 1), y: 2.6 + r() * 0.25, z: z0 + 0.5 + r() * (z1 - z0 - 1), sy: 1.18, color: PARTY[Math.floor(r() * PARTY.length)] });
   instanced(scene, new THREE.SphereGeometry(0.25, 14, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22, metalness: 0.05 }), bal);
-  const sg = new THREE.BufferGeometry();
-  sg.setAttribute('position', new THREE.Float32BufferAttribute(strings, 3));
-  scene.add(new THREE.LineSegments(sg, new THREE.LineBasicMaterial({ color: 0xe6e0d2 })));
 
   // Confetti on the floor and tables.
   const conf = [];
   for (let i = 0; i < 700; i++) {
     const onTable = i < 160, t = tables[Math.floor(r() * tables.length)];
     conf.push(onTable
-      ? { x: t.x + (r() - 0.5) * 3.1, y: 0.958, z: t.z + (r() - 0.5) * 0.9, ry: r() * 6.28, color: PARTY[Math.floor(r() * PARTY.length)] }
+      ? { x: t.x + (r() - 0.5) * 2.5, y: 0.958, z: t.z + (r() - 0.5) * 1.3, ry: r() * 6.28, color: PARTY[Math.floor(r() * PARTY.length)] }
       : { x: x0 + 0.3 + r() * (x1 - x0 - 0.6), y: 0.008, z: z0 + 0.3 + r() * (z1 - z0 - 0.6), ry: r() * 6.28, color: PARTY[Math.floor(r() * PARTY.length)] });
   }
   const cg = new THREE.PlaneGeometry(0.05, 0.03); cg.rotateX(-Math.PI / 2);

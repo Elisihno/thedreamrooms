@@ -11,3 +11,9 @@ First-person survival horror (Three.js). Lives in this folder; the rest of the r
   Until image files are added, procedural placeholders are used.
 - `assets/models/partygoer_original.glb`: Smiley model (static mesh, 7.3k tris, no skeleton/animations, 12.4 MB
   of textures that will be compressed before use). Filename in the file: "PartygoerByFilinMinv". Author/licence still to be confirmed and credited here.
+
+## Models (levelfun/assets/models)
+Optimized from Sketchfab downloads (scaled to metres, origin at bottom-centre, textures shrunk to WebP,
+triangle counts cut for phones): table, chair, cup, cake, party_hat, door, counter, balloons.
+Authors/licences still to be confirmed and credited here. Paper plates are generated in code.
+Replace any model by dropping a new .glb with the same name.

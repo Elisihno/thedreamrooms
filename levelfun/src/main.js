@@ -6,6 +6,7 @@ import { initTouch } from './core/touch.js';
 import { createRenderer, applyQuality, resize } from './core/renderer.js';
 import { configureAssets } from './assets/registry.js';
 import { buildTestRoom } from './world/testroom.js';
+import { loadModels } from './assets/models.js';
 import { Player } from './player.js';
 
 const $ = id => document.getElementById(id);
@@ -21,6 +22,8 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(settings.fov, innerWidth / innerHeight, 0.05, 80);
 scene.add(camera);
 
+$('primary').textContent = 'LOADING…';
+try { await loadModels(); } catch (e) { $('primary').textContent = 'Model load failed'; throw e; }
 const world = buildTestRoom(scene);
 const input = new Input(settings);
 input.canvas = canvas;

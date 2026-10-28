@@ -1,6 +1,7 @@
 import * as THREE from '../three.js';
 import { World } from './builder.js';
 import { addDiningDecor } from './partyprops.js';
+import { instanceModel } from '../assets/models.js';
 
 // Stage 1 test environment (NOT the real building): a party room with three long tables,
 // a corridor, and a room with stairs and a crawl gap, to exercise movement, crouching,
@@ -43,12 +44,13 @@ export function buildTestRoom(scene) {
   w.box({ x: 24, y: 0.4, z: 3.6, w: 1.2, h: 0.8, d: 1.2, mat: 'wood' });
 
   // Room A is the Dining Room: three long white-clothed tables (the player starts under the middle one).
-  addDiningDecor(w, scene, { tables: [{ x: -4.5, z: -3.5 }, { x: -4.5, z: 0 }, { x: -4.5, z: 3.5 }], bounds: { x0: -8, x1: 8, z0: -6, z1: 6 } });
+  addDiningDecor(w, scene, { tables: [{ x: -4.5, z: -3.9 }, { x: -4.5, z: 0 }, { x: -4.5, z: 3.9 }], bounds: { x0: -8, x1: 8, z0: -6, z1: 6 } });
   // Crates, a column, a counter.
   w.box({ x: 5, y: 0.45, z: 4.5, w: 0.9, h: 0.9, d: 0.9, mat: 'wood' });
   w.box({ x: 5, y: 1.35, z: 4.5, w: 0.7, h: 0.9, d: 0.7, mat: 'wood' });
   w.box({ x: 3, y: 1.5, z: -3, w: 0.6, h: 3, d: 0.6, mat: 'wallpaper_accent' });
-  w.box({ x: 4, y: 0.5, z: -5.2, w: 3, h: 1.0, d: 0.8, mat: 'counter_reception', tile: 1 });
+  instanceModel(scene, 'counter', [{ x: 3.5, z: -5.5, s: 1.5 }]);
+  w.collision.add(1.6, -5.9, 5.4, -5.12, 0, 0.95);
 
   // Lights: bright warm party lighting in the dining room (one flickering), dimmer corridor and far room.
   w.light({ x: -5.5, y: 2.8, z: -2.2, intensity: 22, distance: 16, color: 0xfff0d8, shadow: true });
