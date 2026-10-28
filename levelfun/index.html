@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<title>LEVEL FUN</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vignette"></div>
+<pre id="debug" hidden></pre>
+<div id="toast"></div>
+
+<div id="touch-ui" hidden>
+  <div id="stick"><div id="knob"></div></div>
+  <div class="ghost-stick"></div>
+  <button class="tbtn lean l" data-act="leanL">&#9664; LEAN</button>
+  <button class="tbtn lean r" data-act="leanR">LEAN &#9654;</button>
+  <button class="tbtn pause" data-act="pause">&#10074;&#10074;</button>
+  <button class="tbtn interact" data-act="interact">USE</button>
+  <button class="tbtn throw" data-act="throw">THROW</button>
+  <button class="tbtn drop" data-act="drop">DROP</button>
+  <button class="tbtn crouch" data-act="crouch">CROUCH</button>
+  <button class="tbtn zap" data-act="zapper">ZAP</button>
+</div>
+
+<div id="menu">
+  <div class="panel">
+    <h1>LEVEL <span>FUN</span></h1>
+    <p class="sub">Stage 1 &middot; foundation test &middot; build <b id="build"></b></p>
+    <button id="primary" class="big">START</button>
+    <p id="hint" class="hint">Touch: left thumb = move, swipe elsewhere = look.<br>PC: WASD move, mouse look, E use, RMB throw, G drop, F zap, C crouch, Q / R lean, Esc pause.<br>You start crouched under a table: try standing up (you can't), crawl out, then test the stairs and the low crawl gap in the far room.</p>
+    <div class="row"><span>Graphics</span>
+      <div class="seg"><button data-setting="quality" data-value="low">Low</button><button data-setting="quality" data-value="medium">Medium</button><button data-setting="quality" data-value="high">High</button></div></div>
+    <div class="row"><span>Sensitivity <i id="sensv"></i></span><input id="sens" type="range" min="0.3" max="2.5" step="0.05"></div>
+    <div class="row"><span>Field of view <i id="fovv"></i></span><input id="fov" type="range" min="60" max="100" step="1"></div>
+    <div class="row"><span>Crouch (keyboard)</span>
+      <div class="seg"><button data-setting="crouchMode" data-value="toggle">Toggle</button><button data-setting="crouchMode" data-value="hold">Hold</button></div></div>
+    <div class="row"><span>Debug info</span><label class="chk"><input id="debug-on" type="checkbox"> show</label></div>
+    <div class="row"><button id="respawn">Back to start</button><button id="fs">Fullscreen</button></div>
+    <p class="note">Graphics: antialiasing and texture detail apply on next launch.</p>
+  </div>
+</div>
+
+<div id="rotate"><div>Rotate your device<br>to landscape</div></div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
