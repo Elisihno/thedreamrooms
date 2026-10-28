@@ -159,10 +159,13 @@ const rewards = {};   // prizes won so far (kept for the item system)
 function openArcade(game) {
   if (arcadeStop || !running) return;
   setPaused(true); $('menu').hidden = true; $('arcade').hidden = false;
-  arcadeStop = playGame(game, $('acv'), {
-    onWin: id => { rewards[id] = true; toast('Prize won: ' + GAMES[id].reward + ' (items arrive in a later stage)'); },
-    onExit: closeArcade,
-  });
+  $('amsg').textContent = 'LOADING GAME…';
+  try {
+    arcadeStop = playGame(game, $('acv'), {
+      onWin: id => { rewards[id] = true; toast('Prize won: ' + GAMES[id].reward + ' (items arrive in a later stage)'); },
+      onExit: closeArcade,
+    });
+  } catch (e) { $('amsg').textContent = 'Could not start: ' + (e && e.message || e); arcadeStop = () => {}; }
 }
 function closeArcade() {
   if (!arcadeStop) return;

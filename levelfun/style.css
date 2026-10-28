@@ -85,7 +85,9 @@ button { font: inherit; color: #fff; }
 .tbtn.leanbtn.down { opacity: 1; filter: brightness(1.5); background-color: transparent; }
 
 /* Arcade minigame overlay */
-#arcade { position: fixed; inset: 0; z-index: 8; background: #000; display: flex; align-items: center; justify-content: center; touch-action: none; }
+#arcade { position: fixed; inset: 0; z-index: 8; background: #1b1033; display: flex; align-items: center; justify-content: center; touch-action: none; }
 #arcade[hidden] { display: none; }
 #acv { width: min(100vw, 177.7vh); height: min(56.25vw, 100vh); image-rendering: pixelated; touch-action: none; }
 #aquit { position: absolute; left: calc(10px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top)); padding: 10px 14px; font: 700 14px system-ui, sans-serif; background: rgba(0,0,0,.6); border: 2px solid #888; border-radius: 8px; }
+#amsg { position: absolute; left: 0; right: 0; bottom: 14px; margin: 0; text-align: center; font: 700 13px system-ui, sans-serif; color: #ffd23c; pointer-events: none; word-break: break-word; padding: 0 12px; }
+#toast { z-index: 20; }

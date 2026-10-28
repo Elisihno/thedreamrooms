@@ -47,7 +47,11 @@ export function playGame(id, canvas, { onWin, onExit }) {
   function frame(now) {
     if (stopped) return;
     raf = requestAnimationFrame(frame);
+    try { tick(now); } catch (e) { const m = document.getElementById('amsg'); if (m) m.textContent = 'Game error: ' + (e && e.message || e); stopped = true; }
+  }
+  function tick(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
+    const am = document.getElementById('amsg'); if (am && am.textContent === 'LOADING GAME…') am.textContent = '';
     if (state === 'play') { const r = impl.update(dt); if (r === 'win') { state = 'win'; onWin(id); } else if (r === 'lose') { state = 'lose'; msg = impl.msg || ''; } }
     background(ctx, t);
     if (state === 'title') {
