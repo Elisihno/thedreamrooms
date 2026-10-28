@@ -1,5 +1,5 @@
 import * as THREE from '../three.js';
-import { AREAS, HIDING, CAMERAS, FIXTURES, LEVEL_Y, STAIR, CEIL } from './layout.js';
+import { AREAS, HIDING, CAMERAS, FIXTURES, LEVEL_Y, SPIRAL, CEIL } from './layout.js';
 import { getMaterial, getBasic } from '../assets/registry.js';
 import { instanceModel, hasModel, cloneModel, modelSize } from '../assets/models.js';
 import { partySet } from './partyprops.js';
@@ -9,7 +9,7 @@ export function furnish(w) {
   const Y = l => LEVEL_Y[l];
   const bx = (l, x0, z0, x1, z1, h, mat, y = 0, o = {}) => w.block(l, x0, z0, x1, z1, Y(l) + y, Y(l) + y + h, mat, o);
   const deco = { collide: false };
-  const stairRect = [STAIR.x0 - 0.5, STAIR.z0 - 0.5, STAIR.x1 + 0.5, STAIR.z1 + 0.5];
+  const stairRect = [SPIRAL.cx - SPIRAL.holeR - 0.6, SPIRAL.cz - SPIRAL.holeR - 0.6, SPIRAL.cx + SPIRAL.holeR + 0.6, SPIRAL.cz + SPIRAL.holeR + 0.6];
 
   // ----- reusable pieces -----
   // desk/bench with knee space: top slab at 0.85-0.95 m (crouched player fits under), panels on 3 sides, open toward +z.

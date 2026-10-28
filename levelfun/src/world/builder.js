@@ -65,7 +65,7 @@ export class World {
     }
     LEVELS.slice(0, -1).forEach((id, k) => {          // stair flights between level k and k+1
       const g = new THREE.Group(); g.name = 'stairs-' + k; this.levels['S' + k] = g; scene.add(g);
-      this.ranges['S' + k] = [LEVEL_Y[id] - 0.9, LEVEL_Y[LEVELS[k + 1]] + 0.3];
+      this.ranges['S' + k] = [LEVEL_Y[id] - 0.9, LEVEL_Y[LEVELS[k + 1]] + 2.6];
     });
   }
 
@@ -106,9 +106,12 @@ export class World {
   // ---- walkable surfaces (floors, ramps) ----
   flat(rect, y, holes = [], tag) { const s = { type: 'flat', rect, y, holes, enabled: true, tag }; this.surfaces.push(s); return s; }
   ramp(rect, axis, h0, h1, tag) { const s = { type: 'ramp', rect, axis, h0, h1, enabled: true, tag }; this.surfaces.push(s); return s; }
+  // Spiral flight: treads wind around (cx, cz); tread i (0-based) is a flat step at y0 + (i + 1) * rise / treads.
+  spiral(p) { const s = { type: 'spiral', rect: [p.cx - p.rOut, p.cz - p.rOut, p.cx + p.rOut, p.cz + p.rOut], ...p, enabled: true }; this.surfaces.push(s); return s; }
 
   // Height of the highest enabled surface at (x,z) not more than a step above `y`.
-  floorAt(x, z, y) {
+  // With strict = true, returns null where there is no surface at all (a hole), so movement can be blocked.
+  floorAt(x, z, y, strict = false) {
     let best = -Infinity;
     for (const s of this.surfaces) {
       if (!s.enabled) continue;
@@ -121,14 +124,26 @@ export class World {
         let inHole = false;
         for (const q of s.holes) if (x > q[0] && x < q[2] && z > q[1] && z < q[3]) { inHole = true; break; }
         if (inHole) continue;
-      } else {
+      } else if (s.type === 'ramp') {
         const t = s.axis === 'x' ? (x - r[0]) / (r[2] - r[0]) : (z - r[1]) / (r[3] - r[1]);
         h = s.h0 + (s.h1 - s.h0) * t;
+        if (h > y + STEP_TOL || h <= best) continue;
+      } else {   // spiral
+        const dx = x - s.cx, dz = z - s.cz, rad = Math.hypot(dx, dz);
+        if (rad < s.rIn || rad > s.rOut) continue;
+        const P = 360 / Math.abs(s.da);
+        let t = (Math.atan2(dz, dx) * 180 / Math.PI - s.a0) / s.da;
+        t = ((t % P) + P) % P;
+        if (t > P - 0.5) t -= P;
+        const i = Math.floor(t + 0.5);
+        if (i < 0 || i >= s.treads) continue;
+        h = s.y0 + (i + 1) * s.rise / s.treads;
         if (h > y + STEP_TOL || h <= best) continue;
       }
       best = h;
     }
-    return best === -Infinity ? y : best;
+    if (best === -Infinity) return strict ? null : y;
+    return best;
   }
 
   // ---- lights (shared pool, see lightpool.js) ----

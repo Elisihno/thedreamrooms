@@ -210,9 +210,9 @@ function buildShaft(w, p) {
   const z0 = s.openTop[0], z1 = s.openBottom[1];
   const rect = [s.x0, z0, s.x1, z1];
   // walkable: top platform, steep ramp, bottom platform
-  const ramp = w.ramp([s.x0, s.zTop, s.x1, s.zBottom], 'z', yTop, yBot, 'shaft'); ramp.enabled = false;
-  const top = w.flat([s.x0, z0, s.x1, s.zTop], yTop, [], 'shaft'); top.enabled = false;
-  const bottom = w.flat([s.x0, s.zBottom, s.x1, z1], yBot, [], 'shaft'); bottom.enabled = false;
+  const ramp = w.ramp([s.x0 - 0.1, s.zTop, s.x1, s.zBottom], 'z', yTop, yBot, 'shaft'); ramp.enabled = false;
+  const top = w.flat([s.x0 - 0.1, z0, s.x1, s.zTop], yTop, [], 'shaft'); top.enabled = false;
+  const bottom = w.flat([s.x0 - 0.1, s.zBottom, s.x1, z1], yBot, [], 'shaft'); bottom.enabled = false;
   // shell (outside the building, in the always-group)
   w.block('always', s.x1, z0 - 0.1, s.x1 + 0.1, z1 + 0.1, yBot - 0.5, yTop + 2.5, 'panel_concrete');
   w.block('always', s.x0, z0 - 0.1, s.x1, z0, yBot - 0.5, yTop + 2.5, 'panel_concrete');

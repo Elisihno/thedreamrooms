@@ -53,7 +53,14 @@ export class Player {
     const k = Math.min(1, dt * P.accel);
     this.vx += (tx - this.vx) * k; this.vz += (tz - this.vz) * k;
     const h = this.crouched ? P.hCrouch : P.hStand;
+    const px = this.pos.x, pz = this.pos.z;
     col.move(this.pos, this.vx * dt, this.vz * dt, P.radius, this.pos.y + P.stepUp, this.pos.y + h);
+    if (this.world.floorAt(this.pos.x, this.pos.z, this.pos.y, true) === null) {   // stepped over an opening: slide or stop
+      const nx = this.pos.x, nz = this.pos.z;
+      if (this.world.floorAt(nx, pz, this.pos.y, true) !== null) this.pos.set(nx, this.pos.y, pz);
+      else if (this.world.floorAt(px, nz, this.pos.y, true) !== null) this.pos.set(px, this.pos.y, nz);
+      else this.pos.set(px, this.pos.y, pz);
+    }
     this.speed = Math.hypot(this.vx, this.vz);
 
     // Smooth floor height (ramps/stairs).

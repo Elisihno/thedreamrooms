@@ -1,6 +1,6 @@
 // Run: node levelfun/tools/validate_layout.mjs
 // Checks the spec totals and that the ordinary routes (doors + stairs, no secret passages) reach every room.
-import { AREAS, OPENINGS, HIDING, CAMERAS, PASSAGES, LEVELS, areaById, STAIR } from '../src/world/layout.js';
+import { AREAS, OPENINGS, HIDING, CAMERAS, PASSAGES, LEVELS, areaById, STAIR, SPIRAL } from '../src/world/layout.js';
 let bad = 0;
 const fail = m => { console.log('FAIL', m); bad++; };
 const rooms = AREAS.filter(a => a.room);

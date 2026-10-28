@@ -8,9 +8,16 @@ export const LEVELS = ['B', '1', '2', '3'];
 export const LEVEL_Y = { B: -4, 1: 0, 2: 4, 3: 8 };
 export const LEVEL_NAME = { B: 'Basement', 1: 'Floor 1', 2: 'Floor 2', 3: 'Floor 3' };
 
-// Central open staircase, same footprint on every level. Two lanes: lane0 climbs (and the
-// basement flight returns in it), lane1 descends to the basement and brings climbers to the next floor.
-export const STAIR = { x0: 14, x1: 21, z0: 2, z1: 6, runX0: 14, runX1: 19, lane0: [2.2, 3.8], lane1: [4.2, 5.8], landing: [19, 21] };
+// Central spiral staircase (the supplied cast-iron model), one flight per level at the same x/z.
+// Each flight has 17 treads and rises FLOOR_H. Treads wind clockwise (angle decreases with height, measured
+// atan2(z, x)); the quarter of the circle with no treads (x > cx, z < cz) is a landing floor on every level.
+export const SPIRAL = {
+  cx: 18, cz: 4, rise: 4, treads: 17,
+  a0: -97.05, da: -16.43, half: 8.2,      // tread 0 centre angle, angle per tread, half-width (degrees)
+  walkIn: 0.46, walkOut: 1.08,            // radii the player's centre may use (rail at 1.35, column at 0.25)
+  holeR: 1.4,                             // radius of the opening cut in floors and ceilings
+};
+export const STAIR = { x0: SPIRAL.cx - SPIRAL.holeR, x1: SPIRAL.cx + SPIRAL.holeR, z0: SPIRAL.cz - SPIRAL.holeR, z1: SPIRAL.cz + SPIRAL.holeR };
 
 // Rooms (counted) and corridors/halls (not counted). rect = [x0, z0, x1, z1].
 // floor/wall = material keys (see assets/manifest.js).

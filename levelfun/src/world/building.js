@@ -1,7 +1,7 @@
 import * as THREE from '../three.js';
-import { AREAS, OPENINGS, PASSAGES, STAIR, LEVELS, LEVEL_Y, CEIL, areaById } from './layout.js';
+import { AREAS, OPENINGS, PASSAGES, SPIRAL, LEVELS, LEVEL_Y, CEIL, areaById } from './layout.js';
 import { getMaterial } from '../assets/registry.js';
-import { cloneModel, hasModel } from '../assets/models.js';
+import { cloneModel, hasModel, instanceModel } from '../assets/models.js';
 import { World, subtractRects } from './builder.js';
 import { buildPassages, passageHoles } from './passages.js';
 import { furnish } from './furnish.js';
@@ -64,10 +64,9 @@ export function buildBuilding(scene) {
   const w = new World(scene);
 
   // ---------- holes in floors and ceilings (stairwell, hatches, ladder shafts) ----------
-  const S = STAIR;
-  const stairFoot = [S.x0, S.z0, S.x1, S.z1];
-  const floorHoles = { B: [], 1: [[S.runX0, S.lane1[0], S.runX1, S.lane1[1]]], 2: [stairFoot], 3: [stairFoot] };
-  const ceilHoles = { B: [stairFoot], 1: [stairFoot], 2: [stairFoot], 3: [] };
+  const wellL = spiralHoles();
+  const floorHoles = { B: [], 1: [...wellL], 2: [...wellL], 3: [...wellL] };
+  const ceilHoles = { B: [...wellL], 1: [...wellL], 2: [...wellL], 3: [] };
   const ph = passageHoles();
   for (const l of LEVELS) { floorHoles[l].push(...(ph.floor[l] || [])); ceilHoles[l].push(...(ph.ceil[l] || [])); }
 
@@ -82,7 +81,7 @@ export function buildBuilding(scene) {
     const y0 = LEVEL_Y[a.level], [x0, z0, x1, z1] = a.rect;
     w.slab(a.level, a.rect, y0, 0.2, a.floor, floorHoles[a.level], { cast: false });
     w.slab(a.level, a.rect, y0 + CEIL + 0.1, 0.2, a.level === '3' ? 'concrete_dark' : 'ceiling', ceilHoles[a.level], { cast: false });
-    w.flat(a.rect, y0, floorHoles[a.level], a.id);
+    w.flat(a.rect, y0, a.level === 'B' ? [...floorHoles.B, ...wellL] : floorHoles[a.level], a.id);   // no walking under the low treads
 
     const edges = [
       { axis: 'x', c: z0, a: x0, b: x1, off: WALL_T / 2 },     // north edge, wall inside = +z
@@ -126,7 +125,7 @@ export function buildBuilding(scene) {
   for (const o of OPENINGS) if (o.kind === 'door' || o.kind === 'heavy') w.doors.push(new Door(w, o));
 
   // ---------- stairs ----------
-  buildStairs(w);
+  buildSpiral(w);
 
   // ---------- secret passages ----------
   w.passages = buildPassages(w);
@@ -138,67 +137,24 @@ export function buildBuilding(scene) {
   return w;
 }
 
-// Two-lane open staircase on every level; same footprint everywhere.
-function buildStairs(w) {
-  const S = STAIR;
-  const lane0 = [S.runX0, S.lane0[0], S.runX1, S.lane0[1]], lane1 = [S.runX0, S.lane1[0], S.runX1, S.lane1[1]];
-  const landing = [S.landing[0], S.lane0[0], S.landing[1], S.lane1[1]];
-  const steps = 10;
-
-  // flight: rect, axis x, heights at x=runX0 (h0) and x=runX1 (h1)
-  function flight(g, rect, h0, h1, ground) {
-    w.ramp(rect, 'x', h0, h1, 'stairs');
-    const run = rect[2] - rect[0], dz = rect[3] - rect[1];
-    for (let i = 0; i < steps; i++) {
-      const t = (i + 0.5) / steps, h = h0 + (h1 - h0) * t, x = rect[0] + run * i / steps;
-      w.block(g, x, rect[1], x + run / steps, rect[3], h - 0.16, h, 'diamond_plate', { collide: false });
-    }
-    // side rails (visual) and collision walls
-    const lo = Math.min(h0, h1), hi = Math.max(h0, h1);
-    for (const zEdge of [rect[1] - 0.05, rect[3] + 0.05]) {
-      w.collision.add(rect[0], zEdge - 0.05, rect[2], zEdge + 0.05, lo - 0.3, hi + 1.3);
-      for (let i = 0; i < steps; i += 2) {   // low railing panels that follow the slope
-        const x = rect[0] + run * i / steps, hSeg = Math.min(h0 + (h1 - h0) * i / steps, h0 + (h1 - h0) * (i + 2) / steps);
-        w.block(g, x, zEdge - 0.03, x + run * 2 / steps, zEdge + 0.03, hSeg - 0.05, hSeg + 1.05, 'chainlink', { collide: false });
-      }
-    }
-    // blocks the space under the flight where headroom is too low
-    for (let i = 0; i < steps; i++) {
-      const hLow = Math.min(h0 + (h1 - h0) * i / steps, h0 + (h1 - h0) * (i + 1) / steps);
-      if (hLow - ground > 1.9 || hLow - 0.3 <= ground) continue;
-      const x = rect[0] + run * i / steps;
-      w.collision.add(x, rect[1], x + run / steps, rect[3], ground, hLow - 0.3);
-    }
+// Opening for the spiral: a disc (stepped into 0.2 m strips) without the landing quarter (x > cx, z < cz).
+function spiralHoles() {
+  const { cx, cz, holeR: R } = SPIRAL, step = 0.2, out = [];
+  for (let x0 = cx - R; x0 < cx + R - 1e-6; x0 += step) {
+    const x1 = x0 + step, xe = Math.max(Math.abs(x0 - cx), Math.abs(x1 - cx)), ze = Math.sqrt(Math.max(0, R * R - xe * xe));
+    if (ze < 0.05) continue;
+    out.push(x0 >= cx - 1e-6 ? [x0, cz, x1, cz + ze] : [x0, cz - ze, x1, cz + ze]);
   }
-  function landingAt(g, y) {
-    w.flat(landing, y, [], 'landing');
-    w.block(g, landing[0], landing[1], landing[2], landing[3], y - 0.2, y, 'diamond_plate', { collide: false });
-    w.block(g, landing[2] - 0.05, landing[1], landing[2] + 0.05, landing[3], y - 0.3, y + 1.3, 'chainlink', { collide: false }); w.collision.add(landing[2] - 0.05, landing[1], landing[2] + 0.05, landing[3], y - 0.3, y + 1.3);
-    for (const zEdge of [landing[1] - 0.05, landing[3] + 0.05]) { w.block(g, landing[0], zEdge - 0.05, landing[2], zEdge + 0.05, y, y + 1.1, 'chainlink', { collide: false }); w.collision.add(landing[0], zEdge - 0.05, landing[2], zEdge + 0.05, y - 0.3, y + 1.3); }
-  }
-  const gId = k => 'S' + k;
+  return out;
+}
 
-  // Climbing flights from level k to k+1 (levels 1->2, 2->3) and the descending pair 1 -> basement.
-  [['1', 1], ['2', 2]].forEach(([lvl, k]) => {
-    const y0 = LEVEL_Y[lvl], g = gId(k);
-    flight(g, lane0, y0, y0 + 2, y0);
-    landingAt(g, y0 + 2);
-    flight(g, lane1, y0 + 4, y0 + 2, y0 + 0);
-    // railing between the lanes
-    w.block(g, lane0[0], S.lane0[1], lane0[2], S.lane1[0], y0, y0 + 4 + 1.0, 'chainlink', { collide: false });
+// Three stacked flights of the spiral staircase (Basement->1, 1->2, 2->3) sharing one centre column.
+function buildSpiral(w) {
+  const { cx, cz, rise, treads, a0, da, half, walkIn, walkOut } = SPIRAL;
+  LEVELS.slice(0, -1).forEach((id, k) => {
+    const yb = LEVEL_Y[id], g = 'S' + k;
+    instanceModel(w.group(g), 'spiral', [{ x: cx, y: yb, z: cz }]);
+    w.spiral({ cx, cz, y0: yb, rIn: walkIn, rOut: walkOut, treads, a0, da, rise });
+    w.collision.add(cx - 0.2, cz - 0.2, cx + 0.2, cz + 0.2, yb, yb + rise + 1.2);   // centre column
   });
-  // down to basement (stair group S0)
-  flight(gId(0), lane1, 0, -2, -4);
-  landingAt(gId(0), -2);
-  flight(gId(0), lane0, -4, -2, -4);
-  w.block(gId(0), lane0[0], S.lane0[1], lane0[2], S.lane1[0], -4, 1, 'chainlink', { collide: false });
-
-  // guards around the open stairwell edge on floors 2 and 3
-  for (const lvl of ['2', '3']) {
-    const y = LEVEL_Y[lvl], g = lvl;
-    w.block(g, S.x0, S.z0 - 0.05, S.x1, S.z0, y, y + 1.1, 'chainlink', { collide: false }); w.collision.add(S.x0, S.z0 - 0.05, S.x1, S.z0, y, y + 1.2);
-    w.block(g, S.x0, S.z1, S.x1, S.z1 + 0.05, y, y + 1.1, 'chainlink', { collide: false }); w.collision.add(S.x0, S.z1, S.x1, S.z1 + 0.05, y, y + 1.2);
-    w.block(g, S.x1, S.z0, S.x1 + 0.05, S.z1, y, y + 1.1, 'chainlink', { collide: false }); w.collision.add(S.x1, S.z0, S.x1 + 0.05, S.z1, y, y + 1.2);
-  }
-  // floor 1: guard where the descending flight begins beside the climbing one is the divider above.
 }

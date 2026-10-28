@@ -1,6 +1,6 @@
 // Browser-side walkability check: flood-fills the real collision + floor surfaces the way the player moves.
 // Usage (in a page with window.LF): const { reach } = await import('/levelfun/tools/reach.js'); reach(LF.world, {x,z,y})
-import { AREAS, LEVEL_Y, areaById } from '../src/world/layout.js';
+import { AREAS, LEVEL_Y } from '../src/world/layout.js';
 
 export function reach(world, start, { step = 0.3, r = 0.28, h = 0.8, openDoors = true } = {}) {
   if (openDoors) for (const d of world.doors) { d.target = 1; d.openT = 1; d.box.enabled = false; }
@@ -13,8 +13,8 @@ export function reach(world, start, { step = 0.3, r = 0.28, h = 0.8, openDoors =
     const [x, z, y] = queue[qi];
     for (const [dx, dz] of dirs) {
       const nx = x + dx * step, nz = z + dz * step;
-      const ny = world.floorAt(nx, nz, y);
-      if (Math.abs(ny - y) > 0.65) continue;
+      const ny = world.floorAt(nx, nz, y, true);          // strict: no floor under the player = blocked
+      if (ny === null || Math.abs(ny - y) > 0.65) continue;
       if (col.overlaps(nx, nz, r, ny + 0.15, ny + h)) continue;
       const k = key(nx, nz, ny);
       if (seen.has(k)) continue;

@@ -28,6 +28,7 @@ LEVEL FUN is an unofficial fan game. Third-party models (from Sketchfab) are lis
 | Playground slide | [Slide For Animal Mountain Crossing](https://sketchfab.com/3d-models/slide-for-animal-mountain-crossing-5519f19766b14268b4ee76f4575226d2) | zhussainy1 | CC-BY-4.0 |
 | Reception and prize counters | [Renal Reception Counter 001](https://sketchfab.com/3d-models/renal-reception-counter-001-c1621ffe8ce64220a5e9da63f68f4b61) | ebenvanrensburg | CC-BY-4.0 |
 | Reception bell | [Table Bell](https://sketchfab.com/3d-models/table-bell-77f2ea17b4c84fe1a8d2aec02caa9de3) | gla_bot | CC-BY-4.0 |
+| Spiral staircase | [Round Stairs](https://sketchfab.com/3d-models/round-stairs-8f296565048a43848e8cb5f0cb4f6f0a) | Ryoce | CC-BY-4.0 |
 | Smiley (the enemy) | [Partygoer](https://sketchfab.com/3d-models/partygoer-ef2b98195e274a409148e2a9f35ceab6) | siren head fan | CC-BY-4.0 |
 | Trash cans | [Trash Can](https://sketchfab.com/3d-models/trash-can-0ad3407cd8104ba58f71885c0e58ca9a) | Yury Misiyuk | CC-BY-4.0 |
 
