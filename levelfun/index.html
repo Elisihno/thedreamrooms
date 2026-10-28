@@ -18,15 +18,11 @@
 <div id="touch-ui" hidden>
   <div id="stick"><div id="knob"></div></div>
   <div class="ghost-stick"></div>
-  <button class="tbtn lean l" data-act="leanL">&#9664; LEAN</button>
-  <button class="tbtn lean r" data-act="leanR">LEAN &#9654;</button>
   <button class="tbtn pause" data-act="pause">&#10074;&#10074;</button>
-  <button class="tbtn interact" data-act="interact">USE</button>
-  <button class="tbtn throw" data-act="throw">THROW</button>
-  <button class="tbtn drop" data-act="drop">DROP</button>
-  <button class="tbtn crouch" data-act="crouch">CROUCH</button>
-  <button class="tbtn zap" data-act="zapper">ZAP</button>
-</div>
+  <button id="crouchfig" class="tbtn icon crouchfig" data-act="crouch" aria-label="Crouch"><i></i></button>
+  <button id="hand" class="tbtn icon hand" data-act="interact" aria-label="Open" hidden><i></i></button>
+  <button id="grab" class="tbtn icon grab" data-act="interact" aria-label="Pick up" hidden><b></b></button>
+  </div>
 
 <div id="menu">
   <div class="panel">
@@ -34,7 +30,7 @@
     <p class="sub">Stage 2 &middot; the whole building &middot; build <b id="build"></b></p>
     <button id="primary" class="big">START</button>
     <div id="loadbar"><i id="loadfill"></i></div><p id="loadmsg" class="note">Starting…</p>
-    <p id="hint" class="hint">Touch: left thumb = move, swipe elsewhere = look, USE = open doors and hatches.<br>PC: WASD move, mouse look, E use, C crouch, Q / R lean, Esc pause.<br>You wake under a table in the Dining Room. Explore all four floors (take the spiral staircase in the middle of the Main Party Hall). Secret hatches: look for odd striped panels in the floor and ceiling, then press USE. Menu: jump to any floor.</p>
+    <p id="hint" class="hint">Touch: left thumb = move, swipe elsewhere = look, tap the hand (top right) to open doors and hatches, tap the circle to pick things up, tap the figure (top left) to crouch.<br>PC: WASD move, mouse look, E use, C crouch, Q / R lean, Esc pause.<br>You wake under a table in the Dining Room. Explore all four floors (take the spiral staircase in the middle of the Main Party Hall). Secret hatches: look for odd striped panels in the floor and ceiling, then press USE. Menu: jump to any floor.</p>
     <div class="row"><span>Graphics</span>
       <div class="seg"><button data-setting="quality" data-value="low">Low</button><button data-setting="quality" data-value="medium">Medium</button><button data-setting="quality" data-value="high">High</button></div></div>
     <div class="row"><span>Sensitivity <i id="sensv"></i></span><input id="sens" type="range" min="0.3" max="2.5" step="0.05"></div>

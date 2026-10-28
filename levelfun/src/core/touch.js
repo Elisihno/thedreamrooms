@@ -47,7 +47,7 @@ export function initTouch(input, ui, settings) {
       let dx = e.clientX - cx, dy = e.clientY - cy;
       const d = Math.hypot(dx, dy);
       if (d > R) { dx = dx / d * R; dy = dy / d * R; }
-      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      knob.style.transform = `translate(calc(-50% + ${dx * 0.22}px), calc(-50% + ${dy * 0.22}px))`;   // the ball nearly fills the ring, so it only shifts a little
       let nx = dx / R, ny = -dy / R;
       const m = Math.hypot(nx, ny);
       if (m < 0.1) { nx = 0; ny = 0; } else { const s = (m - 0.1) / 0.9 / m; nx *= s; ny *= s; }

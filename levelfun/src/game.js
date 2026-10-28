@@ -129,17 +129,22 @@ $('sens').addEventListener('input', e => { settings.sensitivity = Number(e.targe
 $('fov').addEventListener('input', e => { settings.fov = Number(e.target.value); camera.fov = settings.fov; camera.updateProjectionMatrix(); saveSettings(settings); syncMenu(); });
 
 input.on('pause', () => { if (running && !paused) setPaused(true); });
-input.on('interact', () => {
-  // nearest interactable the player is looking at (doors, secret hatches)
-  const eye = camera.position, dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+// Nearest interactable the player is looking at (doors, secret hatches, later items).
+const _dir = new THREE.Vector3();
+function findTarget() {
+  const eye = camera.position; camera.getWorldDirection(_dir);
   let best = null, bestScore = 0.45;
   for (const it of world.interactables) {
     const dx = it.x - eye.x, dy = it.y - eye.y, dz = it.z - eye.z, d = Math.hypot(dx, dy, dz);
     if (d > it.radius || Math.abs(dy) > 2.6) continue;
-    const dot = (dx * dir.x + dy * dir.y + dz * dir.z) / Math.max(d, 0.001);
+    const dot = (dx * _dir.x + dy * _dir.y + dz * _dir.z) / Math.max(d, 0.001);
     const score = dot - d * 0.08;
     if (dot > 0.35 && score > bestScore) { best = it; bestScore = score; }
   }
+  return best;
+}
+input.on('interact', () => {
+  const best = findTarget();
   if (best) { best.onUse(); if (best.kind === 'hatch') toast('Secret passage opened'); } else toast('Nothing to use here');
 });
 input.on('throw', () => toast('Throw (Stage 3)'));
@@ -166,6 +171,11 @@ function frame(now) {
     world.update(dt);
     world.updateVisibility(player.pos.x, player.pos.y);
     pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
+    if (isTouch) {   // context buttons: the hand shows only when something can be opened, the circle only for items
+      const t = findTarget(), item = t && t.kind === 'item';
+      $('hand').hidden = !t || item; $('grab').hidden = !item;
+      $('crouchfig').classList.toggle('crouched', player.crouched);
+    }
     const tt = now / 1000;
     screenMaterials.forEach((m, i) => { m.emissiveIntensity = 0.75 + 0.25 * Math.sin(tt * 3 + i); });
     const dark = player.pos.y > 6 || player.pos.y < -2;
