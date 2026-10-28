@@ -75,7 +75,7 @@ $('build').textContent = BUILD;
 function toast(msg) {
   const t = $('toast');
   t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 900);
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), /^Error/.test(msg) ? 8000 : 900);
 }
 
 function syncMenu() {
@@ -146,7 +146,11 @@ function findTarget() {
 }
 input.on('interact', () => {
   const best = findTarget();
-  if (best) { best.onUse(); if (best.kind === 'hatch') toast('Secret passage opened'); } else toast('Nothing to use here');
+  if (best) {
+    try { best.onUse(); } catch (e) { toast('Error: ' + (e && e.message || e)); throw e; }
+    if (best.kind === 'hatch') toast('Secret passage opened');
+    else if (best.kind === 'arcade') toast('Loading ' + GAMES[best.game].title + '…');
+  } else toast('Nothing to use here');
 });
 
 // ---- Arcade minigames: a full-screen pixel overlay; the world is frozen while it is open ----

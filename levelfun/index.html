@@ -54,7 +54,8 @@
 (function () {
   setTimeout(function () { if (!window.__lfBoot) { var m = document.getElementById('loadmsg'); if (m) m.textContent = 'The game script did not start (old browser? modules/top-level await unsupported). ' + navigator.userAgent; } }, 6000);
   var lm = document.getElementById('loadmsg'); if (lm) lm.textContent = 'Page loaded - starting game code…';
-  function show(m) { var b = document.getElementById('primary'), t = document.getElementById('hint'); if (b) b.textContent = 'Error - see text below'; if (t) { t.hidden = false; t.textContent = 'Startup error: ' + m; t.style.color = '#f88'; } }
+  function toast(m) { var t = document.getElementById('toast'); if (t) { t.textContent = 'Error: ' + m; t.style.background = 'rgba(160,0,0,.85)'; t.style.maxWidth = '90vw'; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 9000); } }
+  function show(m) { toast(m); var b = document.getElementById('primary'), t = document.getElementById('hint'); if (b) b.textContent = 'Error - see text below'; if (t) { t.hidden = false; t.textContent = 'Startup error: ' + m; t.style.color = '#f88'; } }
   addEventListener('error', function (e) { show((e.message || 'script error') + (e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
   addEventListener('unhandledrejection', function (e) { show(String((e.reason && (e.reason.stack || e.reason.message)) || e.reason).slice(0, 300)); });
 })();
