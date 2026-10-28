@@ -119,3 +119,8 @@ button { font: inherit; color: #fff; }
 #ending.elevator { background: linear-gradient(#9fd2ff, #fff3c9); color: #2a3a4a; } #ending.elevator h1 { color: #b85a00; text-shadow: none; }
 #flash { position: fixed; inset: 0; background: #bfefff; opacity: 0; pointer-events: none; z-index: 7; transition: opacity .25s; }
 #flash.on { opacity: .65; transition: none; }
+
+/* The pickup circle: small, placed on the item by the game each frame. */
+.tbtn.grab { --s: 1.5; left: 50%; top: 50%; right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.grab b { width: 62%; height: 62%; border-width: 2px; }
+.grab b::after { width: 20%; height: 20%; }

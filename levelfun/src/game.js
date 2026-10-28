@@ -145,7 +145,7 @@ $('fov').addEventListener('input', e => { settings.fov = Number(e.target.value);
 
 input.on('pause', () => { if (running && !paused) setPaused(true); });
 // Nearest interactable the player is looking at (doors, secret hatches, later items).
-const _dir = new THREE.Vector3();
+const _dir = new THREE.Vector3(), _pv = new THREE.Vector3();
 function findTarget() {
   const it = items.target();
   if (it) return { kind: 'item', item: it, onUse: () => items.pickUp(it) };
@@ -244,6 +244,11 @@ function frame(now) {
     if (isTouch) {   // context buttons: the hand shows only when something can be opened, the circle only for items
       const t = findTarget(), item = t && t.kind === 'item';
       $('hand').hidden = !t || item; $('grab').hidden = !item;
+      if (item) {   // the pickup circle sits on the item itself
+        const it = t.item, p = _pv.set(it.x, it.y + it.def.size * 0.5, it.z).project(camera);
+        const px = Math.min(innerWidth - 40, Math.max(40, (p.x * 0.5 + 0.5) * innerWidth)), py = Math.min(innerHeight - 40, Math.max(40, (-p.y * 0.5 + 0.5) * innerHeight));
+        const gb = $('grab'); gb.style.left = px + 'px'; gb.style.top = py + 'px';
+      }
       $('crouchfig').classList.toggle('crouched', player.crouched);
     }
     const tt = now / 1000;

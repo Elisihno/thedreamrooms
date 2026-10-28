@@ -275,6 +275,12 @@ export class ItemSystem {
       if (it.y < -30 || !Number.isFinite(it.x + it.y + it.z)) { const h = it.home || { x: 22, y: 0, z: 23 }; it.x = h.x; it.y = h.y + 0.2; it.z = h.z; it.vx = it.vy = it.vz = 0; it.state = 'air'; it.rest = false; }
     }
     this.setHighlight(this.target());
+    // the held item sways with your steps
+    if (this.held) {
+      const k = Math.min(1, player.speed / 2.4), b = player.bob;
+      this.hand.position.set(Math.sin(b * 0.5) * 0.02 * k, -Math.abs(Math.sin(b)) * 0.02 * k, 0);
+      this.hand.rotation.set(Math.sin(b) * 0.04 * k, 0, Math.sin(b * 0.5) * 0.08 * k);
+    } else this.hand.position.set(0, 0, 0);
     if (this.dirty && this.time - (this.lastSave || 0) > 30) { this.lastSave = this.time; this.save(); }
   }
 
