@@ -66,7 +66,7 @@ const startPos = { x: START.x, z: START.z, y: LEVEL_Y[START.level], yaw: START.y
 player.teleport(startPos);
 const items = new ItemSystem(scene, camera, world);
 items.init(ItemSystem.load());   // continue a saved game, or scatter the items for a new one
-const uses = new UseSystem({ items, world, player, camera, scene, ui: { toast: m => toast(m), note: d => showNote(d), keypad: (c, cb) => showKeypad(c, cb), ending: k => showEnding(k), flash: () => doFlash() } });
+const uses = new UseSystem({ items, world, player, camera, scene, ui: { toast: m => toast(m), note: d => showNote(d), ending: k => showEnding(k), flash: () => doFlash() } });
 uses.restore(items.loadedExtra);
 addEventListener('pointerdown', initAudio, { once: true });
 const releaseTouch = initTouch(input, $('touch-ui'), settings);
@@ -176,19 +176,6 @@ function enterModal(id) { if (modal) return false; setPaused(true); $('menu').hi
 function leaveModal() { if (!modal) return; $(modal).hidden = true; modal = null; setPaused(false); }
 function showNote(d) { if (!enterModal('note')) return; $('notet').textContent = d.title; $('noteb').textContent = d.body; $('noteb').classList.toggle('bignum', !!d.big); }
 $('noteclose').addEventListener('click', leaveModal);
-let kpCb = null, kpCode = '', kpBuf = '';
-function kpDraw(t) { $('kpscreen').textContent = t ?? (kpBuf.padEnd(4, '-')); }
-function showKeypad(code, cb) { if (!enterModal('keypad')) return; kpCode = code; kpCb = cb; kpBuf = ''; kpDraw(); }
-document.querySelectorAll('#keypad [data-k]').forEach(b => b.addEventListener('click', () => {
-  const k = b.dataset.k;
-  if (k === 'C') kpBuf = ''; else if (k === 'OK') {
-    const ok = kpBuf === kpCode; kpCb && kpCb(ok);
-    if (ok) { kpDraw('OPEN'); setTimeout(leaveModal, 700); return; }
-    kpDraw('ERR '); kpBuf = ''; setTimeout(() => kpDraw(), 600); return;
-  } else if (kpBuf.length < 4) kpBuf += k;
-  kpDraw();
-}));
-$('kpclose').addEventListener('click', leaveModal);
 addEventListener('keydown', e => { if (modal && modal !== 'ending' && e.code === 'Escape') leaveModal(); });
 function showEnding(kind) {
   items.save(); if (!enterModal('ending')) return;

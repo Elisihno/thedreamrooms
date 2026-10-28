@@ -16,7 +16,7 @@ export const ITEMS = {
   // ---- main puzzle items ----
   exit_key:        { name: 'Exit Key', main: 1, build: 'key', tint: 0xd94b3a, size: 0.12, where: ['dining', 'reception', 'kitchen', 'prep'], loud: 0.2 },
   wire_cutters:    { name: 'Wire Cutters', main: 1, build: 'glb:wire_cutters', size: 0.24, where: ['mstorage', 'electrical', 'supply', 'storage3'], loud: 0.3 },
-  exit_code_note:  { name: 'Exit Code Note', main: 1, build: 'codeNote', size: 0.2, reward: 'find', loud: 0 },
+  exit_code_note:  { name: 'Exit Code Note', main: 1, build: 'codeNote', size: 0.18, reward: 'find', loud: 0 },
   exit_fuse:       { name: 'Exit Fuse', main: 1, build: 'glb:fuse', tint: 0x66c6ff, size: 0.12, where: ['security', 'bath', 'mstorage', 'storage2'], loud: 0.1 },
   screwdriver:     { name: 'Screwdriver', main: 1, build: 'glb:screwdriver', size: 0.25, reward: 'pop', loud: 0.2 },
   elevator_motor:  { name: 'Elevator Motor', main: 1, build: 'motor', size: 0.3, where: ['generator', 'boiler', 'mstorage', 'storage3'], loud: 0.8 },
@@ -64,7 +64,7 @@ function paper(lines, w = 256, h = 192, bg = '#efe6c8', fg = '#2b2118') {
 
 const BUILDERS = {
   key: o => glb('key', o),
-  codeNote: (o, ctx) => sheet(paper([['EXIT CODE', 24, 70], [String(ctx.exitCode), 64, 140]]), 0.16, 0.12),
+  codeNote: (o, ctx) => sheet(paper([['EXIT CODE', 22, 58], [String(ctx.exitCode), 70, 142]], 192, 192, '#ffe66b', '#2a2a2a'), 0.12, 0.12),   // a yellow sticky note
   invitation: () => { const g = sheet(paper([['YOU ARE INVITED', 22, 52], ['THE REAL PARTY IS', 17, 100], ['UNDER THE BALL PIT', 20, 130], ['COME ALONE', 17, 170]], 256, 192, '#ffd3e6', '#7a1f4d'), 0.18, 0.135); return g; },
   diagram: () => sheet(paper([['PASSAGE', 22, 40], ['PLAYGROUND SE CORNER', 14, 82], ['STRIPED FLOOR PANEL', 14, 112], ['CRAWL EAST', 18, 150]], 256, 192, '#cfe1ef', '#16324a'), 0.2, 0.15),
   token: () => { const g = new THREE.Group(); const gold = mat(0xf2c230, { metalness: 0.7, roughness: 0.3 }); g.add(cyl(0.03, 0.008, gold, 0, 0.004, 0, 24)); g.add(cyl(0.02, 0.01, mat(0xc99a1a, { metalness: 0.7, roughness: 0.4 }), 0, 0.005, 0, 24)); return g; },

@@ -41,7 +41,7 @@ export class UseSystem {
     this.p = { exit: { key: false, wires: false, code: false, fuse: false }, exitOpen: false, elev: { motor: false, circuit: false, wiring: false }, genHandle: false, genFuse: false, elevOpen: false, handle: false, party: false, maint: false, bench: {}, passages: [], popped: [] };
     this.anim = []; this.time = 0; this.alarmT = 0; this.ended = false; this.zaps = [];
     world.stuns = []; world.fixtures.hatchGate = (P, held) => this.hatchGate(P, held);
-    this.buildStations();
+    this.buildStations(); this.buildKeypadLight();
     items.extraSave = () => this.p;
   }
 
@@ -52,6 +52,7 @@ export class UseSystem {
     Object.assign(q, extra, { exit: { ...q.exit, ...extra.exit }, elev: { ...q.elev, ...extra.elev }, bench: { ...extra.bench } });
     for (const key of q.popped) this.popKey(key, true);
     for (const id of q.passages) this.world.passages.find(P => P.id === id)?.open();
+    if (q.exit.code) this.setKeypadLight(true);
     if (q.exitOpen) this.openExit(true);
     if (q.elevOpen) this.openElevator(true);
     this.applyDoors();
@@ -65,7 +66,7 @@ export class UseSystem {
     // Emergency Exit Room: four mechanisms (west wall, level 1)
     add({ id: 'ex_key', level: '1', x: 0.45, y: 1.2, z: 13.6, r: 2.2, accepts: ['exit_key'], done: () => q.exit.key, apply: h => { q.exit.key = true; it.installAt(h, { x: 0.5, y: 1.3, z: 13.6, ry: Math.PI / 2, rx: -Math.PI / 2 }); sfx.install(); this.checkExit(); } });
     add({ id: 'ex_wires', level: '1', x: 0.4, y: 1.2, z: 14.7, r: 2.2, accepts: ['wire_cutters'], done: () => q.exit.wires, apply: () => { q.exit.wires = true; sfx.zap(); this.fx.burst(0.5, Y('1') + 1.2, 14.7, 0xffe07a, 14); this.checkExit(); } });
-    add({ id: 'ex_code', level: '1', x: 0.2, y: 1.4, z: 19.5, r: 2.0, accepts: [], special: 'keypad', done: () => q.exit.code, apply: () => this.openKeypad() });
+    add({ id: 'ex_code', level: '1', x: 0.2, y: 1.4, z: 19.5, r: 2.2, accepts: ['exit_code_note'], done: () => q.exit.code, apply: () => { q.exit.code = true; this.setKeypadLight(true); sfx.click(); setTimeout(() => sfx.ding(), 120); this.checkExit(); } });
     add({ id: 'ex_fuse', level: '1', x: 0.3, y: 1.0, z: 20.7, r: 2.2, accepts: ['exit_fuse'], done: () => q.exit.fuse, apply: h => { q.exit.fuse = true; it.installAt(h, { x: 0.38, y: 1.15, z: 20.7, ry: Math.PI / 2, rx: -Math.PI / 2 }); sfx.install(); this.checkExit(); } });
     // Elevator Room (floor 3): motor, circuit, wiring; basement generator: handle + fuse; the elevator door itself
     const e3 = Y('3'), b = Y('B');
@@ -95,6 +96,13 @@ export class UseSystem {
 
   checkExit() { const e = this.p.exit; if (e.key && e.wires && e.code && e.fuse && !this.p.exitOpen) this.openExit(); }
   checkPower() { if (this.p.genHandle && this.p.genFuse) { sfx.rumble(); this.items.save(); } }
+
+  // The keypad's indicator: red until the Exit Code Note has been held up to it, then green.
+  buildKeypadLight() {
+    const g = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.036), new THREE.MeshBasicMaterial({ color: 0xcc2222 }));
+    g.rotation.y = Math.PI / 2; g.position.set(0.198, Y('1') + 1.525, 19.5); this.scene.add(g); this.keypadLight = g;   // covers the keypad's display
+  }
+  setKeypadLight(on) { this.keypadLight.material.color.setHex(on ? 0x39ff6a : 0xcc2222); }
 
   // ---------- doors that open the endings ----------
   slideDoors(doors, axisDir, instant, box, then) {
@@ -137,7 +145,7 @@ export class UseSystem {
     for (const s of this.stations) {
       if (s.done()) continue;
       if (Math.abs(Y(s.level) - this.player.pos.y) > 3) continue;
-      const ok = s.special || (heldId && s.accepts.includes(heldId) && (!s.canAccept || s.canAccept(held)));
+      const ok = heldId && s.accepts.includes(heldId) && (!s.canAccept || s.canAccept(held));
       if (!ok) continue;
       const sc = this.inView(s.x, s.y, s.z, s.r);
       if (sc > bs) { bs = sc; best = s; }
@@ -184,10 +192,8 @@ export class UseSystem {
       default: return false;
     }
   }
-  // Hand button on a station (keypad, or the right item in hand).
-  useStation(s) { const h = this.items.held; if (s.special === 'keypad') { s.apply(); return; } if (h) { s.apply(h); this.items.dirty = true; this.items.save(); } }
-
-  openKeypad() { this.ui.keypad(this.items.exitCode, ok => { if (ok) { this.p.exit.code = true; sfx.ding(); this.checkExit(); this.items.save(); } else sfx.buzz(); }); }
+  // Hand button on a station: use the item in your hand on it.
+  useStation(s) { const h = this.items.held; if (h) { s.apply(h); this.items.dirty = true; this.items.save(); } }
 
   noise(loud, src, at) { const p = at || this.player.pos; this.world.noises.push({ x: p.x, y: p.y, z: p.z, loud, src, t: this.items.time }); if (this.world.noises.length > 32) this.world.noises.shift(); }
 

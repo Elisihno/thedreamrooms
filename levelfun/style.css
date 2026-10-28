@@ -100,8 +100,8 @@ button { font: inherit; color: #fff; }
 /* USE / ZAP buttons, notes, keypad, endings, zap flash */
 .tbtn.use { --rx: 3.3; --by: 3.7; --s: 1.8; background: rgba(180,40,40,.55); border-color: rgba(255,255,255,.6); font-size: calc(var(--u) * .3); }
 .tbtn.zap { --rx: 5.7; --by: 1.5; --s: 1.7; background: rgba(60,60,180,.55); border-color: rgba(255,255,255,.6); font-size: calc(var(--u) * .26); }
-#note, #keypad, #ending { position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.78); touch-action: none; }
-#note[hidden], #keypad[hidden], #ending[hidden] { display: none; }
+#note, #ending { position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.78); touch-action: none; }
+#note[hidden], #ending[hidden] { display: none; }
 .paper { background: #efe6c8; color: #2b2118; border: 3px solid #8a6f3a; border-radius: 6px; padding: 16px 26px; max-width: min(520px, 90vw); text-align: center; font-family: monospace; box-shadow: 0 0 30px rgba(0,0,0,.6); }
 .paper h2 { margin: 0 0 8px; font-size: clamp(16px, 4vh, 26px); letter-spacing: .1em; }
 .paper pre { margin: 0 0 12px; font: 700 clamp(15px, 3.6vh, 24px)/1.35 monospace; white-space: pre-wrap; }

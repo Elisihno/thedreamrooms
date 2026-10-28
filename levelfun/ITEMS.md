@@ -8,9 +8,8 @@ DROP / THROW appear while you hold something (PC: G / right mouse). **USE** appe
 |---|------|---------------------|-----|
 | 1 | Exit Key | scattered (Floor 1 rooms) | USE at the padlocked breaker box beside the Emergency Exit (mechanism 1) |
 | 2 | Wire Cutters | scattered (basement/storage rooms) | USE at the open junction box beside the exit (mechanism 2); not used up |
-| 3 | Exit Code Note | prize of *Find the Party* (arcade) | USE to read the 4-digit code (new code every new game) |
+| 3 | Exit Code Note (yellow sticky note) | prize of *Find the Party* (arcade) | Hold it up to the exit keypad and tap the hand: the keypad clicks and turns green (mechanism 3). USE elsewhere reads the code |
 | 4 | Exit Fuse | scattered (Security, bathrooms, storage) | USE at the fuse cabinet beside the exit (mechanism 4) |
-| – | *(mechanism 3)* | – | Tap the hand at the keypad and type the code from the Exit Code Note |
 | 5 | Screwdriver | prize of *Pop the Balloons* | USE at the elevator wiring panel (Elevator Room, Floor 3); not used up |
 | 6 | Elevator Motor | scattered (generator/boiler/storage) | USE at the winch in the Elevator Room |
 | 7 | Elevator Circuit | prize of *Birthday Dash* | USE at the circuit panel in the Elevator Room |
@@ -20,7 +19,7 @@ DROP / THROW appear while you hold something (PC: G / right mouse). **USE** appe
 | 11 | Arcade Token | Prize Counter counter-top | Hold it and tap the hand at an arcade game machine; reusable |
 | 12 | Party Zapper parts ×3 (Grip, Coil, Emitter) | three different rooms | USE all three at the assembly bench in the Party Preparation Room; the finished Party Zapper appears on the bench |
 
-Emergency Exit ending: Exit Key + Wire Cutters + code + Exit Fuse, then walk through the open door.
+Emergency Exit ending: Exit Key + Wire Cutters + Exit Code Note on the keypad + Exit Fuse, then walk through the open door.
 Service Elevator ending: Motor + Circuit + Screwdriver (wiring) + Generator Handle & Power Fuse (power), then the Elevator Key, then walk into the elevator.
 
 ## Additional items
