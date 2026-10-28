@@ -1,0 +1,252 @@
+import * as THREE from '../three.js';
+import { AREAS, LEVEL_Y, OPENINGS, SPIRAL } from '../world/layout.js';
+import { ITEMS, buildItem } from './catalog.js';
+
+const SAVE_KEY = 'levelfun.save.v1';
+const G = 9.8;
+const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+
+// Items lying around, carried, dropped and thrown. One item can be held at a time.
+export class ItemSystem {
+  constructor(scene, camera, world) {
+    this.scene = scene; this.camera = camera; this.world = world;
+    this.items = [];            // { uid, id, def, mesh, outline, state: 'world'|'held'|'air', x, y, z, vx, vy, vz, home }
+    this.held = null;
+    this.hand = new THREE.Group(); camera.add(this.hand);
+    this.targetItem = null;
+    this.noises = world.noises = [];   // { x, y, z, loud, src, t } for the AI (Stage 4)
+    this.rewards = {};          // arcade game -> true once its prize has appeared
+    this.seed = 1; this.exitCode = '0000';
+    this.dirty = false; this.time = 0;
+    this._v = new THREE.Vector3(); this._d = new THREE.Vector3();
+  }
+
+  // ---------- save / load ----------
+  static load() {
+    try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) return s; } catch (_) { /* no storage */ }
+    return null;
+  }
+  static clear() { try { localStorage.removeItem(SAVE_KEY); } catch (_) { /* no storage */ } }
+  save() {
+    const data = { v: 1, seed: this.seed, exitCode: this.exitCode, rewards: this.rewards, items: this.items.map(i => ({ uid: i.uid, id: i.id, x: i.x, y: i.y, z: i.z, held: i === this.held, home: i.home })) };
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); this.dirty = false; return true; } catch (_) { return false; }
+  }
+
+  // ---------- creation ----------
+  // New game: random placement from a seed. Continue: restore the saved positions.
+  init(save) {
+    if (save) {
+      this.seed = save.seed; this.exitCode = save.exitCode; this.rewards = save.rewards || {};
+      for (const s of save.items) { const it = this.create(s.id, s.uid, s.home); it.x = s.x; it.y = s.y; it.z = s.z; if (s.held) this.pickUp(it, true); else this.place(it); }
+    } else {
+      this.seed = (Math.random() * 1e9) | 0;
+      const r = mulberry(this.seed);
+      this.exitCode = String(1000 + Math.floor(r() * 9000));
+      this.scatter(r);
+    }
+  }
+
+  create(id, uid, home) {
+    const def = ITEMS[id];
+    const mesh = buildItem(id, { exitCode: this.exitCode });
+    mesh.userData.item = true;
+    const outline = this.makeOutline(mesh); mesh.add(outline); outline.visible = false;
+    this.glow(mesh, 0.2);
+    this.scene.add(mesh);
+    const it = { uid: uid ?? `${id}#${this.items.filter(i => i.id === id).length}`, id, def, mesh, outline, state: 'world', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, home: home || null, rest: true, radius: Math.max(0.14, def.size * 0.5) };
+    this.items.push(it);
+    return it;
+  }
+
+  // A faint glowing shell around the item (inverted hull), shown only when it can be picked up.
+  makeOutline(mesh) {
+    const g = new THREE.Group();
+    const m = new THREE.MeshBasicMaterial({ color: 0xfff0b0, side: THREE.BackSide, transparent: true, opacity: 0.8, depthWrite: false });
+    const bb = new THREE.Box3().setFromObject(mesh), c = bb.getCenter(new THREE.Vector3()), s = bb.getSize(new THREE.Vector3());
+    const k = 1 + Math.min(0.5, 0.012 / Math.max(0.02, Math.min(s.x, s.y, s.z, 0.12)) + 0.1);
+    mesh.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(mesh.matrixWorld).invert();
+    mesh.traverse(o => {
+      if (!o.isMesh || o.userData.outline) return;
+      const mm = new THREE.Mesh(o.geometry, m); mm.userData.outline = true;
+      mm.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+      g.add(mm);
+    });
+    g.scale.setScalar(k); g.position.copy(c).multiplyScalar(1 - k);
+    return g;
+  }
+
+  // Random placement: every item picks a clear, reachable floor spot in one of its allowed rooms.
+  scatter(r) {
+    const taken = [];
+    const spots = {};
+    const forRoom = id => spots[id] || (spots[id] = this.roomSpots(id));
+    const order = Object.keys(ITEMS);
+    for (const id of order) {
+      const def = ITEMS[id];
+      const n = def.count || 1;
+      for (let i = 0; i < n; i++) {
+        const it = this.create(id, n > 1 ? `${id}#${i}` : id);
+        if (def.reward) { it.state = 'hidden'; it.mesh.visible = false; continue; }   // appears when its arcade game is won
+        let spot = null;
+        if (def.fixed) spot = { level: def.fixed.level, x: def.fixed.x, z: def.fixed.z, y: LEVEL_Y[def.fixed.level] + def.fixed.y };
+        else {
+          const pool = def.where.flatMap(forRoom).filter(s => !taken.some(t => Math.hypot(t.x - s.x, t.z - s.z) < 1.2 && t.level === s.level));
+          spot = pool[Math.floor(r() * pool.length)] || forRoom(def.where[0])[0];
+        }
+        taken.push(spot);
+        it.x = spot.x; it.z = spot.z; it.y = spot.y ?? LEVEL_Y[spot.level];
+        it.home = { x: it.x, y: it.y, z: it.z };
+        this.place(it);
+      }
+    }
+  }
+
+  // Candidate floor points in a room: open flat floor, away from furniture, walls and doorways.
+  roomSpots(areaId) {
+    const a = AREAS.find(q => q.id === areaId); if (!a) return [];
+    const y = LEVEL_Y[a.level], out = [];
+    const doors = OPENINGS.filter(o => o.level === a.level);
+    for (let x = a.rect[0] + 0.7; x < a.rect[2] - 0.7; x += 0.5) for (let z = a.rect[1] + 0.7; z < a.rect[3] - 0.7; z += 0.5) {
+      const f = this.world.floorAt(x, z, y + 0.1, true);
+      if (f === null || Math.abs(f - y) > 0.01) continue;
+      if (this.world.collision.overlaps(x, z, 0.55, y + 0.1, y + 1.2)) continue;
+      if (this.world.collision.overlaps(x, z, 0.4, y + 1.2, y + 1.75)) continue;   // low roofs (huts, tunnels): you must be able to stand there
+      if (Math.hypot(x - SPIRAL.cx, z - SPIRAL.cz) < 2.6) continue;               // keep the staircase clear
+      if (doors.some(o => (o.axis === 'x' ? Math.hypot(x - (o.a + o.b) / 2, z - o.c) : Math.hypot(x - o.c, z - (o.a + o.b) / 2)) < 1.4)) continue;
+      out.push({ level: a.level, x, z, y });
+    }
+    return out;
+  }
+
+  place(it) {
+    it.state = 'world'; it.vx = it.vy = it.vz = 0; it.rest = true;
+    it.mesh.visible = true; it.mesh.position.set(it.x, it.y, it.z);
+    it.mesh.rotation.set(0, (it.x * 7.3 + it.z * 3.1) % 6.28, 0);
+    this.scene.add(it.mesh);
+  }
+
+  // A prize pops out of an arcade machine.
+  spawnReward(game, x, y, z) {
+    if (this.rewards[game]) return null;
+    const id = Object.keys(ITEMS).find(k => ITEMS[k].reward === game); if (!id) return null;
+    this.rewards[game] = true;
+    const it = this.items.find(i => i.id === id) || this.create(id);
+    it.x = x; it.y = y + 1.0; it.z = z; it.home = { x, y, z };
+    this.place(it); it.state = 'air'; it.rest = false; it.vz = 1.2; it.vy = 2.5;
+    this.dirty = true; this.save();
+    return it;
+  }
+
+  // ---------- targeting ----------
+  heldId() { return this.held ? this.held.id : null; }
+
+  // The item the player is looking at, if it is within reach.
+  target() {
+    const eye = this.camera.position, d = this.camera.getWorldDirection(this._d);
+    let best = null, bd = 1e9;
+    for (const it of this.items) {
+      if (it.state !== 'world' && it.state !== 'air') continue;
+      const cx = it.x - eye.x, cy = it.y + it.def.size * 0.3 - eye.y, cz = it.z - eye.z;
+      const along = cx * d.x + cy * d.y + cz * d.z;
+      if (along < 0.1 || along > 2.1) continue;
+      const px = cx - d.x * along, py = cy - d.y * along, pz = cz - d.z * along;
+      const off = Math.hypot(px, py, pz);
+      const tol = 0.16 + Math.max(0.1, it.def.size) * 0.5 + along * 0.1;
+      if (off < tol && off + along * 0.02 < bd) { best = it; bd = off + along * 0.02; }
+    }
+    return best;
+  }
+
+  setHighlight(it) {
+    if (it === this.targetItem) return;
+    if (this.targetItem) this.targetItem.outline.visible = false;
+    this.targetItem = it;
+    if (it) it.outline.visible = true;
+  }
+
+  // Items glow faintly by themselves (more in the hand) so they stay readable in dark rooms.
+  glow(mesh, k) {
+    mesh.traverse(m => {
+      if (!m.isMesh || m.userData.outline || !m.material || !m.material.emissive) return;
+      const mt = m.material;
+      if (m.userData.e0 === undefined) { m.userData.e0 = mt.emissive.getHex(); m.userData.ei0 = mt.emissiveIntensity; }
+      if (mt.map) { mt.emissiveMap = mt.map; mt.emissive.setScalar(k * 1.2); }
+      else mt.emissive.copy(mt.color).multiplyScalar(k).add(new THREE.Color(m.userData.e0));
+      mt.needsUpdate = true;
+    });
+  }
+
+  // ---------- pick up / drop / throw ----------
+  pickUp(it, silent = false) {
+    if (this.held && this.held !== it) this.drop(0.5);   // hands full: the old item drops at your feet
+    this.held = it; it.state = 'held'; it.rest = true; it.mesh.visible = true;
+    it.outline.visible = false; if (this.targetItem === it) this.targetItem = null;
+    this.hand.add(it.mesh); this.glow(it.mesh, 0.4);
+    const h = it.def.hold || {};
+    it.mesh.position.set(...(h.pos || [0.22, -0.26, -0.5])); it.mesh.rotation.set(...(h.rot || [0.35, -0.5, 0.1]));
+    this.dirty = true; if (!silent) this.save();
+  }
+
+  release(speed, lift) {
+    const it = this.held; if (!it) return null;
+    const eye = this.camera.position, d = this.camera.getWorldDirection(this._d);
+    this.hand.remove(it.mesh); this.scene.add(it.mesh); this.glow(it.mesh, 0.2);
+    const flat = Math.hypot(d.x, d.z) || 1;
+    it.x = eye.x + d.x / flat * 0.45; it.z = eye.z + d.z / flat * 0.45; it.y = eye.y - 0.35;
+    it.vx = d.x * speed; it.vz = d.z * speed; it.vy = d.y * speed + lift;
+    it.state = 'air'; it.rest = false; this.held = null;
+    it.mesh.position.set(it.x, it.y, it.z);
+    // never start inside a wall: if the spawn point is blocked, drop where the player stands
+    if (this.world.collision.overlaps(it.x, it.z, 0.1, it.y, it.y + 0.2)) { it.x = eye.x; it.z = eye.z; }
+    this.dirty = true;
+    return it;
+  }
+  drop() { const it = this.release(0.8, 0.5); if (it) this.save(); return it; }
+  throwHeld() {
+    const it = this.release(7.5, 1.6); if (!it) return;
+    it.thrown = true; this.save();
+  }
+
+  // ---------- simulation ----------
+  update(dt, player) {
+    this.time += dt;
+    const pad = 0.03;
+    for (const it of this.items) {
+      if (it.state === 'air') this.step(it, dt);
+      const m = it.mesh;
+      if (it.state === 'world' || it.state === 'air') {
+        m.visible = Math.abs(it.y - player.pos.y) < 3.5 && Math.hypot(it.x - player.pos.x, it.z - player.pos.z) < 26;
+      }
+      // lost items (out of the world) go back to where they started
+      if (it.y < -30 || !Number.isFinite(it.x + it.y + it.z)) { const h = it.home || { x: 22, y: 0, z: 23 }; it.x = h.x; it.y = h.y + 0.2; it.z = h.z; it.vx = it.vy = it.vz = 0; it.state = 'air'; it.rest = false; }
+    }
+    this.setHighlight(this.target());
+    if (this.dirty && this.time - (this.lastSave || 0) > 30) { this.lastSave = this.time; this.save(); }
+  }
+
+  step(it, dt) {
+    const w = this.world, r = 0.1;
+    it.vy -= G * dt;
+    const nx = it.x + it.vx * dt, nz = it.z + it.vz * dt;
+    const p = { x: nx, z: nz };
+    w.collision.resolve(p, r, it.y, it.y + 0.2);
+    if (Math.abs(p.x - nx) > 1e-4) it.vx *= -0.35;
+    if (Math.abs(p.z - nz) > 1e-4) it.vz *= -0.35;
+    it.x = p.x; it.z = p.z;
+    const ny = it.y + it.vy * dt;
+    const fl = w.floorAt(it.x, it.z, it.y + 0.02, false);
+    if (Number.isFinite(fl) && ny <= fl) {
+      const impact = -it.vy;
+      it.y = fl;
+      if (impact > 1.2) { it.vy = impact * 0.28; it.vx *= 0.6; it.vz *= 0.6; if (impact > 2.5) this.noise(it, Math.min(1, impact / 8) * (it.def.loud + 0.3), it.thrown ? 'throw' : 'drop'); }
+      else it.vy = 0;
+      it.vx *= Math.pow(0.02, dt); it.vz *= Math.pow(0.02, dt);
+      if (it.vy === 0 && Math.hypot(it.vx, it.vz) < 0.15) { it.vx = it.vz = 0; it.state = 'world'; it.rest = true; it.thrown = false; this.dirty = true; }
+    } else it.y = ny;
+    it.mesh.position.set(it.x, it.y, it.z);
+    it.mesh.rotation.y += Math.hypot(it.vx, it.vz) * dt * 2.5;
+  }
+
+  noise(it, loud, src) { this.noises.push({ x: it.x, y: it.y, z: it.z, loud, src, t: this.time }); if (this.noises.length > 32) this.noises.shift(); }
+}

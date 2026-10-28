@@ -8,9 +8,8 @@ export const MODEL_NAMES = ['table', 'chair', 'cup', 'cake', 'party_hat', 'door'
   'metal_table', 'slide', 'bench', 'trash_can', 'crate', 'exit_sign', 'fridge', 'locker', 'floor_lamp', 'table_bell', 'spiral',
   'stall', 'toilet', 'sink', 'boiler', 'generator', 'breaker', 'winch', 'desk', 'chair_office', 'cabinet',
   'door_heavy', 'shelf', 'crt', 'sofa',
-  'ballpit', 'fuse_tall', 'fuse_small', 'keypad', 'breaker2'];
-// Item models (picked up in later stages); not loaded until needed.
-export const ITEM_NAMES = ['screwdriver', 'needle', 'wire_cutters', 'key', 'whistle', 'windup_robot', 'fuse'];
+  'ballpit', 'fuse_tall', 'fuse_small', 'keypad', 'breaker2',
+  'screwdriver', 'needle', 'wire_cutters', 'key', 'whistle', 'windup_robot', 'fuse'];   // item models
 // Some downloads carry stray geometry (the arcade machine's power cord): triangles entirely behind zMin are removed.
 const CLIP = { arcade: { zMin: -0.42 } };
 export const screenMaterials = [];   // animated emissive screens

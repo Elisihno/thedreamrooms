@@ -11,6 +11,7 @@ import { START, LEVEL_Y, LEVELS, LEVEL_NAME } from './world/layout.js';
 import { loadModels, screenMaterials } from './assets/models.js';
 import { Player } from './player.js';
 import { playGame, GAMES } from './arcade/games.js';
+import { ItemSystem } from './items/items.js';
 
 const $ = id => document.getElementById(id);
 const settings = loadSettings();
@@ -61,6 +62,8 @@ input.canvas = canvas;
 const player = new Player(camera, world, input);
 const startPos = { x: START.x, z: START.z, y: LEVEL_Y[START.level], yaw: START.yaw, crouched: true };
 player.teleport(startPos);
+const items = new ItemSystem(scene, camera, world);
+items.init(ItemSystem.load());   // continue a saved game, or scatter the items for a new one
 const releaseTouch = initTouch(input, $('touch-ui'), settings);
 
 applyQuality(renderer, settings.quality, pool, world);
@@ -91,7 +94,7 @@ function setPaused(p) {
   $('touch-ui').hidden = p || !isTouch;
   $('primary').textContent = running ? 'RESUME' : 'START';
   $('hint').hidden = running;
-  if (p) { releaseTouch(); if (document.pointerLockElement) document.exitPointerLock(); }
+  if (p) { items.save(); releaseTouch(); if (document.pointerLockElement) document.exitPointerLock(); }
   else if (!isTouch) canvas.requestPointerLock?.();
   syncMenu();
 }
@@ -124,6 +127,8 @@ document.querySelectorAll('[data-floor]').forEach(b => b.addEventListener('click
   const id = b.dataset.floor, sp = SPOTS[id];
   startRunning(); player.teleport({ x: sp.x, z: sp.z, y: LEVEL_Y[id], yaw: sp.yaw }); setPaused(false);
 }));
+$('newgame').addEventListener('click', () => { if (confirm('Start a new game? Item positions are re-rolled.')) { ItemSystem.clear(); location.reload(); } });
+addEventListener('pagehide', () => items.save());
 $('unlock').addEventListener('click', () => { startRunning(); world.passages.forEach(p => p.open()); setPaused(false); toast('All secret passages opened (test)'); });
 $('respawn').addEventListener('click', () => { startRunning(); player.teleport(startPos); setPaused(false); startWake(); });
 
@@ -135,6 +140,8 @@ input.on('pause', () => { if (running && !paused) setPaused(true); });
 // Nearest interactable the player is looking at (doors, secret hatches, later items).
 const _dir = new THREE.Vector3();
 function findTarget() {
+  const it = items.target();
+  if (it) return { kind: 'item', item: it, onUse: () => items.pickUp(it) };
   const eye = camera.position; camera.getWorldDirection(_dir);
   let best = null, bestScore = 0.45;
   for (const it of world.interactables) {
@@ -158,13 +165,18 @@ input.on('interact', () => {
 // ---- Arcade minigames: a full-screen pixel overlay; the world is frozen while it is open ----
 let arcadeStop = null;
 const rewards = {};   // prizes won so far (kept for the item system)
-function openArcade(game) {
+function openArcade(game, screen) {
   if (arcadeStop || !running) return;
+  if (items.heldId() !== 'token') { screen?.warn(); return; }   // the machines need the Arcade Token in your hand
   setPaused(true); $('menu').hidden = true; $('arcade').hidden = false;
   $('amsg').textContent = 'LOADING GAME…';
   try {
     arcadeStop = playGame(game, $('acv'), {
-      onWin: id => { rewards[id] = true; toast('Prize won: ' + GAMES[id].reward + ' (items arrive in a later stage)'); },
+      onWin: id => {
+      rewards[id] = true;
+      const m = (world.fixtures.arcade || []).find(a => a.game === id);
+      if (m) items.spawnReward(id, m.x, LEVEL_Y['2'], m.z);   // the prize drops out in front of the machine
+    },
       onExit: closeArcade,
     });
   } catch (e) { $('amsg').textContent = 'Could not start: ' + (e && e.message || e); arcadeStop = () => {}; }
@@ -176,8 +188,8 @@ function closeArcade() {
 }
 $('aquit').addEventListener('click', closeArcade);
 world.fixtures.arcadeHandler = openArcade;
-input.on('throw', () => toast('Throw (Stage 3)'));
-input.on('drop', () => toast('Drop (Stage 3)'));
+input.on('throw', () => items.throwHeld());
+input.on('drop', () => items.drop());
 input.on('zapper', () => toast('Party Zapper (Stage 5)'));
 $('touch-ui').addEventListener('click', () => {});
 
@@ -198,6 +210,8 @@ function frame(now) {
   if (!paused) {
     player.update(dt);
     world.update(dt);
+    items.update(dt, player);
+    if (isTouch) { const h = !!items.held; $('throwbtn').hidden = !h; $('dropbtn').hidden = !h; }
     world.updateVisibility(player.pos.x, player.pos.y);
     pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
     if (isTouch) {   // context buttons: the hand shows only when something can be opened, the circle only for items
@@ -219,4 +233,4 @@ setLoad(1, 'Ready'); $('loadbar').classList.add('done'); $('loadmsg').classList.
 requestAnimationFrame(frame);
 
 // Test hook for automated checks.
-window.LF = { rewards, openArcade, player, world, input, settings, renderer, scene, setPaused, pool, camera };
+window.LF = { items, rewards, openArcade, player, world, input, settings, renderer, scene, setPaused, pool, camera };

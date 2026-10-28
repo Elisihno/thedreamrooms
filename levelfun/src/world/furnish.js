@@ -152,8 +152,22 @@ export function furnish(w) {
     const sv = document.createElement('canvas'); sv.width = 96; sv.height = 18; { const sc = sv.getContext('2d'); sc.fillStyle = '#ffd23c'; sc.fillRect(0, 0, 96, 18); sc.fillStyle = '#c0392b'; sc.fillRect(0, 0, 96, 2); sc.fillRect(0, 16, 96, 2); drawCentered(sc, 'PLAY ME!', 48, 5, 1, '#7a2a00'); }
     const st = new THREE.CanvasTexture(sv); st.magFilter = THREE.NearestFilter; st.colorSpace = THREE.SRGBColorSpace;
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.15), new THREE.MeshBasicMaterial({ map: st, toneMapped: false })); sign.position.set(x, Y('2') + 2.15, pz + 0.05); w.group('2').add(sign);
-    w.interactable({ x, y: Y('2') + 1.2, z: pz + 0.6, radius: 2.1, kind: 'arcade', game, onUse: () => w.fixtures.arcadeHandler?.(game) });
-    w.fixtures.arcadeScreens.push({ tick(t) { const l = Math.floor(t * 2.2) % 2 === 0; if (l !== on) { on = l; paint(l); } } });
+    let warnUntil = 0, last = 0;
+    const scr = {
+      warn() { warnUntil = last + 2.2; on = null; },
+      tick(t) {
+        last = t;
+        const warning = t < warnUntil, l = warning ? 'warn' + (Math.floor(t * 4) % 2) : Math.floor(t * 2.2) % 2 === 0;
+        if (l !== on) { on = l; if (warning) paintWarn(l === 'warn0'); else paint(l); }
+      },
+    };
+    const paintWarn = lit => {
+      c.fillStyle = '#5a0a0a'; c.fillRect(0, 0, 96, 75); c.fillStyle = '#a01818'; c.fillRect(3, 3, 90, 69);
+      if (lit) { drawCentered(c, 'INSERT', 48, 18, 2, '#fff', '#300'); drawCentered(c, 'TOKEN', 48, 40, 2, '#ffd23c', '#300'); }
+      tex.needsUpdate = true;
+    };
+    w.interactable({ x, y: Y('2') + 1.2, z: pz + 0.6, radius: 2.1, kind: 'arcade', game, onUse: () => w.fixtures.arcadeHandler?.(game, scr) });
+    w.fixtures.arcadeScreens.push(scr);
   }
   for (let k = 0; k < 7; k++) for (const sx of [-1, 1]) {   // mirrored about x = 36; the middle stays open for the doorway on the south wall
     const x = 36 + sx * (2.45 + 1.3 * k);
