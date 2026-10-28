@@ -33,7 +33,7 @@ export async function preloadTextures(onProgress) {
 }
 
 // Returns a (cached) material. Textures tile in world units: geometry UVs are scaled in builder.js.
-const ALIAS = { ceiling: { as: 'concrete_mid', normal: 0.2, color: 0xe6e2da }, stall_paint: { as: 'wall_green_peel', normal: 1, color: 0xffffff, boost: 1.8 } };
+const ALIAS = { ceiling: { as: 'concrete_mid', normal: 0.2, color: 0xe6e2da }, stall_paint: { as: 'wall_green_peel', normal: 1, color: 0xffffff, boost: 1.8 }, pipe_paint: { as: 'diamond_plate', normal: 0.6, color: 0xb8a58c } };
 
 export function getMaterial(key, extra = {}) {
   const ck = key + JSON.stringify(extra);

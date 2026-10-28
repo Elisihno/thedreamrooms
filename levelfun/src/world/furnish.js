@@ -2,7 +2,8 @@ import * as THREE from '../three.js';
 import { AREAS, HIDING, CAMERAS, FIXTURES, LEVEL_Y, SPIRAL, CEIL } from './layout.js';
 import { getMaterial, getBasic } from '../assets/registry.js';
 import { instanceModel, hasModel, cloneModel, modelSize } from '../assets/models.js';
-import { partySet } from './partyprops.js';
+import { partySet, instanced } from './partyprops.js';
+import { mergeGeometries } from '../../vendor/BufferGeometryUtils.js';
 
 // Furniture, props and fixtures for every room. All static pieces go through the batched box builder.
 export function furnish(w) {
@@ -47,10 +48,12 @@ export function furnish(w) {
   const picnic = (l, x, z, ry = 0) => { put('bench', l, { x, z, ry }); solid(l, x, z, ry ? 0.87 : 0.9, ry ? 0.9 : 0.87, 0.7); };
   const lamp = (l, x, z) => { put('floor_lamp', l, { x, z }); solid(l, x, z, 0.2, 0.2, 1.6); };
   const exitSign = (l, x, y, z, ry) => put('exit_sign', l, { x, z, y: Y(l) + y, ry });
-    // pipe run (the pipe model, 1.65 m sections laid end to end) between two corners of the old box footprint
+    // pipe runs: one cheap instanced pipe section (tube + two flanges, ~100 triangles), 1.65 m long, laid end to end
+  const pipeItems = new Map();
   const pipe = (l, x0, z0, x1, z1, y) => {
     const alongX = (x1 - x0) >= (z1 - z0), len = alongX ? x1 - x0 : z1 - z0, n = Math.max(1, Math.round(len / 1.65));
-    for (let i = 0; i < n; i++) put('pipe_long', l, { x: alongX ? x0 + (i + 0.5) * len / n : (x0 + x1) / 2, z: alongX ? (z0 + z1) / 2 : z0 + (i + 0.5) * len / n, y: Y(l) + y - 0.05, ry: alongX ? Math.PI / 2 : 0, sz: len / n / 1.65 });
+    const arr = pipeItems.get(l) || pipeItems.set(l, []).get(l);
+    for (let i = 0; i < n; i++) arr.push({ x: alongX ? x0 + (i + 0.5) * len / n : (x0 + x1) / 2, z: alongX ? (z0 + z1) / 2 : z0 + (i + 0.5) * len / n, y: Y(l) + y + 0.09, rz: alongX ? Math.PI / 2 : 0, rx: alongX ? 0 : Math.PI / 2, sy: len / n / 1.65 });
   };
   // wall-mounted breaker panel (model is 0.55 x 0.5 x 0.37; front = +z). cx,cz = centre of its back; face = direction it faces
   const breaker = (l, x, z, face, yBase = 1.1, s = 1.3) => {
@@ -204,6 +207,11 @@ export function furnish(w) {
   bin('1', 59, 15.2); bin('1', 37.2, 13); bin('2', 3, 11.7); bin('2', 59, 11.7); bin('1', 38.4, 25.2); bin('3', 47.3, 8.4); bin('B', 13, 7); bin('B', 47, 16);
   exitSign('1', 0.4, 2.4, 17, Math.PI / 2); exitSign('1', 11.8, 2.3, 6, -Math.PI / 2); exitSign('2', 12.2, 2.3, 8.5, Math.PI / 2); exitSign('3', 12.4, 2.3, 14, Math.PI / 2); exitSign('B', 14, 2.3, 7.8, Math.PI);
   for (const [k, arr] of place) { const [name, l] = k.split('|'); instanceModel(w.group(l), name, arr); }
+  {
+    const tube = new THREE.CylinderGeometry(0.13, 0.13, 1.65, 12, 1, true), fl = [-0.8, 0.8].map(yy => new THREE.CylinderGeometry(0.17, 0.17, 0.06, 12).translate(0, yy, 0));
+    const geo = mergeGeometries([tube, ...fl]);
+    for (const [l, items] of pipeItems) instanced(w.group(l), geo, getMaterial('pipe_paint'), items, { receive: false });
+  }
 
   // ============================== markers ==============================
   hidingSpots();

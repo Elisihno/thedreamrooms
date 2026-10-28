@@ -6,7 +6,7 @@ import { getMaterial } from './registry.js';
 // origin at bottom-centre). To upgrade a model, drop a new .glb with the same name.
 export const MODEL_NAMES = ['table', 'chair', 'cup', 'cake', 'party_hat', 'door', 'counter', 'balloons', 'arcade',
   'metal_table', 'slide', 'bench', 'trash_can', 'crate', 'exit_sign', 'fridge', 'locker', 'floor_lamp', 'table_bell', 'spiral',
-  'stall', 'toilet', 'sink', 'boiler', 'generator', 'breaker', 'winch', 'desk', 'chair_office', 'cabinet', 'pipe_long'];
+  'stall', 'toilet', 'sink', 'boiler', 'generator', 'breaker', 'winch', 'desk', 'chair_office', 'cabinet'];
 // Item models (picked up in later stages); not loaded until needed.
 export const ITEM_NAMES = ['screwdriver', 'needle', 'wire_cutters', 'key', 'whistle', 'windup_robot', 'fuse'];
 // Some downloads carry stray geometry (the arcade machine's power cord): triangles entirely behind zMin are removed.
@@ -26,6 +26,9 @@ export async function loadModels(names = MODEL_NAMES) {
         o.material.envMapIntensity = 0.4;
         if (o.material.metalness > 0.4) o.material.metalness = 0.4;
         if (o.material.roughness < 0.35) o.material.roughness = 0.35;
+        if (o.material.transmission > 0) {   // transmission makes three.js render the whole scene a second time
+          o.material.transmission = 0; o.material.transparent = true; o.material.opacity = Math.min(o.material.opacity, 0.3); o.material.depthWrite = false;
+        }
       }
     });
     gltf.scene.updateMatrixWorld(true);

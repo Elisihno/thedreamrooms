@@ -17,7 +17,7 @@ First-person survival horror (Three.js). Lives in this folder; the rest of the r
 Optimized from Sketchfab downloads (scaled to metres, origin at bottom-centre, textures shrunk to WebP,
 triangle counts cut for phones): table, chair, cup, cake, party_hat, door, counter, balloons.
 Paper plates and party hats are generated in code. See `CREDITS.md` for every model's author and licence (two are non-commercial).
-Replace any model by dropping a new .glb with the same name.
+Replace any model by dropping a new .glb with the same name. Pipes, ball-pit balls, balloons' strings, bunting and the paper plates are generated in code.
 
 ## Textures (levelfun/assets/textures)
 26 supplied textures (512 px, seams blended, normal maps generated). Source images were 1254-1312 px.
