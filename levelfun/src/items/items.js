@@ -126,6 +126,22 @@ export class ItemSystem {
     this.scene.add(it.mesh);
   }
 
+  // Test helper: lay every item out on the floor in front of the player (8 per row).
+  spawnAllInFront(player) {
+    if (this.held) this.drop();
+    const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw), rx = Math.cos(player.yaw), rz = -Math.sin(player.yaw);
+    this.items.forEach((it, i) => {
+      const col = i % 8, row = Math.floor(i / 8);
+      const d = 1.3 + row * 0.55, off = (col - 3.5) * 0.45;
+      it.x = player.pos.x + fx * d + rx * off; it.z = player.pos.z + fz * d + rz * off;
+      const f = this.world.floorAt(it.x, it.z, player.pos.y + 0.3, false);
+      it.y = Number.isFinite(f) ? f : player.pos.y;
+      if (ITEMS[it.id].reward) this.rewards[ITEMS[it.id].reward] = true;
+      this.place(it);
+    });
+    this.dirty = true; this.save();
+  }
+
   // A prize pops out of an arcade machine.
   spawnReward(game, x, y, z) {
     if (this.rewards[game]) return null;

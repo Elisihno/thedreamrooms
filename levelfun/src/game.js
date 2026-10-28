@@ -127,6 +127,7 @@ document.querySelectorAll('[data-floor]').forEach(b => b.addEventListener('click
   const id = b.dataset.floor, sp = SPOTS[id];
   startRunning(); player.teleport({ x: sp.x, z: sp.z, y: LEVEL_Y[id], yaw: sp.yaw }); setPaused(false);
 }));
+$('spawnall').addEventListener('click', () => { startRunning(); player.wakeT = 99; items.spawnAllInFront(player); setPaused(false); toast('All items laid out in front of you'); });
 $('newgame').addEventListener('click', () => { if (confirm('Start a new game? Item positions are re-rolled.')) { ItemSystem.clear(); location.reload(); } });
 addEventListener('pagehide', () => items.save());
 $('unlock').addEventListener('click', () => { startRunning(); world.passages.forEach(p => p.open()); setPaused(false); toast('All secret passages opened (test)'); });
