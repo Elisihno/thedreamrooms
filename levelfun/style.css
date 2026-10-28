@@ -3,13 +3,12 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; oversc
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); }
 
-#debug { position: fixed; left: calc(8px + env(safe-area-inset-left)); top: 6px; margin: 0; font: 11px/1.3 monospace; color: #9f9; background: rgba(0,0,0,.45); padding: 3px 6px; pointer-events: none; }
 #toast { position: fixed; left: 50%; top: 14%; transform: translateX(-50%); background: rgba(0,0,0,.6); padding: 6px 12px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
 #toast.show { opacity: 1; }
 
 /* Touch UI. --u scales every control with the screen. */
 #touch-ui { --u: clamp(40px, 10.5vmin, 74px); position: fixed; inset: 0; touch-action: none; }
-#touch-ui[hidden], #menu[hidden], #debug[hidden] { display: none; }
+#touch-ui[hidden], #menu[hidden] { display: none; }
 .tbtn { position: absolute; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(20,20,20,.45); color: #fff; font: 700 calc(var(--u) * .2)/1 system-ui, sans-serif; padding: 0; touch-action: none; }
 .tbtn.down { background: rgba(255,255,255,.4); }
 .tbtn { right: calc(var(--rx) * var(--u) - var(--s) * var(--u) / 2 + env(safe-area-inset-right)); bottom: calc(var(--by) * var(--u) - var(--s) * var(--u) / 2 + env(safe-area-inset-bottom)); width: calc(var(--s) * var(--u)); height: calc(var(--s) * var(--u)); }

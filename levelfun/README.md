@@ -4,7 +4,8 @@ First-person survival horror (Three.js). Lives in this folder; the rest of the r
 
 - Play/test: open `levelfun/` on the GitHub Pages site (e.g. `https://elisihno.github.io/thedreamrooms/levelfun/`).
 - Build stamp is shown on the start screen, so you can confirm the phone loaded the latest version.
-- Progress: **Stage 1 (foundation)**: controls, movement, collision, test room.
+- Progress: **Stage 1** foundation, **Stage 2** the whole building (4 floors, 29 rooms, stairs, doors, 6 secret passages, 21 hiding spots, 9 camera mounts).
+- `node levelfun/tools/validate_layout.mjs` checks the spec totals and that ordinary routes reach every room.
 
 ## Assets
 - Texture library: see `src/assets/manifest.js` for the 25 material keys and the file layout.
@@ -17,3 +18,7 @@ Optimized from Sketchfab downloads (scaled to metres, origin at bottom-centre, t
 triangle counts cut for phones): table, chair, cup, cake, party_hat, door, counter, balloons.
 Authors/licences still to be confirmed and credited here. Paper plates are generated in code.
 Replace any model by dropping a new .glb with the same name.
+
+## Textures (levelfun/assets/textures)
+26 supplied textures (512 px, seams blended, normal maps generated). Source images were 1254-1312 px.
+Add more by listing keys in `src/assets/manifest.js`. Arcade machine model: `assets/models/arcade.glb` (author/licence to be credited).

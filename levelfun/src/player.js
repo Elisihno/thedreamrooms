@@ -19,8 +19,8 @@ export class Player {
     camera.rotation.order = 'YXZ';
   }
 
-  teleport({ x, z, yaw = 0, crouched = false }) {
-    this.pos.set(x, this.world.floorAt(x, z), z);
+  teleport({ x, z, y = 0, yaw = 0, crouched = false }) {
+    this.pos.set(x, this.world.floorAt(x, z, y + 0.2), z);
     this.yaw = yaw; this.pitch = 0;
     this.crouched = crouched; this.input.crouch = crouched;
     this.eye = crouched ? CFG.player.eyeCrouch : CFG.player.eyeStand;
@@ -57,7 +57,7 @@ export class Player {
     this.speed = Math.hypot(this.vx, this.vz);
 
     // Smooth floor height (ramps/stairs).
-    const fy = this.world.floorAt(this.pos.x, this.pos.z);
+    const fy = this.world.floorAt(this.pos.x, this.pos.z, this.pos.y);
     this.pos.y += (fy - this.pos.y) * Math.min(1, dt * 14);
 
     // Lean (reduced when a wall is in the way).

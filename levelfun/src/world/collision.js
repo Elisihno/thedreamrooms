@@ -10,7 +10,7 @@ export class CollisionWorld {
   }
 
   add(minX, minZ, maxX, maxZ, y0, y1) {
-    const b = { minX, minZ, maxX, maxZ, y0, y1, seen: 0 };
+    const b = { minX, minZ, maxX, maxZ, y0, y1, seen: 0, enabled: true };
     this.boxes.push(b);
     for (let cx = Math.floor(minX / CELL); cx <= Math.floor(maxX / CELL); cx++) {
       for (let cz = Math.floor(minZ / CELL); cz <= Math.floor(maxZ / CELL); cz++) {
@@ -30,7 +30,7 @@ export class CollisionWorld {
       for (let cz = Math.floor((z - r) / CELL); cz <= Math.floor((z + r) / CELL); cz++) {
         const a = this.grid.get(cx + ',' + cz);
         if (!a) continue;
-        for (const b of a) if (b.seen !== s) { b.seen = s; out.push(b); }
+        for (const b of a) if (b.seen !== s) { b.seen = s; if (b.enabled !== false) out.push(b); }
       }
     }
     return out;

@@ -11,17 +11,14 @@ export function createRenderer(canvas, quality) {
 }
 
 // Applies a quality preset. Antialiasing and texture detail take effect on next launch.
-export function applyQuality(renderer, quality, world) {
+export function applyQuality(renderer, quality, pool, world) {
   const q = CFG.quality[quality];
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q.pixelRatio));
   renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = q.shadows;
-  world.lights.forEach((l, i) => {
-    l.visible = i < q.maxLights;
-    const sh = q.shadows && l.userData.shadowCapable;
-    l.castShadow = sh;
-    if (sh) { l.shadow.mapSize.set(512, 512); l.shadow.bias = -0.002; l.shadow.camera.near = 0.2; l.shadow.camera.far = l.distance; }
-  });
+  pool.setCount(q.maxLights);
+  pool.setShadows(q.shadows ? 2 : 0);
+  if (world) for (const m of world.optional) m.visible = quality !== 'low';
   allMaterials().forEach(m => { m.needsUpdate = true; });
 }
 

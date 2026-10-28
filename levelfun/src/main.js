@@ -4,9 +4,11 @@ import { loadSettings, saveSettings } from './core/settings.js';
 import { Input } from './core/input.js';
 import { initTouch } from './core/touch.js';
 import { createRenderer, applyQuality, resize } from './core/renderer.js';
-import { configureAssets } from './assets/registry.js';
-import { buildTestRoom } from './world/testroom.js';
-import { loadModels } from './assets/models.js';
+import { configureAssets, preloadTextures } from './assets/registry.js';
+import { buildBuilding } from './world/building.js';
+import { LightPool } from './world/lightpool.js';
+import { START, LEVEL_Y, LEVELS, LEVEL_NAME } from './world/layout.js';
+import { loadModels, screenMaterials } from './assets/models.js';
 import { Player } from './player.js';
 
 const $ = id => document.getElementById(id);
@@ -23,15 +25,25 @@ const camera = new THREE.PerspectiveCamera(settings.fov, innerWidth / innerHeigh
 scene.add(camera);
 
 $('primary').textContent = 'LOADING…';
-try { await loadModels(); } catch (e) { $('primary').textContent = 'Model load failed'; throw e; }
-const world = buildTestRoom(scene);
+try {
+  await Promise.all([loadModels(), preloadTextures(p => { $('primary').textContent = 'LOADING ' + Math.round(p * 100) + '%'; })]);
+} catch (e) { $('primary').textContent = 'Load failed'; throw e; }
+$('primary').textContent = 'BUILDING…';
+await new Promise(r => setTimeout(r, 30));   // let the label paint before the (synchronous) build
+scene.background = new THREE.Color(0x0b0a0c);
+scene.fog = new THREE.FogExp2(0x0b0a0c, 0.02);
+const ambient = new THREE.HemisphereLight(0x8a8aa6, 0x3a2e24, 1.1);
+scene.add(ambient);
+const world = buildBuilding(scene);
+const pool = new LightPool(scene, world.lightDefs, 8);
 const input = new Input(settings);
 input.canvas = canvas;
 const player = new Player(camera, world, input);
-player.teleport(world.start);
+const startPos = { x: START.x, z: START.z, y: LEVEL_Y[START.level], yaw: START.yaw, crouched: true };
+player.teleport(startPos);
 const releaseTouch = initTouch(input, $('touch-ui'), settings);
 
-applyQuality(renderer, settings.quality, world);
+applyQuality(renderer, settings.quality, pool, world);
 resize(renderer, camera);
 addEventListener('resize', () => resize(renderer, camera));
 
@@ -50,8 +62,6 @@ function syncMenu() {
   document.querySelectorAll('[data-setting]').forEach(b => b.classList.toggle('on', String(settings[b.dataset.setting]) === b.dataset.value));
   $('sens').value = settings.sensitivity; $('sensv').textContent = settings.sensitivity.toFixed(2);
   $('fov').value = settings.fov; $('fovv').textContent = settings.fov;
-  $('debug-on').checked = settings.debug;
-  $('debug').hidden = !settings.debug || paused;
 }
 
 function setPaused(p) {
@@ -87,20 +97,37 @@ $('primary').addEventListener('click', () => {
   if (first) startWake();
 });
 $('fs').addEventListener('click', enterFullscreen);
-$('respawn').addEventListener('click', () => { player.teleport(world.start); setPaused(false); startWake(); });
+const SPOTS = { B: { x: 24, z: 4, yaw: -Math.PI / 2 }, 1: { x: 24, z: 8, yaw: -Math.PI / 2 }, 2: { x: 30, z: 11.5, yaw: -Math.PI / 2 }, 3: { x: 24, z: 8, yaw: -Math.PI / 2 } };
+document.querySelectorAll('[data-floor]').forEach(b => b.addEventListener('click', () => {
+  const id = b.dataset.floor, sp = SPOTS[id];
+  player.teleport({ x: sp.x, z: sp.z, y: LEVEL_Y[id], yaw: sp.yaw }); setPaused(false);
+}));
+$('unlock').addEventListener('click', () => { world.passages.forEach(p => p.open()); setPaused(false); toast('All secret passages opened (test)'); });
+$('respawn').addEventListener('click', () => { player.teleport(startPos); setPaused(false); startWake(); });
 
 document.querySelectorAll('[data-setting]').forEach(b => b.addEventListener('click', () => {
   const k = b.dataset.setting, v = b.dataset.value;
   settings[k] = k === 'quality' || k === 'crouchMode' ? v : Number(v);
-  if (k === 'quality') applyQuality(renderer, settings.quality, world);
+  if (k === 'quality') applyQuality(renderer, settings.quality, pool, world);
   saveSettings(settings); syncMenu();
 }));
 $('sens').addEventListener('input', e => { settings.sensitivity = Number(e.target.value); saveSettings(settings); syncMenu(); });
 $('fov').addEventListener('input', e => { settings.fov = Number(e.target.value); camera.fov = settings.fov; camera.updateProjectionMatrix(); saveSettings(settings); syncMenu(); });
-$('debug-on').addEventListener('change', e => { settings.debug = e.target.checked; saveSettings(settings); syncMenu(); });
 
 input.on('pause', () => { if (running && !paused) setPaused(true); });
-input.on('interact', () => toast('Interact (Stage 3)'));
+input.on('interact', () => {
+  // nearest interactable the player is looking at (doors, secret hatches)
+  const eye = camera.position, dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  let best = null, bestScore = 0.45;
+  for (const it of world.interactables) {
+    const dx = it.x - eye.x, dy = it.y - eye.y, dz = it.z - eye.z, d = Math.hypot(dx, dy, dz);
+    if (d > it.radius || Math.abs(dy) > 2.6) continue;
+    const dot = (dx * dir.x + dy * dir.y + dz * dir.z) / Math.max(d, 0.001);
+    const score = dot - d * 0.08;
+    if (dot > 0.35 && score > bestScore) { best = it; bestScore = score; }
+  }
+  if (best) { best.onUse(); if (best.kind === 'hatch') toast('Secret passage opened'); } else toast('Nothing to use here');
+});
 input.on('throw', () => toast('Throw (Stage 3)'));
 input.on('drop', () => toast('Drop (Stage 3)'));
 input.on('zapper', () => toast('Party Zapper (Stage 5)'));
@@ -115,8 +142,7 @@ const portrait = matchMedia('(orientation: portrait)');
 portrait.addEventListener?.('change', () => { if (portrait.matches && isTouch && running && !paused) setPaused(true); });
 
 // ---- Loop ----
-const dbg = $('debug');
-let last = performance.now(), fpsT = 0, frames = 0, fps = 0;
+let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000);
@@ -124,15 +150,12 @@ function frame(now) {
   if (!paused) {
     player.update(dt);
     world.update(dt);
-    frames++; fpsT += dt;
-    if (fpsT >= 0.5) {
-      fps = Math.round(frames / fpsT); frames = 0; fpsT = 0;
-      if (settings.debug) {
-        const p = player.pos, i = renderer.info.render;
-        dbg.textContent = `${fps} fps  ${settings.quality}  calls ${i.calls}  tris ${i.triangles}\n` +
-          `x ${p.x.toFixed(1)} y ${p.y.toFixed(2)} z ${p.z.toFixed(1)}  ${player.crouched ? 'crouch' : 'stand'}  lean ${player.lean.toFixed(2)}`;
-      }
-    }
+    world.updateVisibility(player.pos.x, player.pos.y);
+    pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
+    const tt = now / 1000;
+    screenMaterials.forEach((m, i) => { m.emissiveIntensity = 0.75 + 0.25 * Math.sin(tt * 3 + i); });
+    const dark = player.pos.y > 6 || player.pos.y < -2;
+    ambient.intensity += ((dark ? 0.6 : 1.1) - ambient.intensity) * Math.min(1, dt * 2);
   }
   renderer.render(scene, camera);
 }
@@ -140,4 +163,4 @@ setPaused(true);
 requestAnimationFrame(frame);
 
 // Test hook for automated checks.
-window.LF = { player, world, input, settings, renderer, scene, setPaused };
+window.LF = { player, world, input, settings, renderer, scene, setPaused, pool, camera };

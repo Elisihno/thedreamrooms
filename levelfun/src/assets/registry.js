@@ -1,5 +1,5 @@
 import * as THREE from '../three.js';
-import { AVAILABLE_TEXTURES, PROCEDURAL } from './manifest.js';
+import { AVAILABLE_TEXTURES, PROCEDURAL, SURFACE } from './manifest.js';
 import { proceduralCanvas } from './procedural.js';
 
 const cache = new Map();
@@ -15,22 +15,53 @@ function prep(tex, srgb) {
   return tex;
 }
 
-// Returns a (cached) material. Textures tile in world units: geometry UVs are scaled in
-// builder.js, so one material serves every surface size.
+const loaded = new Map();   // key -> { map, normalMap }
+
+function loadImage(url, srgb) {
+  return new Promise(res => loader.load(url, t => res(prep(t, srgb)), undefined, () => res(null)));
+}
+
+// Loads every texture image once, before the world is built.
+export async function preloadTextures(onProgress) {
+  let done = 0;
+  await Promise.all(AVAILABLE_TEXTURES.map(async key => {
+    const base = new URL(`../../assets/textures/${key}/`, import.meta.url).href;
+    const [map, normalMap] = await Promise.all([loadImage(base + 'color.jpg', true), loadImage(base + 'normal.jpg', false)]);
+    if (map) loaded.set(key, { map, normalMap });
+    onProgress?.(++done / AVAILABLE_TEXTURES.length);
+  }));
+}
+
+// Returns a (cached) material. Textures tile in world units: geometry UVs are scaled in builder.js.
+const ALIAS = { ceiling: { as: 'concrete_mid', normal: 0.2, color: 0xe6e2da } };
+
 export function getMaterial(key, extra = {}) {
   const ck = key + JSON.stringify(extra);
   if (cache.has(ck)) return cache.get(ck);
+  const alias = ALIAS[key];
+  if (alias) {
+    const base = getMaterial(alias.as, extra);
+    const m = base.clone(); m.normalScale.set(alias.normal, alias.normal); m.color.setHex(alias.color);
+    cache.set(ck, m); return m;
+  }
   const spec = PROCEDURAL[key] || { style: 'concrete', base: '#777' };
-  const mat = new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: spec.style === 'metal' ? 0.35 : 0, ...extra });
-  if (AVAILABLE_TEXTURES.includes(key)) {
-    const base = `assets/textures/${key}/`;
-    const set = (prop, file, srgb) => loader.load(new URL(`../../${base}${file}`, import.meta.url).href, t => { mat[prop] = prep(t, srgb); mat.needsUpdate = true; });
-    set('map', 'color.jpg', true); set('normalMap', 'normal.jpg', false); set('roughnessMap', 'rough.jpg', false);
+  const [rough, metal] = SURFACE[key] || [0.9, spec.style === 'metal' ? 0.3 : 0];
+  const mat = new THREE.MeshStandardMaterial({ roughness: rough, metalness: metal, ...extra });
+  const tex = loaded.get(key);
+  if (tex) {
+    mat.map = tex.map;
+    if (tex.normalMap) { mat.normalMap = tex.normalMap; mat.normalScale.set(1, 1); }
   } else {
     mat.map = prep(new THREE.CanvasTexture(proceduralCanvas(key, spec, opts.texSize)), true);
   }
   cache.set(ck, mat);
   return mat;
+}
+
+const basic = new Map();
+export function getBasic(color) {
+  if (!basic.has(color)) basic.set(color, new THREE.MeshBasicMaterial({ color }));
+  return basic.get(color);
 }
 
 export function allMaterials() { return [...cache.values()]; }
