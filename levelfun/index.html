@@ -21,6 +21,8 @@
   <button class="tbtn leanbtn lean-r" data-act="leanR" aria-label="Lean right"></button>
   <button class="tbtn pause" data-act="pause">&#10074;&#10074;</button>
   <button id="crouchfig" class="tbtn icon crouchfig" data-act="crouch" aria-label="Crouch"><i></i></button>
+  <button id="usebtn" class="tbtn use" data-act="use" hidden>USE</button>
+  <button id="zapbtn" class="tbtn zap" data-act="zapper" hidden>ZAP</button>
   <button id="throwbtn" class="tbtn throw" data-act="throw" hidden>THROW</button>
   <button id="dropbtn" class="tbtn drop" data-act="drop" hidden>DROP</button>
   <button id="hand" class="tbtn icon hand" data-act="interact" aria-label="Open" hidden><i></i></button>
@@ -50,6 +52,14 @@
 </div>
 
 <div id="arcade" hidden><canvas id="acv" width="320" height="180"></canvas><p id="amsg">LOADING GAME…</p><button id="aquit">&times; EXIT</button></div>
+
+<div id="note" hidden><div class="paper"><h2 id="notet"></h2><pre id="noteb"></pre><button id="noteclose">CLOSE</button></div></div>
+<div id="keypad" hidden><div class="kp"><div id="kpscreen">----</div><div class="kpgrid">
+  <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+  <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="C">C</button><button data-k="0">0</button><button data-k="OK">OK</button></div>
+  <button id="kpclose">&times; CLOSE</button></div></div>
+<div id="ending" hidden><div class="endbox"><h1 id="endt"></h1><p id="endp"></p><button id="endbtn" class="big">PLAY AGAIN</button></div></div>
+<div id="flash"></div>
 
 <div id="rotate"><div>Rotate your device<br>to landscape</div></div>
 

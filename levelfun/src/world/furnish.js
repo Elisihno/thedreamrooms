@@ -69,7 +69,7 @@ export function furnish(w) {
   const officeChair = (l, x, z, ry = 0) => { put('chair_office', l, { x, z, ry }); solid(l, x, z, 0.28, 0.28, 0.9); };
   const winch = (l, x, z, ry = 0) => { put('winch', l, { x, z, ry }); const r = Math.abs(Math.sin(ry)) > 0.5; solid(l, x, z, r ? 0.95 : 0.85, r ? 0.85 : 0.95, 0.96); };
   const screen = (l, x, y, z, w2, h2, d2, color) => w.box({ level: l, x, y: Y(l) + y, z, w: w2, h: h2, d: d2, mat: color, basic: true, collide: false, cast: false, receive: false });
-  const bunch = (l, x, z, s = 1) => instanceModel(w.group(l), 'balloons', [{ x, y: Y(l), z, ry: x * 3.1, s }]);
+  const bunch = (l, x, z, s = 1) => { const ms = instanceModel(w.group(l), 'balloons', [{ x, y: Y(l), z, ry: x * 3.1, s }]); w.balloons.push({ key: `${l}:fbunch:${Math.round(x * 10)}:${Math.round(z * 10)}`, meshes: ms, index: 0, x, y: Y(l) + 1.0 * s, z, r: 0.55 * s, popped: false }); return ms; };
   const couch = (l, x0, z0, x1, z1) => {
     const alongX = (x1 - x0) >= (z1 - z0), len = alongX ? x1 - x0 : z1 - z0, n = Math.max(1, Math.round(len / 2)), ry = facing(l, x0, z0, x1, z1);
     for (let i = 0; i < n; i++) {
@@ -113,6 +113,7 @@ export function furnish(w) {
   // Party Preparation Room: assembly bench, hiding bench, shelves, boxes
   metalTable('1', 55, 0.8); metalTable('1', 56.9, 0.8);
   metalTable('1', 51, 9.6);
+  locker('1', 50.5, 0.35, 'S', 1);   // the Party Room Key opens this storage compartment
   shelf('1', 58.8, 3, 59.8, 10.5, 'wood'); shelf('1', 48.2, 2, 49.2, 7, 'wood');
   crate('1', 55.5, 5, 0.9); crate('1', 56.5, 5.4, 0.7); bunch('1', 51, 4, 0.9);
   // corridors
@@ -213,6 +214,7 @@ export function furnish(w) {
   for (const [x, z] of [[38, 11.5], [39.2, 11.5], [38.6, 14], [41, 16.5], [43.5, 11.2]]) { crate('3', x, z, 1.0); }
   crate('3', 38.6, 11.5, 0.9, 1.0); locker('3', 38.2, 18.6, 'N', 3);
   // Maintenance Office: workbench + elevator door + parts
+  locker('3', 49.6, 4.35, 'S', 1);   // the Maintenance Key opens this compartment
   metalTable('3', 51.5, 6.2); metalTable('3', 53.4, 6.2); breaker('3', 56, 4.1, 'S'); breaker('3', 57.8, 4.1, 'S');
   shelf('3', 49, 11, 54, 11.9, 'tile_metal');
   elevator();
@@ -262,10 +264,11 @@ export function furnish(w) {
   function exitFixtures() {
     const l = '1', y = Y(l);
     w.fixtures.exitDoor = { level: l, x: 0.15, z: 17 };
+    w.fixtures.exitDoors = [];
     for (const z of [16.2, 17.8]) {
-      if (hasModel('door')) { const d = doubleSidedModel('door', 1.2 / 1.04, 1.05, 0.133); d.rotation.y = Math.PI / 2; d.position.set(0.12, y, z); w.group(l).add(d); }
+      if (hasModel('door')) { const d = doubleSidedModel('door', 1.2 / 1.04, 1.05, 0.133); d.rotation.y = Math.PI / 2; d.position.set(0.12, y, z); w.group(l).add(d); d.userData.z0 = z; w.fixtures.exitDoors.push(d); }
     }
-    w.collision.add(0, 15.4, 0.3, 18.6, y, y + 2.3);
+    w.fixtures.exitBox = w.collision.add(0, 15.4, 0.3, 18.6, y, y + 2.3);
     bx(l, 0.3, 14.5, 2.5, 19.5, 0.02, 'hazard_stripes', 0, deco);
     // the four mechanisms beside the door (west wall, facing into the room)
     const panel = (name, id, z, yBase, s, ry, hx, hz, h, yOff = 0) => {
@@ -281,8 +284,9 @@ export function furnish(w) {
   function elevator() {
     const l = '3', y = Y(l);
     w.fixtures.elevator = { level: l, x: 59.9, z: 11 };
-    for (const z of [10.35, 11.65]) { const d = doubleSidedModel('door', 1.3 / 1.04, 1.07, 0.133); d.rotation.y = -Math.PI / 2; d.position.set(59.75, y, z); w.group(l).add(d); }
-    w.collision.add(59.2, 9.55, 60, 12.45, y, y + 2.5);
+    w.fixtures.elevDoors = [];
+    for (const z of [10.35, 11.65]) { const d = doubleSidedModel('door', 1.3 / 1.04, 1.07, 0.133); d.rotation.y = -Math.PI / 2; d.position.set(59.75, y, z); w.group(l).add(d); d.userData.z0 = z; w.fixtures.elevDoors.push(d); }
+    w.fixtures.elevBox = w.collision.add(59.2, 9.55, 60, 12.45, y, y + 2.5);
   }
   function playground() {
     const l = '2', y = Y(l);

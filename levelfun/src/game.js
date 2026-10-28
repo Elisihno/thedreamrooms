@@ -12,6 +12,8 @@ import { loadModels, screenMaterials } from './assets/models.js';
 import { Player } from './player.js';
 import { playGame, GAMES } from './arcade/games.js';
 import { ItemSystem } from './items/items.js';
+import { UseSystem } from './items/uses.js';
+import { initAudio } from './audio/sfx.js';
 
 const $ = id => document.getElementById(id);
 const settings = loadSettings();
@@ -64,6 +66,9 @@ const startPos = { x: START.x, z: START.z, y: LEVEL_Y[START.level], yaw: START.y
 player.teleport(startPos);
 const items = new ItemSystem(scene, camera, world);
 items.init(ItemSystem.load());   // continue a saved game, or scatter the items for a new one
+const uses = new UseSystem({ items, world, player, camera, scene, ui: { toast: m => toast(m), note: d => showNote(d), keypad: (c, cb) => showKeypad(c, cb), ending: k => showEnding(k), flash: () => doFlash() } });
+uses.restore(items.loadedExtra);
+addEventListener('pointerdown', initAudio, { once: true });
 const releaseTouch = initTouch(input, $('touch-ui'), settings);
 
 applyQuality(renderer, settings.quality, pool, world);
@@ -114,8 +119,9 @@ async function enterFullscreen() {
 }
 
 // Any way of leaving the start menu counts as starting the game (floor jumps, passage unlock, respawn).
-function startRunning() { if (!running) { running = true; if (isTouch) enterFullscreen(); } }
+function startRunning() { initAudio(); if (!running) { running = true; if (isTouch) enterFullscreen(); } }
 $('primary').addEventListener('click', () => {
+  initAudio();
   const first = !running;
   if (first) { running = true; if (isTouch) enterFullscreen(); }
   setPaused(false);
@@ -143,6 +149,8 @@ const _dir = new THREE.Vector3();
 function findTarget() {
   const it = items.target();
   if (it) return { kind: 'item', item: it, onUse: () => items.pickUp(it) };
+  const st = uses.stationTarget(items.heldId());   // the keypad, or a machine that takes what you hold
+  if (st) return { kind: 'station', station: st, onUse: () => uses.useStation(st) };
   const eye = camera.position; camera.getWorldDirection(_dir);
   let best = null, bestScore = 0.45;
   for (const it of world.interactables) {
@@ -157,11 +165,41 @@ function findTarget() {
 input.on('interact', () => {
   const best = findTarget();
   if (best) {
-    try { best.onUse(); } catch (e) { toast('Error: ' + (e && e.message || e)); throw e; }
-    if (best.kind === 'hatch') toast('Secret passage opened');
-    else if (best.kind === 'arcade') toast('Loading ' + GAMES[best.game].title + '…');
-  } else toast('Nothing to use here');
+    try { best.onUse(items.heldId()); } catch (e) { toast('Error: ' + (e && e.message || e)); throw e; }
+    if (best.kind === 'arcade') toast('Loading ' + GAMES[best.game].title + '…');
+  } else if (items.held && uses.canUse()) uses.useHeld();
 });
+input.on('use', () => { if (!modal) uses.useHeld(); });
+// ---- Overlays: notes, the keypad, endings ----
+let modal = null;
+function enterModal(id) { if (modal) return false; setPaused(true); $('menu').hidden = true; $(id).hidden = false; modal = id; return true; }
+function leaveModal() { if (!modal) return; $(modal).hidden = true; modal = null; setPaused(false); }
+function showNote(d) { if (!enterModal('note')) return; $('notet').textContent = d.title; $('noteb').textContent = d.body; $('noteb').classList.toggle('bignum', !!d.big); }
+$('noteclose').addEventListener('click', leaveModal);
+let kpCb = null, kpCode = '', kpBuf = '';
+function kpDraw(t) { $('kpscreen').textContent = t ?? (kpBuf.padEnd(4, '-')); }
+function showKeypad(code, cb) { if (!enterModal('keypad')) return; kpCode = code; kpCb = cb; kpBuf = ''; kpDraw(); }
+document.querySelectorAll('#keypad [data-k]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.k;
+  if (k === 'C') kpBuf = ''; else if (k === 'OK') {
+    const ok = kpBuf === kpCode; kpCb && kpCb(ok);
+    if (ok) { kpDraw('OPEN'); setTimeout(leaveModal, 700); return; }
+    kpDraw('ERR '); kpBuf = ''; setTimeout(() => kpDraw(), 600); return;
+  } else if (kpBuf.length < 4) kpBuf += k;
+  kpDraw();
+}));
+$('kpclose').addEventListener('click', leaveModal);
+addEventListener('keydown', e => { if (modal && modal !== 'ending' && e.code === 'Escape') leaveModal(); });
+function showEnding(kind) {
+  items.save(); if (!enterModal('ending')) return;
+  const E = $('ending'); E.className = kind;
+  $('endt').textContent = kind === 'exit' ? 'YOU ESCAPED LEVEL FUN' : 'YOU ESCAPED';
+  $('endp').textContent = kind === 'exit'
+    ? 'The emergency door opens onto a yellow hallway of buzzing lights and damp carpet. You have left Level Fun... but not the Backrooms.'
+    : 'The service elevator groans open onto warm daylight. Real grass, real sky. You made it out.';
+}
+$('endbtn').addEventListener('click', () => { ItemSystem.clear(); location.reload(); });
+function doFlash() { const f = $('flash'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 70); }
 
 // ---- Arcade minigames: a full-screen pixel overlay; the world is frozen while it is open ----
 let arcadeStop = null;
@@ -191,7 +229,7 @@ $('aquit').addEventListener('click', closeArcade);
 world.fixtures.arcadeHandler = openArcade;
 input.on('throw', () => items.throwHeld());
 input.on('drop', () => items.drop());
-input.on('zapper', () => toast('Party Zapper (Stage 5)'));
+input.on('zapper', () => uses.fireZapper());
 $('touch-ui').addEventListener('click', () => {});
 
 // Desktop: click the game to (re)capture the mouse; losing the lock (Esc) pauses.
@@ -212,7 +250,8 @@ function frame(now) {
     player.update(dt);
     world.update(dt);
     items.update(dt, player);
-    if (isTouch) { const h = !!items.held; $('throwbtn').hidden = !h; $('dropbtn').hidden = !h; }
+    uses.update(dt);
+    if (isTouch) { const h = !!items.held; $('throwbtn').hidden = !h; $('dropbtn').hidden = !h; $('usebtn').hidden = !uses.canUse(); $('zapbtn').hidden = !(h && items.held.id === 'zapper'); }
     world.updateVisibility(player.pos.x, player.pos.y);
     pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
     if (isTouch) {   // context buttons: the hand shows only when something can be opened, the circle only for items
@@ -234,4 +273,4 @@ setLoad(1, 'Ready'); $('loadbar').classList.add('done'); $('loadmsg').classList.
 requestAnimationFrame(frame);
 
 // Test hook for automated checks.
-window.LF = { items, rewards, openArcade, player, world, input, settings, renderer, scene, setPaused, pool, camera };
+window.LF = { uses, items, rewards, openArcade, player, world, input, settings, renderer, scene, setPaused, pool, camera };

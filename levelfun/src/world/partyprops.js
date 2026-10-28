@@ -112,10 +112,14 @@ export function partySet(w, level, { tables, bounds, avoid = [], ceilingBalloons
   const bunches = [];
   for (const t of tables) for (const sx of [-1, 1]) { const x = t.x + sx * (1.1 * (t.len ?? 1.5) + 0.9), z = t.z; if (x > x0 + 0.8 && x < x1 - 0.8 && !hit(x, z)) bunches.push({ x, y: y0, z, ry: r() * 6.28 }); }
   for (const [bx, bz] of [[x0 + 0.8, z0 + 0.8], [x0 + 0.8, z1 - 0.8], [x1 - 0.8, z0 + 0.8], [x1 - 0.8, z1 - 0.8]]) if (!hit(bx, bz, 1.2)) bunches.push({ x: bx, y: y0, z: bz, ry: r() * 6.28, s: 1.1 });
-  instanceModel(parent, 'balloons', bunches);
+  const bm = instanceModel(parent, 'balloons', bunches);
+  bunches.forEach((b, i) => w.balloons.push({ key: `${level}:bunch:${Math.round(b.x * 10)}:${Math.round(b.z * 10)}`, meshes: bm, index: i, x: b.x, y: b.y + 1.0, z: b.z, r: 0.55, popped: false }));
   const bal = [];
   for (let i = 0; i < ceilingBalloons; i++) bal.push({ x: x0 + 0.5 + r() * (x1 - x0 - 1), y: y0 + 2.6 + r() * 0.2, z: z0 + 0.5 + r() * (z1 - z0 - 1), sy: 1.18, color: PARTY[Math.floor(r() * PARTY.length)] });
-  if (bal.length) instanced(parent, new THREE.SphereGeometry(0.25, 12, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22, metalness: 0.05 }), bal, { optional: w.optional });
+  if (bal.length) {
+    const cm = instanced(parent, new THREE.SphereGeometry(0.25, 12, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22, metalness: 0.05 }), bal, { optional: w.optional });
+    bal.forEach((b, i) => w.balloons.push({ key: `${level}:ceil:${Math.round(b.x * 10)}:${Math.round(b.z * 10)}`, meshes: [cm], index: i, x: b.x, y: b.y, z: b.z, r: 0.32, popped: false, color: b.color }));
+  }
 
   // confetti
   const conf = [];

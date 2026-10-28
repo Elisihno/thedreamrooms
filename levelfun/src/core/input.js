@@ -57,6 +57,7 @@ export class Input {
       switch (e.code) {
         case 'KeyE': this.emit('interact'); break;
         case 'KeyG': this.emit('drop'); break;
+        case 'KeyU': this.emit('use'); break;
         case 'KeyF': this.emit('zapper'); break;
         case 'KeyC': case 'ControlLeft': case 'ControlRight':
           if (this.settings.crouchMode === 'hold') this.crouch = true; else this.toggleCrouch();

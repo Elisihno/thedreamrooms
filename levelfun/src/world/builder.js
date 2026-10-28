@@ -58,6 +58,7 @@ export class World {
     this.passages = [];
     this.optional = [];     // decorative meshes hidden on Low graphics
     this.fixtures = {};
+    this.balloons = [];   // poppable balloons: { key, meshes[], index, x, y, z, r, popped }
     this.ranges = {};   // group id -> [minY, maxY] of player feet for which the group is drawn
     for (const id of LEVELS) {
       const g = new THREE.Group(); g.name = 'level-' + id; this.levels[id] = g; scene.add(g);

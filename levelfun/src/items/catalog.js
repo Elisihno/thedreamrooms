@@ -1,6 +1,13 @@
 import * as THREE from '../three.js';
 import { cloneModel, hasModel } from '../assets/models.js';
 
+// Text shown when a note is read (USE while holding it).
+export const READ = {
+  exit_code_note: ctx => ({ title: 'EXIT CODE', body: ctx.exitCode, big: true }),
+  invitation: () => ({ title: 'YOU ARE INVITED', body: 'THE REAL PARTY IS\nUNDER THE BALL PIT\n\nCOME ALONE' }),
+  passage_diagram: () => ({ title: 'PASSAGE DIAGRAM', body: 'INDOOR PLAYGROUND\nSOUTH-EAST CORNER\nSTRIPED FLOOR PANEL\n\nCRAWL EAST UNDER THE FLOOR\nTO THE SUPPLY CLOSET' }),
+};
+
 // Every item in the game. Items are built at real-world scale with their origin at the bottom centre.
 //  main: one of the 12 main escape-puzzle categories (the rest are utility/access items)
 //  where: rooms (area ids) the random placement may use; reward: won at an arcade game instead of being scattered
@@ -21,7 +28,8 @@ export const ITEMS = {
   zap_a:           { name: 'Party Zapper Grip', main: 1, build: 'zapGrip', size: 0.2, where: ['reception', 'partya', 'partyb'], loud: 0.3 },
   zap_b:           { name: 'Party Zapper Coil', main: 1, build: 'zapCoil', size: 0.16, where: ['kitchen', 'prep', 'supply'], loud: 0.3 },
   zap_c:           { name: 'Party Zapper Emitter', main: 1, build: 'zapEmitter', size: 0.2, where: ['storage3', 'archives', 'celeb'], loud: 0.3 },
-  battery:         { name: 'Battery', build: 'battery', size: 0.09, count: 3, where: ['bath', 'security', 'storage2', 'service', 'electrical', 'supply'], loud: 0.1 },
+  zapper:          { name: 'Party Zapper', build: 'zapper', size: 0.3, hidden: true, loud: 0.3 },
+  battery:         { name: 'Battery', build: 'battery', size: 0.09, count: 3, compartment: ['party', 'maint'], where: ['bath', 'security', 'storage2', 'service', 'electrical', 'supply'], loud: 0.1 },
   // ---- additional items ----
   needle:          { name: 'Balloon Popper', build: 'glb:needle', size: 0.2, where: ['dining', 'hall', 'partya', 'partyb'], loud: 0.1 },
   turning_handle:  { name: 'Turning Handle', build: 'turningHandle', size: 0.22, where: ['prep', 'kitchen', 'reception', 'supply'], loud: 0.4 },
@@ -58,7 +66,7 @@ const BUILDERS = {
   key: o => glb('key', o),
   codeNote: (o, ctx) => sheet(paper([['EXIT CODE', 24, 70], [String(ctx.exitCode), 64, 140]]), 0.16, 0.12),
   invitation: () => { const g = sheet(paper([['YOU ARE INVITED', 22, 52], ['THE REAL PARTY IS', 17, 100], ['UNDER THE BALL PIT', 20, 130], ['COME ALONE', 17, 170]], 256, 192, '#ffd3e6', '#7a1f4d'), 0.18, 0.135); return g; },
-  diagram: () => sheet(paper([['PASSAGE', 22, 40], ['DINING ROOM  <->  BALL PIT', 13, 82], ['HATCH BELOW THE NORTH WALL', 12, 112], ['LOOK FOR STRIPES', 14, 150]], 256, 192, '#cfe1ef', '#16324a'), 0.2, 0.15),
+  diagram: () => sheet(paper([['PASSAGE', 22, 40], ['PLAYGROUND SE CORNER', 14, 82], ['STRIPED FLOOR PANEL', 14, 112], ['CRAWL EAST', 18, 150]], 256, 192, '#cfe1ef', '#16324a'), 0.2, 0.15),
   token: () => { const g = new THREE.Group(); const gold = mat(0xf2c230, { metalness: 0.7, roughness: 0.3 }); g.add(cyl(0.03, 0.008, gold, 0, 0.004, 0, 24)); g.add(cyl(0.02, 0.01, mat(0xc99a1a, { metalness: 0.7, roughness: 0.4 }), 0, 0.005, 0, 24)); return g; },
   motor: () => { const g = new THREE.Group(); const grey = mat(0x6b7078, { metalness: 0.5, roughness: 0.5 }), cu = mat(0xb06a3a, { metalness: 0.6, roughness: 0.4 });
     const body = cyl(0.07, 0.2, grey, 0, 0.09, 0); body.rotation.z = Math.PI / 2; g.add(body);
@@ -77,6 +85,11 @@ const BUILDERS = {
     for (let i = 0; i < 7; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 8, 18), cu); t.rotation.x = Math.PI / 2; t.position.y = 0.02 + i * 0.02; g.add(t); } return g; },
   zapEmitter: () => { const g = new THREE.Group(); g.add(cyl(0.025, 0.1, mat(0x3b7ddd), 0, 0.05, 0)); const cone = mesh(new THREE.ConeGeometry(0.05, 0.1, 14), mat(0xffd23c, { emissive: 0x553300 }), 0, 0.15, 0); g.add(cone);
     g.add(ball(0.022, mat(0xff4fd8, { emissive: 0x802070 }), 0, 0.21, 0)); return g; },
+  zapper: () => { const g = new THREE.Group(); const pink = mat(0xff5fa8), blue = mat(0x3b7ddd), cu = mat(0xc27a3c, { metalness: 0.7, roughness: 0.35 });
+    g.add(box(0.05, 0.14, 0.07, pink, 0, 0.07, 0)); g.add(box(0.04, 0.05, 0.2, mat(0xffffff), 0, 0.165, 0.03));
+    for (let i = 0; i < 4; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.01, 8, 16), cu); t.position.set(0, 0.165, 0.14 + i * 0.025); g.add(t); }
+    const cone = mesh(new THREE.ConeGeometry(0.045, 0.09, 14), mat(0xffd23c, { emissive: 0x553300 }), 0, 0.165, 0.27); cone.rotation.x = Math.PI / 2; g.add(cone);
+    g.add(ball(0.02, mat(0xff4fd8, { emissive: 0x802070 }), 0, 0.165, 0.33)); g.add(cyl(0.015, 0.05, blue, 0, 0.19, -0.04)); return g; },
   battery: () => { const g = new THREE.Group(); g.add(cyl(0.025, 0.09, mat(0xf1c40f), 0, 0.045, 0)); g.add(cyl(0.025, 0.03, mat(0x222222), 0, 0.075, 0)); g.add(cyl(0.01, 0.01, mat(0xcccccc, { metalness: 0.8 }), 0, 0.095, 0)); return g; },
   turningHandle: () => { const g = new THREE.Group(); const brass = mat(0xb59a4a, { metalness: 0.6, roughness: 0.4 });
     g.add(cyl(0.015, 0.1, brass, 0, 0.05, 0)); const bar = cyl(0.013, 0.2, brass, 0, 0.11, 0); bar.rotation.z = Math.PI / 2; g.add(bar);

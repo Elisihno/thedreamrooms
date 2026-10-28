@@ -2,7 +2,7 @@ import * as THREE from '../three.js';
 import { AREAS, LEVEL_Y, OPENINGS, SPIRAL } from '../world/layout.js';
 import { ITEMS, buildItem } from './catalog.js';
 
-const SAVE_KEY = 'levelfun.save.v1';
+const SAVE_KEY = 'levelfun.save.v2';
 const G = 9.8;
 const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 
@@ -23,12 +23,15 @@ export class ItemSystem {
 
   // ---------- save / load ----------
   static load() {
-    try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) return s; } catch (_) { /* no storage */ }
+    try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 2) return s; } catch (_) { /* no storage */ }
     return null;
   }
   static clear() { try { localStorage.removeItem(SAVE_KEY); } catch (_) { /* no storage */ } }
   save() {
-    const data = { v: 1, seed: this.seed, exitCode: this.exitCode, rewards: this.rewards, items: this.items.map(i => ({ uid: i.uid, id: i.id, x: i.x, y: i.y, z: i.z, held: i === this.held, home: i.home })) };
+    const data = {
+      v: 2, seed: this.seed, exitCode: this.exitCode, rewards: this.rewards, extra: this.extraSave ? this.extraSave() : null,
+      items: this.items.map(i => ({ uid: i.uid, id: i.id, x: i.x, y: i.y, z: i.z, state: i === this.held ? 'held' : i.state === 'air' ? 'world' : i.state, home: i.home, charges: i.charges, slot: i.slot, recorded: i.recorded })),
+    };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); this.dirty = false; return true; } catch (_) { return false; }
   }
 
@@ -37,13 +40,47 @@ export class ItemSystem {
   init(save) {
     if (save) {
       this.seed = save.seed; this.exitCode = save.exitCode; this.rewards = save.rewards || {};
-      for (const s of save.items) { const it = this.create(s.id, s.uid, s.home); it.x = s.x; it.y = s.y; it.z = s.z; if (s.held) this.pickUp(it, true); else this.place(it); }
+      this.loadedExtra = save.extra || null;
+      for (const q of save.items) {
+        if (!ITEMS[q.id]) continue;
+        const it = this.create(q.id, q.uid, q.home);
+        it.x = q.x; it.y = q.y; it.z = q.z; it.charges = q.charges || 0; it.slot = q.slot; it.recorded = q.recorded;
+        if (q.state === 'held') this.pickUp(it, true);
+        else if (q.state === 'hidden') this.hide(it);
+        else if (q.state === 'used') this.consume(it, true);
+        else if (q.state === 'installed' && q.slot) this.installAt(it, q.slot, true);
+        else this.place(it);
+      }
     } else {
       this.seed = (Math.random() * 1e9) | 0;
       const r = mulberry(this.seed);
       this.exitCode = String(1000 + Math.floor(r() * 9000));
       this.scatter(r);
     }
+  }
+
+  hide(it) { it.state = 'hidden'; it.mesh.visible = false; if (it.mesh.parent !== this.scene) this.scene.add(it.mesh); }
+  // Spent for good (keys, batteries, confetti poppers...): stays in the save so it does not come back.
+  consume(it, silent = false) {
+    if (this.held === it) this.held = null;
+    it.state = 'used'; it.mesh.visible = false; if (this.targetItem === it) this.targetItem = null;
+    if (it.mesh.parent === this.hand) { this.hand.remove(it.mesh); this.scene.add(it.mesh); }
+    this.dirty = true; if (!silent) this.save();
+  }
+  // Fixed in place on a machine (motor, circuit, fuses, handle...).
+  installAt(it, slot, silent = false) {
+    if (this.held === it) this.held = null;
+    if (it.mesh.parent !== this.scene) { it.mesh.parent?.remove(it.mesh); this.scene.add(it.mesh); }
+    this.glow(it.mesh, 0.2);
+    it.state = 'installed'; it.slot = slot; it.vx = it.vy = it.vz = 0;
+    it.mesh.visible = true; it.mesh.position.set(slot.x, slot.y, slot.z); it.mesh.rotation.set(slot.rx || 0, slot.ry || 0, slot.rz || 0);
+    it.x = slot.x; it.y = slot.y; it.z = slot.z; it.outline.visible = false; if (this.targetItem === it) this.targetItem = null;
+    this.dirty = true; if (!silent) this.save();
+  }
+  // Brings a hidden item into the world, popping out of a compartment or machine.
+  reveal(it, x, y, z) {
+    it.x = x; it.y = y; it.z = z; this.place(it); it.state = 'air'; it.rest = false; it.vy = 1.5; it.vz = 0.6;
+    this.dirty = true; this.save();
   }
 
   create(id, uid, home) {
@@ -87,7 +124,7 @@ export class ItemSystem {
       const n = def.count || 1;
       for (let i = 0; i < n; i++) {
         const it = this.create(id, n > 1 ? `${id}#${i}` : id);
-        if (def.reward) { it.state = 'hidden'; it.mesh.visible = false; continue; }   // appears when its arcade game is won
+        if (def.reward || def.hidden || def.compartment && def.compartment[i - 1]) { this.hide(it); continue; }   // appears later: arcade prize, assembly or compartment
         let spot = null;
         if (def.fixed) spot = { level: def.fixed.level, x: def.fixed.x, z: def.fixed.z, y: LEVEL_Y[def.fixed.level] + def.fixed.y };
         else {

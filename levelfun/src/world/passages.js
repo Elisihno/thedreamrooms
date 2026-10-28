@@ -155,7 +155,7 @@ function buildCrawl(w, p, mats) {
   hCover.position.set((hr[0] + hr[2]) / 2, yU - 0.02, (hr[1] + hr[3]) / 2);
   w.group(up).add(hCover);
   const hCoverSurface = w.flat(hr, yU, [], 'hatch-cover');
-  w.interactable({ x: (hr[0] + hr[2]) / 2, y: yU, z: (hr[1] + hr[3]) / 2, radius: 2.4, kind: 'hatch', passage: P, onUse: () => P.open() });
+  w.interactable({ x: (hr[0] + hr[2]) / 2, y: yU, z: (hr[1] + hr[3]) / 2, radius: 2.4, kind: 'hatch', passage: P, onUse: held => (w.fixtures.hatchGate ? w.fixtures.hatchGate(P, held) : P.open()) });
 
   // --- ladder (lower room) ---
   const lr = g.ladder.rect;
@@ -180,7 +180,7 @@ function buildCrawl(w, p, mats) {
   const cCover = new THREE.Mesh(new THREE.BoxGeometry(ch[2] - ch[0] - 0.04, 0.06, ch[3] - ch[1] - 0.04), getMaterial('panel_concrete'));
   cCover.position.set((ch[0] + ch[2]) / 2, yL + CEIL + 0.02, (ch[1] + ch[3]) / 2);
   w.group(lo).add(cCover);
-  w.interactable({ x: (ch[0] + ch[2]) / 2, y: yL + CEIL, z: (ch[1] + ch[3]) / 2, radius: 2.6, kind: 'hatch', passage: P, onUse: () => P.open() });
+  w.interactable({ x: (ch[0] + ch[2]) / 2, y: yL + CEIL, z: (ch[1] + ch[3]) / 2, radius: 2.6, kind: 'hatch', passage: P, onUse: held => (w.fixtures.hatchGate ? w.fixtures.hatchGate(P, held) : P.open()) });
 
   P.openThings.push(() => {
     hCover.visible = false; cCover.visible = false; hCoverSurface.enabled = false;
@@ -242,7 +242,7 @@ function buildShaft(w, p) {
     cover.position.set(59.95, y0 + 1.125, (o[0] + o[1]) / 2);
     w.group(level).add(cover);
     const box = w.collision.add(59.9, o[0], 60.1, o[1], y0, y0 + 2.25);
-    w.interactable({ x: 59.9, y: y0 + 1.1, z: (o[0] + o[1]) / 2, radius: 2.4, kind: 'hatch', passage: P, onUse: () => P.open() });
+    w.interactable({ x: 59.9, y: y0 + 1.1, z: (o[0] + o[1]) / 2, radius: 2.4, kind: 'hatch', passage: P, onUse: held => (w.fixtures.hatchGate ? w.fixtures.hatchGate(P, held) : P.open()) });
     return () => { cover.visible = false; box.enabled = false; };
   };
   const hideTop = mk('3', s.openTop), hideBottom = mk('B', s.openBottom);

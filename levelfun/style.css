@@ -96,3 +96,26 @@ button { font: inherit; color: #fff; }
 .tbtn.throw, .tbtn.drop { --s: 1.7; font-size: calc(var(--u) * .24); background: rgba(20,20,20,.55); border-color: rgba(255,255,255,.55); }
 .tbtn.throw { --rx: 1.5; --by: 1.5; }
 .tbtn.drop { --rx: 3.6; --by: 1.5; }
+
+/* USE / ZAP buttons, notes, keypad, endings, zap flash */
+.tbtn.use { --rx: 3.3; --by: 3.7; --s: 1.8; background: rgba(180,40,40,.55); border-color: rgba(255,255,255,.6); font-size: calc(var(--u) * .3); }
+.tbtn.zap { --rx: 5.7; --by: 1.5; --s: 1.7; background: rgba(60,60,180,.55); border-color: rgba(255,255,255,.6); font-size: calc(var(--u) * .26); }
+#note, #keypad, #ending { position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.78); touch-action: none; }
+#note[hidden], #keypad[hidden], #ending[hidden] { display: none; }
+.paper { background: #efe6c8; color: #2b2118; border: 3px solid #8a6f3a; border-radius: 6px; padding: 16px 26px; max-width: min(520px, 90vw); text-align: center; font-family: monospace; box-shadow: 0 0 30px rgba(0,0,0,.6); }
+.paper h2 { margin: 0 0 8px; font-size: clamp(16px, 4vh, 26px); letter-spacing: .1em; }
+.paper pre { margin: 0 0 12px; font: 700 clamp(15px, 3.6vh, 24px)/1.35 monospace; white-space: pre-wrap; }
+.paper pre.bignum { font-size: clamp(40px, 16vh, 96px); letter-spacing: .15em; }
+.paper button, #kpclose { background: #2b2118; color: #efe6c8; border: 0; padding: 8px 18px; border-radius: 6px; font-weight: 700; }
+.kp { background: #1d1f22; border: 3px solid #555; border-radius: 10px; padding: 12px; text-align: center; }
+#kpscreen { background: #0b2a12; color: #5dff7a; font: 700 clamp(28px, 8vh, 48px) monospace; letter-spacing: .3em; padding: 6px 10px; margin-bottom: 10px; border-radius: 4px; }
+.kpgrid { display: grid; grid-template-columns: repeat(3, clamp(56px, 15vh, 84px)); gap: 6px; justify-content: center; margin-bottom: 10px; }
+.kpgrid button { height: clamp(40px, 11vh, 62px); font: 700 clamp(18px, 5vh, 28px) monospace; background: #3a3d42; border: 2px solid #666; border-radius: 6px; }
+#ending { background: #000; text-align: center; }
+.endbox { max-width: min(560px, 90vw); }
+.endbox h1 { color: #d9c24a; }
+.endbox p { opacity: .85; line-height: 1.5; margin: 14px 0 22px; }
+#ending.exit { background: #cdbd4a; color: #3a3210; } #ending.exit h1 { color: #5a4c10; text-shadow: none; }
+#ending.elevator { background: linear-gradient(#9fd2ff, #fff3c9); color: #2a3a4a; } #ending.elevator h1 { color: #b85a00; text-shadow: none; }
+#flash { position: fixed; inset: 0; background: #bfefff; opacity: 0; pointer-events: none; z-index: 7; transition: opacity .25s; }
+#flash.on { opacity: .65; transition: none; }
