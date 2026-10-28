@@ -36,6 +36,7 @@ export async function loadModels(names = MODEL_NAMES) {
     if (CLIP[n]) clipModel(gltf.scene, CLIP[n]);
     if (n === 'arcade') prepArcade(gltf.scene);
     if (n === 'spiral') prepSpiral(gltf.scene);
+    if (n === 'door' || n === 'door_heavy') gltf.scene.traverse(o => { if (o.isMesh && o.material.map) { o.material = o.material.clone(); o.material.color.setScalar(2.4); } });   // the texture is almost black
     if (n === 'stall') gltf.scene.traverse(o => { if (o.isMesh && o.material.name === 'plastic') o.userData.matKey = 'stall_paint'; });   // the source has no textures: painted panels are textured here
     templates.set(n, gltf.scene);
   }));

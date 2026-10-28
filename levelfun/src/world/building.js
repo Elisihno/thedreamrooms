@@ -3,6 +3,7 @@ import { AREAS, OPENINGS, PASSAGES, SPIRAL, LEVELS, LEVEL_Y, CEIL, areaById } fr
 import { getMaterial } from '../assets/registry.js';
 import { cloneModel, hasModel, instanceModel } from '../assets/models.js';
 import { World, subtractRects } from './builder.js';
+import { doubleSidedModel } from './doorleaf.js';
 import { buildPassages, passageHoles } from './passages.js';
 import { furnish } from './furnish.js';
 
@@ -31,8 +32,7 @@ class Door {
     const heavy = o.kind === 'heavy', key = heavy ? 'door_heavy' : 'door';
     let leaf;
     if (hasModel(key)) {
-      leaf = cloneModel(key);
-      leaf.scale.set(L / (heavy ? 2.1 : 1.04), heavy ? 1.1 : 1.07, 1);
+      leaf = doubleSidedModel(key, L / (heavy ? 2.1 : 1.04), heavy ? 1.1 : 1.07, heavy ? 0.2 : 0.133);
       leaf.position.set(L / 2, 0, 0);
     } else {
       leaf = new THREE.Mesh(new THREE.BoxGeometry(L, 2.15, 0.07), getMaterial('tile_metal'));
