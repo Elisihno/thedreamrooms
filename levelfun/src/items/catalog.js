@@ -14,24 +14,24 @@ export const READ = {
 //  count: how many physical copies exist; loud: how much noise a throw makes (0..1)
 export const ITEMS = {
   // ---- main puzzle items ----
-  exit_key:        { name: 'Exit Key', main: 1, build: 'key', tint: 0xd94b3a, size: 0.12, where: ['dining', 'reception', 'kitchen', 'prep'], loud: 0.2 },
-  wire_cutters:    { name: 'Wire Cutters', main: 1, build: 'glb:wire_cutters', size: 0.24, where: ['mstorage', 'electrical', 'supply', 'storage3'], loud: 0.3 },
+  exit_key:        { name: 'Exit Key', main: 1, build: 'key', tint: 0xd94b3a, size: 0.12, where: ['dining', 'reception', 'kitchen', 'prep'], tool: true, loud: 0.2 },
+  wire_cutters:    { name: 'Wire Cutters', main: 1, build: 'glb:wire_cutters', size: 0.24, where: ['mstorage', 'electrical', 'supply', 'storage3'], tool: true, loud: 0.3 },
   exit_code_note:  { name: 'Exit Code Note', main: 1, build: 'codeNote', size: 0.18, reward: 'find', loud: 0 },
   exit_fuse:       { name: 'Exit Fuse', main: 1, build: 'glb:fuse', tint: 0x66c6ff, size: 0.12, where: ['security', 'bath', 'mstorage', 'storage2'], loud: 0.1 },
-  screwdriver:     { name: 'Screwdriver', main: 1, build: 'glb:screwdriver', size: 0.25, reward: 'pop', loud: 0.2 },
+  screwdriver:     { name: 'Screwdriver', main: 1, build: 'glb:screwdriver', size: 0.25, reward: 'pop', tool: true, loud: 0.2 },
   elevator_motor:  { name: 'Elevator Motor', main: 1, build: 'motor', size: 0.3, where: ['generator', 'boiler', 'mstorage', 'storage3'], loud: 0.8 },
   elevator_circuit:{ name: 'Elevator Circuit', main: 1, build: 'circuit', size: 0.2, reward: 'dash', loud: 0.2 },
-  elevator_key:    { name: 'Elevator Key', main: 1, build: 'key', tint: 0x4aa3ff, size: 0.12, where: ['staff', 'archives', 'maintoffice', 'birthday'], loud: 0.2 },
-  generator_handle:{ name: 'Generator Handle', main: 1, build: 'crank', size: 0.35, where: ['electrical', 'boiler', 'mstorage', 'bhall'], loud: 0.6 },
+  elevator_key:    { name: 'Elevator Key', main: 1, build: 'key', tint: 0x4aa3ff, size: 0.12, where: ['staff', 'archives', 'maintoffice', 'birthday'], tool: true, loud: 0.2 },
+  generator_handle:{ name: 'Generator Handle', main: 1, build: 'crank', size: 0.35, where: ['electrical', 'boiler', 'mstorage', 'bhall'], tool: true, loud: 0.6 },
   power_fuse:      { name: 'Power Fuse', main: 1, build: 'glb:fuse', tint: 0xffa43a, size: 0.14, where: ['staff', 'archives', 'storage3', 'service'], loud: 0.1 },
   token:           { name: 'Arcade Token', main: 1, build: 'token', size: 0.06, fixed: { level: '2', x: 54.0, z: 1.05, y: 0.96 }, loud: 0.05 },
-  zap_a:           { name: 'Party Zapper Grip', main: 1, build: 'zapGrip', size: 0.2, where: ['reception', 'partya', 'partyb'], loud: 0.3 },
-  zap_b:           { name: 'Party Zapper Coil', main: 1, build: 'zapCoil', size: 0.16, where: ['kitchen', 'prep', 'supply'], loud: 0.3 },
-  zap_c:           { name: 'Party Zapper Emitter', main: 1, build: 'zapEmitter', size: 0.2, where: ['storage3', 'archives', 'celeb'], loud: 0.3 },
-  zapper:          { name: 'Party Zapper', build: 'zapper', size: 0.3, hidden: true, loud: 0.3 },
+  zap_a:           { name: 'Party Zapper Grip', main: 1, build: 'zapGrip', size: 0.12, where: ['reception', 'partya', 'partyb'], loud: 0.3 },
+  zap_b:           { name: 'Party Zapper Body', main: 1, build: 'zapBody', size: 0.146, where: ['kitchen', 'prep', 'supply'], loud: 0.3 },
+  zap_c:           { name: 'Party Zapper Probe Head', main: 1, build: 'zapHead', size: 0.12, where: ['storage3', 'archives', 'celeb'], loud: 0.3 },
+  zapper:          { name: 'Party Zapper', build: 'zapper', size: 0.28, hidden: true, tool: true, loud: 0.3 },
   battery:         { name: 'Battery', build: 'battery', size: 0.09, count: 3, compartment: ['party', 'maint'], where: ['bath', 'security', 'storage2', 'service', 'electrical', 'supply'], loud: 0.1 },
   // ---- additional items ----
-  needle:          { name: 'Balloon Popper', build: 'glb:needle', size: 0.2, where: ['dining', 'hall', 'partya', 'partyb'], loud: 0.1 },
+  needle:          { name: 'Balloon Popper', build: 'glb:needle', size: 0.2, where: ['dining', 'hall', 'partya', 'partyb'], tool: true, loud: 0.1 },
   turning_handle:  { name: 'Turning Handle', build: 'turningHandle', size: 0.22, where: ['prep', 'kitchen', 'reception', 'supply'], loud: 0.4 },
   plush:           { name: 'Partygoer Plushie', build: 'glb:plush', size: 0.34, count: 2, where: ['birthday', 'celeb', 'archives', 'playground', 'landing'], loud: 0.05, hold: { pos: [0.2, -0.3, -0.5] } },
   music_box:       { name: 'Birthday Music Box', build: 'musicBox', size: 0.16, where: ['partyb', 'partya', 'birthday'], loud: 0.5 },
@@ -39,9 +39,9 @@ export const ITEMS = {
   windup_toy:      { name: 'Wind-Up Toy', build: 'glb:windup_robot', size: 0.2, where: ['partyb', 'playground', 'ballpit'], loud: 0.3 },
   invitation:      { name: 'Birthday Invitation', build: 'invitation', size: 0.2, where: ['reception', 'hall', 'prep'], loud: 0 },
   confetti_popper: { name: 'Confetti Popper', build: 'popper', size: 0.22, where: ['hall', 'dining', 'partya', 'partyb', 'celeb'], loud: 0.2 },
-  party_room_key:  { name: 'Party Room Key', build: 'key', tint: 0x59d36b, size: 0.12, where: ['kitchen', 'prep', 'bath'], loud: 0.2 },
+  party_room_key:  { name: 'Party Room Key', build: 'key', tint: 0x59d36b, size: 0.12, where: ['kitchen', 'prep', 'bath'], tool: true, loud: 0.2 },
   tape_recorder:   { name: 'Portable Tape Recorder', build: 'recorder', size: 0.2, where: ['security', 'staff', 'archives'], loud: 0.4 },
-  maintenance_key: { name: 'Maintenance Key', build: 'key', tint: 0xf1c40f, size: 0.12, where: ['mstorage', 'storage3', 'maintoffice'], loud: 0.2 },
+  maintenance_key: { name: 'Maintenance Key', build: 'key', tint: 0xf1c40f, size: 0.12, where: ['mstorage', 'storage3', 'maintoffice'], tool: true, loud: 0.2 },
   passage_diagram: { name: 'Secret Passage Diagram', build: 'diagram', size: 0.22, where: ['staff', 'archives', 'electrical'], loud: 0 },
   valve_wheel:     { name: 'Valve Wheel', build: 'valve', size: 0.28, where: ['boiler', 'generator', 'mstorage'], loud: 0.6 },
 };
@@ -62,6 +62,43 @@ function paper(lines, w = 256, h = 192, bg = '#efe6c8', fg = '#2b2118') {
   return tex;
 }
 
+
+// The Party Zapper: a stun gun in party colours. Built in parts (grip, body, probe head) so the three pieces found around the
+// building fit together on the assembly bench. Everything points along +z; y is up.
+const ZC = { pink: 0xff3d9a, purple: 0x7b3fe4, teal: 0x19c5b8, yellow: 0xffd23c, orange: 0xff9a1f, dark: 0x1d1530, steel: 0xdfe4ea };
+function emblemTexture() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d');
+  g.fillStyle = '#19c5b8'; g.beginPath(); g.arc(64, 64, 62, 0, 6.3); g.fill(); g.lineWidth = 6; g.strokeStyle = '#7b3fe4'; g.stroke();
+  g.fillStyle = '#ffd23c'; g.strokeStyle = '#1d1530'; g.lineWidth = 4; g.beginPath(); [[74, 18], [40, 72], [60, 72], [48, 110], [90, 54], [68, 54], [84, 18]].forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill(); g.stroke();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function zapParts(which) {
+  const g = new THREE.Group(), m = (c, o = {}) => mat(c, { roughness: 0.45, metalness: 0.05, ...o });
+  const bars = (x, y, z, n, vertical, c) => { for (let i = 0; i < n; i++) { const b = box(vertical ? 0.0025 : 0.0025, vertical ? 0.026 : 0.0035, vertical ? 0.0035 : 0.02, m(c), x, y + (vertical ? 0 : (i - (n - 1) / 2) * 0.012), z + (vertical ? (i - (n - 1) / 2) * 0.014 : 0)); g.add(b); } };
+  if (which.includes('body')) {
+    g.add(box(0.05, 0.06, 0.1, m(ZC.pink), 0, 0.135, 0.02));
+    g.add(box(0.05, 0.06, 0.03, m(ZC.purple), 0, 0.135, -0.045));            // rear cap
+    for (const s of [-1, 1]) { g.add(box(0.0015, 0.04, 0.07, m(ZC.yellow), s * 0.0258, 0.135, 0.02)); bars(s * 0.0268, 0.135, 0.02, 4, true, ZC.dark); }
+    g.add(box(0.02, 0.006, 0.05, m(ZC.teal), 0, 0.168, 0.02));                // top sight stripe
+  }
+  if (which.includes('head')) {
+    g.add(box(0.054, 0.066, 0.05, m(ZC.purple), 0, 0.135, 0.095));
+    for (const s of [-1, 1]) { g.add(box(0.0015, 0.05, 0.035, m(ZC.teal), s * 0.0278, 0.135, 0.095)); bars(s * 0.0288, 0.135, 0.095, 4, false, ZC.dark); }
+    for (const y of [-1, 1]) {   // the two probes: steel rods with bright tips
+      const rod = mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.05, 10), m(ZC.steel, { metalness: 0.7, roughness: 0.3 }), 0, 0.135 + y * 0.017, 0.145); rod.rotation.x = Math.PI / 2; g.add(rod);
+      const tip = mesh(new THREE.ConeGeometry(0.0045, 0.014, 10), m(ZC.orange, { emissive: 0x552200 }), 0, 0.135 + y * 0.017, 0.177); tip.rotation.x = Math.PI / 2; g.add(tip);
+    }
+  }
+  if (which.includes('grip')) {
+    const grip = box(0.046, 0.11, 0.05, m(ZC.orange), 0, 0.055, -0.03); grip.rotation.x = 0.14; g.add(grip);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.004, 8, 18), m(ZC.dark)); ring.rotation.y = Math.PI / 2; ring.position.set(0, 0.098, 0.028); g.add(ring);
+    g.add(box(0.008, 0.026, 0.006, m(ZC.yellow), 0, 0.098, 0.018));            // trigger
+    const em = emblemTexture();
+    for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.CircleGeometry(0.018, 24), new THREE.MeshStandardMaterial({ map: em, roughness: 0.5 })); p.position.set(s * 0.0238, 0.055, -0.028); p.rotation.y = s * Math.PI / 2; g.add(p); }
+  }
+  return g;
+}
+
 const BUILDERS = {
   key: o => glb('key', o),
   codeNote: (o, ctx) => sheet(paper([['EXIT CODE', 22, 58], [String(ctx.exitCode), 70, 142]], 192, 192, '#ffe66b', '#2a2a2a'), 0.12, 0.12),   // a yellow sticky note
@@ -80,16 +117,10 @@ const BUILDERS = {
   crank: () => { const g = new THREE.Group(); const steel = mat(0x8a8e94, { metalness: 0.6, roughness: 0.4 });
     g.add(cyl(0.012, 0.3, steel, 0, 0.15, 0)); const arm = cyl(0.012, 0.18, steel, 0.09, 0.3, 0); arm.rotation.z = Math.PI / 2; g.add(arm);
     const grip = cyl(0.022, 0.12, mat(0xc0392b), 0.18, 0.36, 0); g.add(grip); g.children[0].position.y = 0.15; return g; },
-  zapGrip: () => { const g = new THREE.Group(); const pink = mat(0xff5fa8); g.add(box(0.05, 0.14, 0.07, pink, 0, 0.07, 0)); g.add(box(0.04, 0.03, 0.16, mat(0xffffff), 0, 0.15, 0.03)); g.add(box(0.012, 0.04, 0.02, mat(0xffd23c), 0, 0.1, 0.045)); return g; },
-  zapCoil: () => { const g = new THREE.Group(); const cu = mat(0xc27a3c, { metalness: 0.7, roughness: 0.35 }); g.add(cyl(0.02, 0.14, mat(0x444a52), 0, 0.07, 0));
-    for (let i = 0; i < 7; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 8, 18), cu); t.rotation.x = Math.PI / 2; t.position.y = 0.02 + i * 0.02; g.add(t); } return g; },
-  zapEmitter: () => { const g = new THREE.Group(); g.add(cyl(0.025, 0.1, mat(0x3b7ddd), 0, 0.05, 0)); const cone = mesh(new THREE.ConeGeometry(0.05, 0.1, 14), mat(0xffd23c, { emissive: 0x553300 }), 0, 0.15, 0); g.add(cone);
-    g.add(ball(0.022, mat(0xff4fd8, { emissive: 0x802070 }), 0, 0.21, 0)); return g; },
-  zapper: () => { const g = new THREE.Group(); const pink = mat(0xff5fa8), blue = mat(0x3b7ddd), cu = mat(0xc27a3c, { metalness: 0.7, roughness: 0.35 });
-    g.add(box(0.05, 0.14, 0.07, pink, 0, 0.07, 0)); g.add(box(0.04, 0.05, 0.2, mat(0xffffff), 0, 0.165, 0.03));
-    for (let i = 0; i < 4; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.01, 8, 16), cu); t.position.set(0, 0.165, 0.14 + i * 0.025); g.add(t); }
-    const cone = mesh(new THREE.ConeGeometry(0.045, 0.09, 14), mat(0xffd23c, { emissive: 0x553300 }), 0, 0.165, 0.27); cone.rotation.x = Math.PI / 2; g.add(cone);
-    g.add(ball(0.02, mat(0xff4fd8, { emissive: 0x802070 }), 0, 0.165, 0.33)); g.add(cyl(0.015, 0.05, blue, 0, 0.19, -0.04)); return g; },
+  zapGrip: () => zapParts(['grip']),
+  zapBody: () => zapParts(['body']),
+  zapHead: () => zapParts(['head']),
+  zapper: () => zapParts(['grip', 'body', 'head']),
   battery: () => { const g = new THREE.Group(); g.add(cyl(0.025, 0.09, mat(0xf1c40f), 0, 0.045, 0)); g.add(cyl(0.025, 0.03, mat(0x222222), 0, 0.075, 0)); g.add(cyl(0.01, 0.01, mat(0xcccccc, { metalness: 0.8 }), 0, 0.095, 0)); return g; },
   turningHandle: () => { const g = new THREE.Group(); const brass = mat(0xb59a4a, { metalness: 0.6, roughness: 0.4 });
     g.add(cyl(0.015, 0.1, brass, 0, 0.05, 0)); const bar = cyl(0.013, 0.2, brass, 0, 0.11, 0); bar.rotation.z = Math.PI / 2; g.add(bar);

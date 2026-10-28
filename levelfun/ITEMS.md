@@ -17,7 +17,7 @@ DROP / THROW appear while you hold something (PC: G / right mouse). **USE** appe
 | 9 | Generator Handle | scattered (electrical/boiler/storage) | USE at the basement generator |
 | 10 | Power Fuse | scattered (staff/archives/storage/service) | USE at the basement generator; handle + fuse = power repaired |
 | 11 | Arcade Token | Prize Counter counter-top | Hold it and tap the hand at an arcade game machine; reusable |
-| 12 | Party Zapper parts ×3 (Grip, Coil, Emitter) | three different rooms | USE all three at the assembly bench in the Party Preparation Room; the finished Party Zapper appears on the bench |
+| 12 | Party Zapper parts ×3 (Grip, Body, Probe Head) | three different rooms | USE all three at the assembly bench in the Party Preparation Room; the finished Party Zapper appears on the bench |
 
 Emergency Exit ending: Exit Key + Wire Cutters + Exit Code Note on the keypad + Exit Fuse, then walk through the open door.
 Service Elevator ending: Motor + Circuit + Screwdriver (wiring) + Generator Handle & Power Fuse (power), then the Elevator Key, then walk into the elevator.

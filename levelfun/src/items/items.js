@@ -89,10 +89,44 @@ export class ItemSystem {
     mesh.userData.item = true;
     const outline = this.makeOutline(mesh); mesh.add(outline); outline.visible = false;
     this.glow(mesh, 0.2);
+    const holdQuat = def.tool ? this.toolOrientation(mesh, def.tool === 'flip') : null;
     this.scene.add(mesh);
-    const it = { uid: uid ?? `${id}#${this.items.filter(i => i.id === id).length}`, id, def, mesh, outline, state: 'world', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, home: home || null, rest: true, radius: Math.max(0.14, def.size * 0.5) };
+    const it = { holdQuat, uid: uid ?? `${id}#${this.items.filter(i => i.id === id).length}`, id, def, mesh, outline, state: 'world', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, home: home || null, rest: true, radius: Math.max(0.14, def.size * 0.5) };
     this.items.push(it);
     return it;
+  }
+
+  // Tools (keys, screwdriver, cutters, popper, zapper...) are held with their working end pointing straight ahead.
+  // The long axis of the model is found, the thinner end is the tip, and the flat side is kept facing up.
+  toolOrientation(mesh, flipEnd = false) {
+    mesh.updateMatrixWorld(true);
+    const pts = [], v = new THREE.Vector3();
+    mesh.traverse(o => { if (!o.isMesh || o.userData.outline) return; const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i += Math.max(1, Math.floor(p.count / 400))) pts.push(v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld).clone()); });
+    // principal axes of the point cloud (the model may be lying at an angle): long axis, and the flat direction
+    const c = pts.reduce((m, q) => m.add(q), new THREE.Vector3()).divideScalar(pts.length);
+    const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    for (const q of pts) { const d = [q.x - c.x, q.y - c.y, q.z - c.z]; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) C[i][j] += d[i] * d[j]; }
+    const mulv = (M, v) => new THREE.Vector3(M[0][0] * v.x + M[0][1] * v.y + M[0][2] * v.z, M[1][0] * v.x + M[1][1] * v.y + M[1][2] * v.z, M[2][0] * v.x + M[2][1] * v.y + M[2][2] * v.z);
+    const power = (M, v0) => { let v = v0.clone().normalize(); for (let i = 0; i < 40; i++) { v = mulv(M, v); if (v.lengthSq() < 1e-18) break; v.normalize(); } return v; };
+    const long = power(C, new THREE.Vector3(0.3, 0.2, 1));
+    const l1 = mulv(C, long).dot(long), C2 = C.map((row, i) => row.map((x, j) => x - l1 * [long.x, long.y, long.z][i] * [long.x, long.y, long.z][j]));
+    const mid = power(C2, new THREE.Vector3(1, 0.1, 0.2).sub(long.clone().multiplyScalar(long.x * 1 + long.y * 0.1 + long.z * 0.2)));
+    const flat = new THREE.Vector3().crossVectors(long, mid).normalize();
+    let lmin = 1e9, lmax = -1e9; for (const q of pts) { const t = q.clone().sub(c).dot(long); lmin = Math.min(lmin, t); lmax = Math.max(lmax, t); }
+    const half = (lmax - lmin) / 2, lc = (lmax + lmin) / 2;
+    const lo = [], hi = [];
+    for (const q of pts) { const t = q.clone().sub(c), along = t.dot(long), rad = t.addScaledVector(long, -along).length(); const k = (along - lc) / half; if (k < -0.45) lo.push(rad); else if (k > 0.45) hi.push(rad); }
+    const widest = a => a.length ? Math.max(...a) : 1e9;   // the working end is the slimmer one
+    let tip = widest(lo) < widest(hi) ? long.clone().negate() : long.clone();
+    if (flipEnd) tip.negate();
+    const aim = new THREE.Vector3(-0.22, 0.06, -1).normalize();
+    const q1 = new THREE.Quaternion().setFromUnitVectors(tip, aim);
+    // roll about the aim so the flattest side faces up
+    const f = flat.clone().applyQuaternion(q1), up = new THREE.Vector3(0, 1, 0);
+    const fp = f.clone().addScaledVector(aim, -f.dot(aim)).normalize(), upp = up.clone().addScaledVector(aim, -up.dot(aim)).normalize();
+    let ang = Math.acos(Math.min(1, Math.max(-1, fp.dot(upp)))); if (fp.clone().cross(upp).dot(aim) < 0) ang = -ang;
+    if (ang > Math.PI / 2) ang -= Math.PI; else if (ang < -Math.PI / 2) ang += Math.PI;   // the flat side may face up or down: take the smaller turn
+    return new THREE.Quaternion().setFromAxisAngle(aim, ang).multiply(q1);
   }
 
   // A faint glowing shell around the item (inverted hull), shown only when it can be picked up.
@@ -237,7 +271,8 @@ export class ItemSystem {
     it.outline.visible = false; if (this.targetItem === it) this.targetItem = null;
     this.hand.add(it.mesh); this.glow(it.mesh, 0.4);
     const h = it.def.hold || {};
-    it.mesh.position.set(...(h.pos || [0.22, -0.26, -0.5])); it.mesh.rotation.set(...(h.rot || [0.35, -0.5, 0.1]));
+    it.mesh.position.set(...(h.pos || (it.holdQuat ? [0.2, -0.22, -0.42] : [0.22, -0.26, -0.5])));
+    if (it.holdQuat) it.mesh.quaternion.copy(it.holdQuat); else it.mesh.rotation.set(...(h.rot || [0.35, -0.5, 0.1]));
     this.dirty = true; if (!silent) this.save();
   }
 
@@ -245,6 +280,7 @@ export class ItemSystem {
     const it = this.held; if (!it) return null;
     const eye = this.camera.position, d = this.camera.getWorldDirection(this._d);
     this.hand.remove(it.mesh); this.scene.add(it.mesh); this.glow(it.mesh, 0.2);
+    it.mesh.quaternion.identity(); it.mesh.rotation.set(0, Math.random() * 6.28, 0);
     const flat = Math.hypot(d.x, d.z) || 1;
     it.x = eye.x + d.x / flat * 0.45; it.z = eye.z + d.z / flat * 0.45; it.y = eye.y - 0.35;
     it.vx = d.x * speed; it.vz = d.z * speed; it.vy = d.y * speed + lift;
