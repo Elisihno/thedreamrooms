@@ -122,22 +122,31 @@ export function furnish(w) {
   partySet(w, '2', { tables: [{ x: 8, z: 18, len: 1.1 }, { x: 8, z: 22, len: 1.0 }], bounds: { x0: 0, x1: 14, z0: 13, z1: 25 }, avoid: [[0, 13.5, 3, 18]], ceilingBalloons: 10, seed: 23, confetti: 350 });
   couch('2', 12.3, 7, 13, 9.5, 'tile_metal');
   // Landing: benches
-  // Arcade: rows of machines (the model); three are the playable games, marked by a lit sign
-  const games = [['pop', 29.5], ['dash', 37.5], ['find', 44.5]];
+  // Arcade: two mirrored rows of machines along the north and south walls (three are the playable games, marked by a lit sign),
+  // dressed as a party: balloons, hats on the machines, bunting and confetti
+  const games = [['pop', 29.65], ['dash', 38.45], ['find', 44.95]];
   w.fixtures.arcade = [];
   const asz = modelSize('arcade') || { x: 0.9, z: 0.9, y: 1.85 };
-  const placements = [];
+  const placements = [], machineHats = [];
   const addMachine = (x, z, facingSouth) => {
     placements.push({ x, y: Y('2'), z: facingSouth ? z + asz.z / 2 : z - asz.z / 2, ry: facingSouth ? 0 : Math.PI });
     w.collision.add(x - asz.x / 2, facingSouth ? z : z - asz.z, x + asz.x / 2, facingSouth ? z + asz.z : z, Y('2'), Y('2') + 1.9);
   };
-  for (let i = 0; i < 15; i++) {
-    const x = 27.4 + i * 1.3; if (x > 46.4) break;
+  for (let k = 0; k < 7; k++) for (const sx of [-1, 1]) {   // mirrored about x = 36; the middle stays open for the doorway on the south wall
+    const x = 36 + sx * (2.45 + 1.3 * k);
     addMachine(x, 0.12, true);
-    const g = games.find(q => Math.abs(q[1] - x) < 0.7);
+    addMachine(x, 9.88, false);
+    machineHats.push({ x, y: Y('2') + asz.y, z: 0.12 + asz.z / 2, ry: (k * 2.1 + sx) }, { x, y: Y('2') + asz.y, z: 9.88 - asz.z / 2, ry: (k * 1.7 - sx) });
+    const g = games.find(q => Math.abs(q[1] - x) < 0.3);
     if (g) { screen('2', x, 2.15, 0.12 + asz.z / 2, 0.8, 0.14, 0.04, 0xffd23c); w.fixtures.arcade.push({ game: g[0], x, z: 0.12 + asz.z + 0.4 }); }
   }
-  for (let i = 0; i < 6; i++) { const x = 29 + i * 1.8; addMachine(x, 4.4, true); addMachine(x, 5.5 + asz.z, false); }
+  {
+    const hatGeo = new THREE.ConeGeometry(0.1, 0.26, 10); hatGeo.translate(0, 0.13, 0);
+    const cols = [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71, 0x9b59b6, 0xff7eb6, 0xff8c1a];
+    instanced(w.group('2'), hatGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), machineHats.map((h, i) => ({ ...h, color: cols[i % cols.length] })), { receive: false, optional: w.optional });
+  }
+  partySet(w, '2', { tables: [], bounds: { x0: 24, x1: 48, z0: 0, z1: 10 }, avoid: [[24, 0, 48, 1.4], [24, 8.6, 48, 10]], ceilingBalloons: 26, seed: 41, bunting: true, confetti: 500 });
+  for (const [bx, bz] of [[36, 0.7], [33.1, 3.2], [38.9, 3.2], [30, 5], [42, 5], [25.5, 2.2], [25.5, 7.8], [46.5, 2.2], [46.5, 7.8], [33.1, 6.9], [38.9, 6.9]]) bunch('2', bx, bz, 1.0);
   instanceModel(w.group('2'), 'arcade', placements);
   // Prize Counter: counter model, plush shelves, token spot
   if (hasModel('counter')) { instanceModel(w.group('2'), 'counter', [{ x: 54, y: Y('2'), z: 1.2, s: 1.5 }]); w.collision.add(52.1, 0.1, 55.9, 1.55, Y('2'), Y('2') + 0.95); }
