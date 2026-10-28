@@ -49,6 +49,14 @@
 
 <div id="rotate"><div>Rotate your device<br>to landscape</div></div>
 
+<script>
+// Show any startup failure on screen (phones have no console).
+(function () {
+  function show(m) { var b = document.getElementById('primary'), t = document.getElementById('hint'); if (b) b.textContent = 'Error - see text below'; if (t) { t.hidden = false; t.textContent = 'Startup error: ' + m; t.style.color = '#f88'; } }
+  addEventListener('error', function (e) { show((e.message || 'script error') + (e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
+  addEventListener('unhandledrejection', function (e) { show(String((e.reason && (e.reason.stack || e.reason.message)) || e.reason).slice(0, 300)); });
+})();
+</script>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

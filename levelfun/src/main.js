@@ -24,6 +24,16 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(settings.fov, innerWidth / innerHeight, 0.05, 80);
 scene.add(camera);
 
+// Quality buttons work during loading too; applyQuality runs once the world exists.
+let onQuality = null;
+document.querySelectorAll('[data-setting]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.setting, v = b.dataset.value;
+  settings[k] = k === 'quality' || k === 'crouchMode' ? v : Number(v);
+  if (k === 'quality') onQuality?.();
+  saveSettings(settings);
+  document.querySelectorAll('[data-setting]').forEach(x => x.classList.toggle('on', String(settings[x.dataset.setting]) === x.dataset.value));
+}));
+document.querySelectorAll('[data-setting]').forEach(x => x.classList.toggle('on', String(settings[x.dataset.setting]) === x.dataset.value));
 $('primary').textContent = 'LOADING…';
 try {
   await Promise.all([loadModels(), preloadTextures(p => { $('primary').textContent = 'LOADING ' + Math.round(p * 100) + '%'; })]);
@@ -105,12 +115,7 @@ document.querySelectorAll('[data-floor]').forEach(b => b.addEventListener('click
 $('unlock').addEventListener('click', () => { world.passages.forEach(p => p.open()); setPaused(false); toast('All secret passages opened (test)'); });
 $('respawn').addEventListener('click', () => { player.teleport(startPos); setPaused(false); startWake(); });
 
-document.querySelectorAll('[data-setting]').forEach(b => b.addEventListener('click', () => {
-  const k = b.dataset.setting, v = b.dataset.value;
-  settings[k] = k === 'quality' || k === 'crouchMode' ? v : Number(v);
-  if (k === 'quality') applyQuality(renderer, settings.quality, pool, world);
-  saveSettings(settings); syncMenu();
-}));
+onQuality = () => applyQuality(renderer, settings.quality, pool, world);
 $('sens').addEventListener('input', e => { settings.sensitivity = Number(e.target.value); saveSettings(settings); syncMenu(); });
 $('fov').addEventListener('input', e => { settings.fov = Number(e.target.value); camera.fov = settings.fov; camera.updateProjectionMatrix(); saveSettings(settings); syncMenu(); });
 
