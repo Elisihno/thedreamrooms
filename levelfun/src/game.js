@@ -159,13 +159,25 @@ const rewards = {};   // prizes won so far (kept for the item system)
 function openArcade(game) {
   if (arcadeStop || !running) return;
   setPaused(true); $('menu').hidden = true; $('arcade').hidden = false;
-  $('amsg').textContent = 'LOADING GAME…';
+  $('amsg').textContent = 'LOADING GAME…'; arcadeDebug();
   try {
     arcadeStop = playGame(game, $('acv'), {
       onWin: id => { rewards[id] = true; toast('Prize won: ' + GAMES[id].reward + ' (items arrive in a later stage)'); },
       onExit: closeArcade,
     });
   } catch (e) { $('amsg').textContent = 'Could not start: ' + (e && e.message || e); arcadeStop = () => {}; }
+}
+// Temporary on-screen diagnostics while the arcade is being tested on phones.
+let dbgTimer = 0;
+function arcadeDebug() {
+  let d = document.getElementById('dbg');
+  if (!d) { d = document.createElement('pre'); d.id = 'dbg'; d.style.cssText = 'position:fixed;left:4px;bottom:4px;z-index:99;margin:0;padding:4px 6px;background:rgba(0,0,0,.75);color:#8f8;font:11px monospace;pointer-events:none;max-width:70vw;white-space:pre-wrap'; document.body.appendChild(d); }
+  clearInterval(dbgTimer); let n = 0; window.__arcFrames = 0;
+  dbgTimer = setInterval(() => {
+    const a = $('arcade'), r = $('acv').getBoundingClientRect(), cs = getComputedStyle(a);
+    d.textContent = `arcade hidden=${a.hidden} display=${cs.display} z=${cs.zIndex}\ncanvas ${Math.round(r.width)}x${Math.round(r.height)} at ${Math.round(r.x)},${Math.round(r.y)}\nframes=${window.__arcFrames} msg="${$('amsg').textContent}"\nstop=${!!arcadeStop} paused=${paused}`;
+    if (++n > 40) { clearInterval(dbgTimer); d.remove(); }
+  }, 250);
 }
 function closeArcade() {
   if (!arcadeStop) return;
@@ -209,7 +221,7 @@ function frame(now) {
     const dark = player.pos.y > 6 || player.pos.y < -2;
     ambient.intensity += ((dark ? 0.6 : 1.1) - ambient.intensity) * Math.min(1, dt * 2);
   }
-  renderer.render(scene, camera);
+  if (!arcadeStop) renderer.render(scene, camera);   // the 3D view is hidden behind the arcade overlay: skip the work
 }
 setPaused(true);
 $('primary').disabled = false;

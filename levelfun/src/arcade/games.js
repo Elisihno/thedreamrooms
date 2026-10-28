@@ -47,6 +47,7 @@ export function playGame(id, canvas, { onWin, onExit }) {
   function frame(now) {
     if (stopped) return;
     raf = requestAnimationFrame(frame);
+    window.__arcFrames = (window.__arcFrames || 0) + 1;
     try { tick(now); } catch (e) { const m = document.getElementById('amsg'); if (m) m.textContent = 'Game error: ' + (e && e.message || e); stopped = true; }
   }
   function tick(now) {
