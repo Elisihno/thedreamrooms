@@ -4,6 +4,7 @@ import { getMaterial, getBasic } from '../assets/registry.js';
 import { instanceModel, hasModel, cloneModel, modelSize } from '../assets/models.js';
 import { partySet, instanced } from './partyprops.js';
 import { doubleSidedModel } from './doorleaf.js';
+import { drawCentered } from '../arcade/pixelfont.js';
 import { mergeGeometries } from '../../vendor/BufferGeometryUtils.js';
 
 // Furniture, props and fixtures for every room. All static pieces go through the batched box builder.
@@ -132,13 +133,35 @@ export function furnish(w) {
     placements.push({ x, y: Y('2'), z: facingSouth ? z + asz.z / 2 : z - asz.z / 2, ry: facingSouth ? 0 : Math.PI });
     w.collision.add(x - asz.x / 2, facingSouth ? z : z - asz.z, x + asz.x / 2, facingSouth ? z + asz.z : z, Y('2'), Y('2') + 1.9);
   };
+  // The playable machines show a blinking pixel "START GAME" on their screen; USE in front of one opens the minigame.
+  w.fixtures.arcadeScreens = [];
+  function playableScreen(game, x, pz) {
+    const cv = document.createElement('canvas'); cv.width = 96; cv.height = 75;
+    const c = cv.getContext('2d'), tex = new THREE.CanvasTexture(cv); tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+    const name = { pop: 'POP', dash: 'DASH', find: 'FIND' }[game];
+    let on = null;
+    const paint = lit => {
+      c.fillStyle = '#0a1a5a'; c.fillRect(0, 0, 96, 75); c.fillStyle = '#1b3fae'; c.fillRect(3, 3, 90, 69);
+      drawCentered(c, name, 48, 8, 2, '#ffd23c', '#7a2a00');
+      if (lit) { drawCentered(c, 'START', 48, 28, 2, '#fff', '#c0392b'); drawCentered(c, 'GAME', 48, 46, 2, '#fff', '#c0392b'); }
+      tex.needsUpdate = true;
+    };
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.476, 0.372), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+    mesh.position.set(x, Y('2') + 1.124 + 0.004, pz + 0.04); mesh.rotation.x = -0.222;
+    w.group('2').add(mesh);
+    const sv = document.createElement('canvas'); sv.width = 96; sv.height = 18; { const sc = sv.getContext('2d'); sc.fillStyle = '#ffd23c'; sc.fillRect(0, 0, 96, 18); sc.fillStyle = '#c0392b'; sc.fillRect(0, 0, 96, 2); sc.fillRect(0, 16, 96, 2); drawCentered(sc, 'PLAY ME!', 48, 5, 1, '#7a2a00'); }
+    const st = new THREE.CanvasTexture(sv); st.magFilter = THREE.NearestFilter; st.colorSpace = THREE.SRGBColorSpace;
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.15), new THREE.MeshBasicMaterial({ map: st, toneMapped: false })); sign.position.set(x, Y('2') + 2.15, pz + 0.05); w.group('2').add(sign);
+    w.interactable({ x, y: Y('2') + 1.2, z: pz + 0.6, radius: 2.1, kind: 'arcade', game, onUse: () => w.fixtures.arcadeHandler?.(game) });
+    w.fixtures.arcadeScreens.push({ tick(t) { const l = Math.floor(t * 2.2) % 2 === 0; if (l !== on) { on = l; paint(l); } } });
+  }
   for (let k = 0; k < 7; k++) for (const sx of [-1, 1]) {   // mirrored about x = 36; the middle stays open for the doorway on the south wall
     const x = 36 + sx * (2.45 + 1.3 * k);
     addMachine(x, 0.12, true);
     addMachine(x, 9.88, false);
     machineHats.push({ x, y: Y('2') + asz.y, z: 0.12 + asz.z / 2, ry: (k * 2.1 + sx) }, { x, y: Y('2') + asz.y, z: 9.88 - asz.z / 2, ry: (k * 1.7 - sx) });
     const g = games.find(q => Math.abs(q[1] - x) < 0.3);
-    if (g) { screen('2', x, 2.15, 0.12 + asz.z / 2, 0.8, 0.14, 0.04, 0xffd23c); w.fixtures.arcade.push({ game: g[0], x, z: 0.12 + asz.z + 0.4 }); }
+    if (g) { w.fixtures.arcade.push({ game: g[0], x, z: 0.12 + asz.z + 0.4 }); playableScreen(g[0], x, 0.12 + asz.z / 2); }
   }
   {
     const hatGeo = new THREE.ConeGeometry(0.1, 0.26, 10); hatGeo.translate(0, 0.13, 0);

@@ -83,3 +83,9 @@ button { font: inherit; color: #fff; }
 .tbtn.leanbtn.lean-l { left: calc(50% - var(--w) * var(--u) - .1 * var(--u)); right: auto; background-image: url(assets/ui/lean_l.png); }
 .tbtn.leanbtn.lean-r { left: calc(50% + .1 * var(--u)); right: auto; background-image: url(assets/ui/lean_r.png); }
 .tbtn.leanbtn.down { opacity: 1; filter: brightness(1.5); background-color: transparent; }
+
+/* Arcade minigame overlay */
+#arcade { position: fixed; inset: 0; z-index: 8; background: #000; display: flex; align-items: center; justify-content: center; touch-action: none; }
+#arcade[hidden] { display: none; }
+#acv { width: min(100vw, 177.7vh); height: min(56.25vw, 100vh); image-rendering: pixelated; touch-action: none; }
+#aquit { position: absolute; left: calc(10px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top)); padding: 10px 14px; font: 700 14px system-ui, sans-serif; background: rgba(0,0,0,.6); border: 2px solid #888; border-radius: 8px; }

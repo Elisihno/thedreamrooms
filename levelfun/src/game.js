@@ -10,6 +10,7 @@ import { LightPool } from './world/lightpool.js';
 import { START, LEVEL_Y, LEVELS, LEVEL_NAME } from './world/layout.js';
 import { loadModels, screenMaterials } from './assets/models.js';
 import { Player } from './player.js';
+import { playGame, GAMES } from './arcade/games.js';
 
 const $ = id => document.getElementById(id);
 const settings = loadSettings();
@@ -147,6 +148,25 @@ input.on('interact', () => {
   const best = findTarget();
   if (best) { best.onUse(); if (best.kind === 'hatch') toast('Secret passage opened'); } else toast('Nothing to use here');
 });
+
+// ---- Arcade minigames: a full-screen pixel overlay; the world is frozen while it is open ----
+let arcadeStop = null;
+const rewards = {};   // prizes won so far (kept for the item system)
+function openArcade(game) {
+  if (arcadeStop || !running) return;
+  setPaused(true); $('menu').hidden = true; $('arcade').hidden = false;
+  arcadeStop = playGame(game, $('acv'), {
+    onWin: id => { rewards[id] = true; toast('Prize won: ' + GAMES[id].reward + ' (items arrive in a later stage)'); },
+    onExit: closeArcade,
+  });
+}
+function closeArcade() {
+  if (!arcadeStop) return;
+  arcadeStop(); arcadeStop = null; $('arcade').hidden = true;
+  setPaused(false);
+}
+$('aquit').addEventListener('click', closeArcade);
+world.fixtures.arcadeHandler = openArcade;
 input.on('throw', () => toast('Throw (Stage 3)'));
 input.on('drop', () => toast('Drop (Stage 3)'));
 input.on('zapper', () => toast('Party Zapper (Stage 5)'));
@@ -154,7 +174,7 @@ $('touch-ui').addEventListener('click', () => {});
 
 // Desktop: click the game to (re)capture the mouse; losing the lock (Esc) pauses.
 canvas.addEventListener('click', () => { if (!isTouch && !paused && document.pointerLockElement !== canvas) canvas.requestPointerLock?.(); });
-document.addEventListener('pointerlockchange', () => { if (running && !paused && !isTouch && document.pointerLockElement !== canvas) setPaused(true); });
+document.addEventListener('pointerlockchange', () => { if (running && !paused && !arcadeStop && !isTouch && document.pointerLockElement !== canvas) setPaused(true); });
 // Pause when the page is hidden or the phone is held in portrait.
 document.addEventListener('visibilitychange', () => { if (document.hidden && running && !paused) setPaused(true); });
 const portrait = matchMedia('(orientation: portrait)');
@@ -177,6 +197,7 @@ function frame(now) {
       $('crouchfig').classList.toggle('crouched', player.crouched);
     }
     const tt = now / 1000;
+    for (const s of world.fixtures.arcadeScreens || []) s.tick(tt);
     screenMaterials.forEach((m, i) => { m.emissiveIntensity = 0.75 + 0.25 * Math.sin(tt * 3 + i); });
     const dark = player.pos.y > 6 || player.pos.y < -2;
     ambient.intensity += ((dark ? 0.6 : 1.1) - ambient.intensity) * Math.min(1, dt * 2);
@@ -189,4 +210,4 @@ setLoad(1, 'Ready'); $('loadbar').classList.add('done'); $('loadmsg').classList.
 requestAnimationFrame(frame);
 
 // Test hook for automated checks.
-window.LF = { player, world, input, settings, renderer, scene, setPaused, pool, camera };
+window.LF = { rewards, openArcade, player, world, input, settings, renderer, scene, setPaused, pool, camera };

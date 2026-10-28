@@ -1,4 +1,4 @@
-export const BUILD = 'stage2-r17';
+export const BUILD = 'stage2-r18';
 
 export const CFG = {
   player: {
