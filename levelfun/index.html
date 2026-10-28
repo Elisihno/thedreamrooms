@@ -53,6 +53,7 @@
 <script>
 // Show any startup failure on screen (phones have no console).
 (function () {
+  setTimeout(function () { if (!window.__lfBoot) { var m = document.getElementById('loadmsg'); if (m) m.textContent = 'The game script did not start (old browser? modules/top-level await unsupported). ' + navigator.userAgent; } }, 6000);
   var lm = document.getElementById('loadmsg'); if (lm) lm.textContent = 'Page loaded - starting game code…';
   function show(m) { var b = document.getElementById('primary'), t = document.getElementById('hint'); if (b) b.textContent = 'Error - see text below'; if (t) { t.hidden = false; t.textContent = 'Startup error: ' + m; t.style.color = '#f88'; } }
   addEventListener('error', function (e) { show((e.message || 'script error') + (e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
