@@ -77,3 +77,9 @@ button { font: inherit; color: #fff; }
 .grab b { display: block; width: 80%; height: 80%; border-radius: 50%; border: 4px solid #fff; position: relative; pointer-events: none; }
 .grab b::after { content: ''; position: absolute; left: 50%; top: 50%; width: 22%; height: 22%; border-radius: 50%; background: #fff; transform: translate(-50%, -50%); }
 .tbtn.icon.down { opacity: .6; }
+
+/* Lean buttons: always visible, bottom centre. */
+.tbtn.leanbtn { --w: 3.6; width: calc(var(--w) * var(--u)); height: calc(var(--w) * var(--u) * .544); border: 0; border-radius: 0; background: center / contain no-repeat; bottom: calc(.3 * var(--u) + env(safe-area-inset-bottom)); top: auto; opacity: .85; }
+.tbtn.leanbtn.lean-l { left: calc(50% - var(--w) * var(--u) - .1 * var(--u)); right: auto; background-image: url(assets/ui/lean_l.png); }
+.tbtn.leanbtn.lean-r { left: calc(50% + .1 * var(--u)); right: auto; background-image: url(assets/ui/lean_r.png); }
+.tbtn.leanbtn.down { opacity: 1; filter: brightness(1.5); background-color: transparent; }
