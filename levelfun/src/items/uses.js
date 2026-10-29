@@ -1,6 +1,6 @@
 import * as THREE from '../three.js';
 import { LEVEL_Y } from '../world/layout.js';
-import { READ } from './catalog.js';
+import { READ, ITEMS } from './catalog.js';
 import { sfx } from '../audio/sfx.js';
 
 const Y = l => LEVEL_Y[l];
@@ -42,7 +42,7 @@ export class UseSystem {
     this.anim = []; this.time = 0; this.alarmT = 0; this.ended = false; this.zaps = [];
     world.stuns = []; world.fixtures.hatchGate = (P, held) => this.hatchGate(P, held);
     this.buildStations(); this.buildKeypadLight(); this.buildDoorSocket();
-    world.fixtures.onLocked = () => sfx.buzz();
+    world.fixtures.onLocked = () => this.need(this.needText('turning_handle'));
     items.extraSave = () => this.p;
   }
 
@@ -76,8 +76,8 @@ export class UseSystem {
     add({ id: 'el_wiring', level: '3', x: 55.4, y: e3 + 1.2, z: 23.5, r: 2.4, accepts: ['screwdriver'], done: () => q.elev.wiring, apply: () => { q.elev.wiring = true; sfx.zap(); this.fx.burst(55.4, e3 + 1.2, 23.4, 0xffe07a, 14); } });
     add({ id: 'gen_handle', level: 'B', x: 23, y: b + 0.9, z: 17.4, r: 2.2, accepts: ['generator_handle'], done: () => q.genHandle, apply: h => { q.genHandle = true; it.installAt(h, { x: 23, y: b + 0.6, z: 17.3 }); sfx.install(); this.checkPower(); } });
     add({ id: 'gen_fuse', level: 'B', x: 25.3, y: b + 0.9, z: 17.4, r: 2.2, accepts: ['power_fuse'], done: () => q.genFuse, apply: h => { q.genFuse = true; it.installAt(h, { x: 25.3, y: b + 0.9, z: 17.3, rx: -Math.PI / 2 }); sfx.install(); this.checkPower(); } });
-    add({ id: 'el_door', level: '3', x: 59.3, y: e3 + 1.1, z: 11, r: 2.4, accepts: ['elevator_key'], done: () => q.elevOpen,
-      apply: h => { if (!(q.elev.motor && q.elev.circuit && q.elev.wiring && q.genHandle && q.genFuse)) { sfx.buzz(); return; } sfx.install(); this.items.consume(h); this.openElevator(); } });
+    add({ id: 'el_door', need: 'I Need the Elevator Key', level: '3', x: 59.3, y: e3 + 1.1, z: 11, r: 2.4, accepts: ['elevator_key'], done: () => q.elevOpen,
+      apply: h => { if (!(q.elev.motor && q.elev.circuit && q.elev.wiring && q.genHandle && q.genFuse)) { this.need('The Elevator Needs Repairs First'); return; } sfx.install(); this.items.consume(h); this.openElevator(); } });
     // Security Room door: the Turning Handle
     add({ id: 'sec_door', level: '1', x: 54.4, y: 1.1, z: 15.6, r: 2.2, accepts: ['turning_handle'], done: () => q.handle, apply: h => { q.handle = true; it.installAt(h, { x: 53.65, y: 1.05, z: 15.82, rx: -Math.PI / 2 }); sfx.install(); this.applyDoors(); } });
     // optional locked compartments (each holds one Battery)
@@ -85,7 +85,7 @@ export class UseSystem {
     add({ id: 'lock_maint', level: '3', x: 49.6, y: e3 + 1.1, z: 4.8, r: 2.0, accepts: ['maintenance_key'], done: () => q.maint, apply: () => { q.maint = true; sfx.install(); const b2 = it.items.find(i => i.uid === 'battery#2'); if (b2) it.reveal(b2, 49.6, e3 + 1.0, 5.1); } });
     // Party Zapper assembly bench (Party Preparation Room)
     const slots = { zap_a: 54.55, zap_b: 55.0, zap_c: 55.45 };
-    add({ id: 'bench', level: '1', x: 55, y: 1.1, z: 1.4, r: 2.3, accepts: ['zap_a', 'zap_b', 'zap_c'], done: () => false, canAccept: h => !q.bench[h.id],
+    add({ id: 'bench', need: 'I Need the Stun Gun Parts', level: '1', x: 55, y: 1.1, z: 1.4, r: 2.3, accepts: ['zap_a', 'zap_b', 'zap_c'], done: () => false, canAccept: h => !q.bench[h.id],
       apply: h => { q.bench[h.id] = true; it.installAt(h, { x: slots[h.id], y: 0.96, z: 0.8 }); sfx.install();
         if (q.bench.zap_a && q.bench.zap_b && q.bench.zap_c) {
           for (const id of Object.keys(slots)) { const p = it.items.find(i => i.id === id); if (p) it.consume(p, true); }
@@ -134,7 +134,7 @@ export class UseSystem {
 
   hatchGate(P, held) {
     if (P.isOpen) return;
-    if (P.requires && held !== P.requires) { sfx.buzz(); return; }
+    if (P.requires && held !== P.requires) { this.need(this.needText(P.requires)); return; }
     if (P.requires) sfx.install();
     P.open(); if (!this.p.passages.includes(P.id)) this.p.passages.push(P.id);
     this.items.dirty = true; this.items.save();
@@ -148,19 +148,27 @@ export class UseSystem {
     const dot = (dx * d.x + dy * d.y + dz * d.z) / Math.max(dist, 0.001);
     return dot > 0.45 ? dot - dist * 0.08 : -1;
   }
-  stationTarget(heldId) {
+  // "I Need a Exit Key" style messages
+  needText(id) {
+    const n = ITEMS[id].name, plural = /s$/.test(n) && !/ss$/.test(n);
+    return 'I Need ' + (plural ? '' : (/^[AEIOU]/i.test(n) ? 'an ' : 'a ')) + n;
+  }
+  need(text) { sfx.buzz(); this.ui.need(text); }
+  // The station you are looking at. `ready` means the item in your hand is the one it takes.
+  stationTarget(heldId, onlyReady = false) {
     let best = null, bs = -1;
     const held = this.items.held;
     for (const s of this.stations) {
       if (s.done()) continue;
       if (Math.abs(Y(s.level) - this.player.pos.y) > 3) continue;
-      const ok = heldId && s.accepts.includes(heldId) && (!s.canAccept || s.canAccept(held));
-      if (!ok) continue;
+      const ready = !!(heldId && s.accepts.includes(heldId) && (!s.canAccept || s.canAccept(held)));
+      if (onlyReady && !ready) continue;
       const sc = this.inView(s.x, s.y, s.z, s.r);
       if (sc > bs) { bs = sc; best = s; }
     }
     return best;
   }
+  stationReady(s, heldId) { return !!(heldId && s.accepts.includes(heldId) && (!s.canAccept || s.canAccept(this.items.held))); }
   hatchTarget(heldId) {
     if (!heldId) return null;
     let best = null, bs = -1;
@@ -177,13 +185,13 @@ export class UseSystem {
     const h = this.items.held; if (!h) return false;
     if (SELF.has(h.id)) return true;
     if (h.id === 'battery') return !!this.zapperTarget();
-    return !!(this.stationTarget(h.id) || this.hatchTarget(h.id));
+    return !!(this.stationTarget(h.id, true) || this.hatchTarget(h.id));
   }
 
   // ---------- pressing USE ----------
   useHeld() {
     const h = this.items.held; if (!h) return false;
-    const st = this.stationTarget(h.id);
+    const st = this.stationTarget(h.id, true);
     if (st) { st.apply(h); this.items.dirty = true; this.items.save(); return true; }
     const ht = this.hatchTarget(h.id);
     if (ht) { ht.onUse(h.id); return true; }
@@ -202,7 +210,11 @@ export class UseSystem {
     }
   }
   // Hand button on a station: use the item in your hand on it.
-  useStation(s) { const h = this.items.held; if (h) { s.apply(h); this.items.dirty = true; this.items.save(); } }
+  useStation(s) {
+    const h = this.items.held;
+    if (h && this.stationReady(s, h.id)) { s.apply(h); this.items.dirty = true; this.items.save(); return; }
+    this.need(s.need || this.needText(s.accepts[0]));
+  }
 
   noise(loud, src, at) { const p = at || this.player.pos; this.world.noises.push({ x: p.x, y: p.y, z: p.z, loud, src, t: this.items.time }); if (this.world.noises.length > 32) this.world.noises.shift(); }
 

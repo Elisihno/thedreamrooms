@@ -143,3 +143,9 @@ button { font: inherit; color: #fff; }
 .tbtn.use span, .tbtn.drop span { display: inline-block; -webkit-text-stroke: calc(var(--u) * .1) #1b1033; paint-order: stroke fill; filter: drop-shadow(0 3px 2px rgba(0,0,0,.6)); }
 
 .tbtn.use[hidden], .tbtn.drop[hidden], .tbtn.throw[hidden] { display: none; }
+
+/* "I Need a ..." message */
+#need { position: fixed; left: 50%; bottom: 30%; transform: translateX(-50%); z-index: 12; max-width: 90vw; text-align: center; font: 900 clamp(20px, 7vh, 40px)/1.1 "Arial Rounded MT Bold", "Chalkboard SE", "Marker Felt", "Comic Sans MS", system-ui, sans-serif; color: #fff; -webkit-text-stroke: 4px #1b1033; paint-order: stroke fill; text-shadow: 0 3px 8px rgba(0,0,0,.7); pointer-events: none; }
+#need[hidden] { display: none; }
+#need.show { animation: needpop .25s ease-out; }
+@keyframes needpop { from { transform: translateX(-50%) scale(.7); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }

@@ -74,7 +74,7 @@ const startPos = { x: START.x, z: START.z, y: LEVEL_Y[START.level], yaw: START.y
 player.teleport(startPos);
 const items = new ItemSystem(scene, camera, world);
 items.init(ItemSystem.load());   // continue a saved game, or scatter the items for a new one
-const uses = new UseSystem({ items, world, player, camera, scene, ui: { toast: m => toast(m), note: d => showNote(d), ending: k => showEnding(k), flash: () => doFlash() } });
+const uses = new UseSystem({ items, world, player, camera, scene, ui: { toast: m => toast(m), note: d => showNote(d), ending: k => showEnding(k), flash: () => doFlash(), need: t => showNeed(t) } });
 uses.restore(items.loadedExtra);
 addEventListener('pointerdown', initAudio, { once: true });
 const releaseTouch = initTouch(input, $('touch-ui'), settings);
@@ -157,7 +157,7 @@ const _dir = new THREE.Vector3(), _pv = new THREE.Vector3();
 function findTarget() {
   const it = items.target();
   if (it) return { kind: 'item', item: it, onUse: () => items.pickUp(it) };
-  const st = uses.stationTarget(items.heldId());   // the keypad, or a machine that takes what you hold
+  const st = uses.stationTarget(items.heldId());   // machines and locks: the hand shows; wrong item says what you need
   if (st) return { kind: 'station', station: st, onUse: () => uses.useStation(st) };
   const eye = camera.position; camera.getWorldDirection(_dir);
   let best = null, bestScore = 0.45;
@@ -194,6 +194,8 @@ function showEnding(kind) {
     : 'The service elevator groans open onto warm daylight. Real grass, real sky. You made it out.';
 }
 $('endbtn').addEventListener('click', () => { ItemSystem.clear(); location.reload(); });
+let needT = 0;
+function showNeed(text) { const n = $('need'); n.textContent = text; n.hidden = false; n.classList.remove('show'); void n.offsetWidth; n.classList.add('show'); clearTimeout(needT); needT = setTimeout(() => { n.hidden = true; }, 1900); }
 function doFlash() { const f = $('flash'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 70); }
 
 // ---- Arcade minigames: a full-screen pixel overlay; the world is frozen while it is open ----
