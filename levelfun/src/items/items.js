@@ -119,10 +119,10 @@ export class ItemSystem {
     const widest = a => a.length ? Math.max(...a) : 1e9;   // the working end is the slimmer one
     let tip = widest(lo) < widest(hi) ? long.clone().negate() : long.clone();
     if (flipEnd) tip.negate();
-    const aim = new THREE.Vector3(-0.22, 0.06, -1).normalize();
+    const aim = new THREE.Vector3(-0.2, 0.14, -1).normalize();
     const q1 = new THREE.Quaternion().setFromUnitVectors(tip, aim);
     // roll about the aim so the flattest side faces up
-    const f = flat.clone().applyQuaternion(q1), up = new THREE.Vector3(0, 1, 0);
+    const f = flat.clone().applyQuaternion(q1), up = new THREE.Vector3(0, 0.65, 0.76);   // flat side turned up and toward you
     const fp = f.clone().addScaledVector(aim, -f.dot(aim)).normalize(), upp = up.clone().addScaledVector(aim, -up.dot(aim)).normalize();
     let ang = Math.acos(Math.min(1, Math.max(-1, fp.dot(upp)))); if (fp.clone().cross(upp).dot(aim) < 0) ang = -ang;
     if (ang > Math.PI / 2) ang -= Math.PI; else if (ang < -Math.PI / 2) ang += Math.PI;   // the flat side may face up or down: take the smaller turn
@@ -273,7 +273,7 @@ export class ItemSystem {
     const h = it.def.hold || {};
     it.mesh.position.set(0, 0, -0.5);   // the hand group places it on screen (see update)
     it.mesh.scale.setScalar(Math.min(1, 0.24 / it.def.size));   // big things are held a little smaller so they stay clear of the buttons
-    if (it.holdQuat) it.mesh.quaternion.copy(it.holdQuat); else it.mesh.rotation.set(...(h.rot || [0.35, -0.5, 0.1]));
+    if (it.holdQuat) it.mesh.quaternion.copy(it.holdQuat); else it.mesh.rotation.set(...(h.rot || [0, 0, 0]));
     this.dirty = true; if (!silent) this.save();
   }
 
