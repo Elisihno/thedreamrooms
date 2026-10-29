@@ -62,7 +62,18 @@ export const sfx = {
 
   pop() { noise(0.12, { gain: 0.55, hp: 600 }); tone(180, 0.08, { type: 'square', gain: 0.2, slide: -120 }); },
   bang() { noise(0.35, { gain: 0.7, hp: 300 }); tone(90, 0.25, { type: 'sawtooth', gain: 0.35, slide: -60 }); },
-  whistle() { tone(2300, 0.35, { type: 'sine', gain: 0.35, slide: 200 }); tone(2380, 0.35, { type: 'sine', gain: 0.25, slide: 150, delay: 0.02 }); },
+  // A pea whistle: a pure ~2.8 kHz tone with a fast warble (the pea rattling), breathy noise, and a short rise at the start.
+  whistle() {
+    if (!ctx) return;
+    const t = ctx.currentTime, dur = 0.55, o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(2500, t); o.frequency.linearRampToValueAtTime(2850, t + 0.06); o.frequency.setValueAtTime(2850, t + dur - 0.1); o.frequency.linearRampToValueAtTime(2700, t + dur);
+    lfo.frequency.value = 42; lg.gain.value = 170; lfo.connect(lg); lg.connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.38, t + 0.03); g.gain.setValueAtTime(0.38, t + dur - 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
+    const o2 = ctx.createOscillator(), g2 = ctx.createGain(); o2.type = 'sine'; o2.frequency.setValueAtTime(5650, t); o2.frequency.linearRampToValueAtTime(5400, t + dur);
+    g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(0.05, t + 0.03); g2.gain.exponentialRampToValueAtTime(0.0001, t + dur); o2.connect(g2); g2.connect(master); o2.start(t); o2.stop(t + dur + 0.02);
+    noise(dur, { gain: 0.07, hp: 3200 });
+  },
   squeak() { tone(900, 0.12, { type: 'triangle', gain: 0.25, slide: 500 }); tone(1300, 0.08, { type: 'triangle', gain: 0.2, delay: 0.1 }); },
   tick() { tone(1400, 0.03, { type: 'square', gain: 0.18 }); },
   click() { tone(500, 0.04, { type: 'square', gain: 0.15 }); },

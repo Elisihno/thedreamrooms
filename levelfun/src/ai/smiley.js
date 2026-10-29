@@ -100,14 +100,20 @@ export class Smiley {
     const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z, dy = p.pos.y - this.pos.y, d = Math.hypot(dx, dz);
     if (Math.abs(dy) > 2.2) return false;
     const area = this.nav.areaAt(this.pos.x, this.pos.z, this.pos.y);
-    let range = 16 * (DARK[area ? area.mood : 'warm'] ?? 1) * (p.crouched ? 0.75 : 1) * (p.speed < 0.2 ? 0.7 : 1);
+    // Darkness, crouching and standing still shorten his sight, but never below 7 m: someone in plain view across a room is seen.
+    const range = Math.max(7, 18 * (DARK[area ? area.mood : 'warm'] ?? 1) * (p.crouched ? 0.85 : 1) * (p.speed < 0.2 ? 0.9 : 1));
     if (d > range) return false;
-    if (d > 1.4) { const ang = Math.abs(wrap(Math.atan2(-dx, -dz) - this.yaw)); if (ang > 1.15) return false; }   // about 130 degree field of view
-    const ey = this.pos.y + EYE, ty = this.eyeOfPlayer(), n = Math.ceil(d / 0.3), col = this.world.collision;
-    for (let i = 1; i < n; i++) {
-      const t = i / n, x = this.pos.x + dx * t, z = this.pos.z + dz * t, y = ey + (ty - ey) * t;
-      for (const b of col.near(x, z, 0.04)) { if (b.y1 <= y - 0.03 || b.y0 >= y + 0.03) continue; if (x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ) return false; }
-    }
+    if (d > 2.2) { const ang = Math.abs(wrap(Math.atan2(-dx, -dz) - this.yaw)); if (ang > 1.4) return false; }   // about 160 degree field of view; right next to him he notices you from any side
+    const ey = this.pos.y + EYE, col = this.world.collision, n = Math.ceil(d / 0.3);
+    const clear = ty => {   // is the line from his eyes to this height on you free of walls and furniture?
+      for (let i = 1; i < n; i++) {
+        const t = i / n, x = this.pos.x + dx * t, z = this.pos.z + dz * t, y = ey + (ty - ey) * t;
+        for (const b of col.near(x, z, 0.04)) { if (b.y1 <= y - 0.03 || b.y0 >= y + 0.03) continue; if (x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ) return false; }
+      }
+      return true;
+    };
+    const top = this.eyeOfPlayer();
+    if (!clear(top) && !clear(p.pos.y + (p.crouched ? 0.4 : 1.0)) && !clear(p.pos.y + 0.2)) return false;
     return true;
   }
   hearNoises() {
