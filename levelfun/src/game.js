@@ -238,7 +238,7 @@ function frame(now) {
     world.update(dt);
     items.update(dt, player);
     uses.update(dt);
-    if (isTouch) { const h = !!items.held; $('throwbtn').hidden = !h; $('dropbtn').hidden = !h; $('usebtn').hidden = !uses.canUse(); $('zapbtn').hidden = !(h && items.held.id === 'zapper'); }
+    if (isTouch) { const h = !!items.held; $('throwbtn').hidden = !h; $('dropbtn').hidden = !h; $('usebtn').hidden = !uses.canUse(); }
     world.updateVisibility(player.pos.x, player.pos.y);
     pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
     if (isTouch) {   // context buttons: the hand shows only when something can be opened, the circle only for items

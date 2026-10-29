@@ -128,3 +128,7 @@ button { font: inherit; color: #fff; }
 /* Name of the item you are looking at, shown under the pickup circle */
 #itemname { position: absolute; transform: translate(-50%, 0); padding: 2px 8px; font: 700 calc(var(--u) * .27)/1.2 system-ui, sans-serif; color: #fff; text-shadow: 0 1px 3px #000, 0 0 6px #000; background: rgba(0,0,0,.35); border-radius: 10px; white-space: nowrap; pointer-events: none; }
 #itemname[hidden] { display: none; }
+
+/* Right-side action buttons: plain white text, no circle or backdrop. */
+.tbtn.use, .tbtn.throw, .tbtn.drop { background: none; border: 0; border-radius: 0; color: #fff; font: 800 calc(var(--u) * .42)/1 system-ui, sans-serif; letter-spacing: .06em; text-shadow: 0 2px 4px #000, 0 0 10px #000; display: flex; align-items: center; justify-content: center; }
+.tbtn.use.down, .tbtn.throw.down, .tbtn.drop.down { background: none; opacity: .55; }
