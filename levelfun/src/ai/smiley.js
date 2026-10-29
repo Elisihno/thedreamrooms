@@ -67,6 +67,16 @@ export class Smiley {
     this.root.visible = false;
   }
 
+  // Test aid: a green glow that shows through walls, and he is drawn on every floor.
+  setXray(on) {
+    this.xray = on;
+    if (on && !this.ghosts) {
+      const mat = new THREE.MeshBasicMaterial({ color: 0x20ff4a, transparent: true, opacity: 0.55, depthTest: false, depthWrite: false });
+      const meshes = []; this.rig.root.traverse(o => { if (o.isMesh) meshes.push(o); });
+      this.ghosts = meshes.map(m => { const g = new THREE.Mesh(m.geometry, mat); g.renderOrder = 999; g.frustumCulled = false; m.parent.add(g); return g; });
+    }
+    for (const g of this.ghosts || []) g.visible = on;
+  }
   get cfg() { return DIFFICULTY[this.difficulty] || null; }
   get present() { return !!this.cfg; }
 
@@ -126,7 +136,7 @@ export class Smiley {
   update(dt) {
     if (!this.present) { this.root.visible = false; return; }
     const p = this.player, cfg = this.cfg;
-    this.root.visible = Math.abs(this.pos.y - this.camera.position.y) < 4.5;
+    this.root.visible = this.xray || Math.abs(this.pos.y - this.camera.position.y) < 4.5;
     if (this.catching) { this.animate(dt, 0); return; }
     this.stateT += dt; this.grace = Math.max(0, this.grace - dt);
 
