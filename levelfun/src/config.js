@@ -1,4 +1,4 @@
-export const BUILD = 'stage3-r16';
+export const BUILD = 'stage4-r1';
 
 export const CFG = {
   player: {
@@ -20,5 +20,5 @@ export const CFG = {
     medium: { pixelRatio: 1.0,  antialias: true,  shadows: false, texSize: 512,  aniso: 4, maxLights: 6 },
     high:   { pixelRatio: 1.75, antialias: true,  shadows: true,  texSize: 1024, aniso: 8, maxLights: 8 },
   },
-  defaults: { quality: 'medium', sensitivity: 1, fov: 70, crouchMode: 'toggle' },
+  defaults: { quality: 'medium', sensitivity: 1, fov: 70, crouchMode: 'toggle', difficulty: 'normal' },
 };

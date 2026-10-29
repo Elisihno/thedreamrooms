@@ -25,7 +25,41 @@ function noise(dur, { gain = 0.3, hp = 800, delay = 0 } = {}) {
   s.connect(f); f.connect(g); g.connect(master); s.start(t);
 }
 
+let breath = null;
+function panned(pan) { if (!ctx) return master; if (!ctx.createStereoPanner) return master; const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); p.connect(master); return p; }
+function thud(gain, pan) {
+  if (!ctx) return;
+  const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.14);
+  g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  o.connect(g); g.connect(panned(pan)); o.start(t); o.stop(t + 0.2);
+}
+
 export const sfx = {
+  // Smiley: heavy footsteps (quieter with distance, panned left/right), slow breathing, and a few stings
+  smileyStep(dist, pan) { const v = Math.max(0, 1 - dist / 26); if (v > 0.02) thud(0.55 * v * v + 0.04 * v, pan); },
+  setBreath(vol, chasing) {
+    if (!ctx) return;
+    if (!breath) {
+      const n = ctx.sampleRate * 2, buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 520; f.Q.value = 0.8;
+      const g = ctx.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(master); s.start();
+      breath = { g, f };
+    }
+    const t = ctx.currentTime, rate = chasing ? 1.5 : 0.55, w = 0.55 + 0.45 * Math.sin(t * rate * 6.283);
+    breath.g.gain.setTargetAtTime(vol * vol * 0.32 * w, t, 0.06);
+    breath.f.frequency.setTargetAtTime(chasing ? 700 : 480, t, 0.2);
+  },
+  smileyNotice() { tone(70, 0.9, { type: 'sawtooth', gain: 0.3, slide: -20 }); tone(740, 0.5, { type: 'square', gain: 0.08, slide: -300 }); },
+  doorCreak() { tone(180, 0.7, { type: 'sawtooth', gain: 0.08, slide: 120 }); noise(0.6, { gain: 0.05, hp: 1200 }); },
+  stunned() { sfx.zap(); tone(60, 1.2, { type: 'sawtooth', gain: 0.3, slide: -30 }); },
+  stick() { noise(0.5, { gain: 0.35, hp: 200 }); tone(240, 0.35, { type: 'sine', gain: 0.25, slide: -170 }); tone(160, 0.3, { type: 'sine', gain: 0.2, slide: -100, delay: 0.15 }); },
+  struggle() { noise(0.18, { gain: 0.25, hp: 300 }); },
+  thump() { noise(0.2, { gain: 0.6, hp: 120 }); tone(70, 0.3, { type: 'sine', gain: 0.5, slide: -40 }); },
+  scream() { tone(1100, 0.9, { type: 'sawtooth', gain: 0.35, slide: 500 }); tone(1650, 0.9, { type: 'square', gain: 0.18, slide: 300 }); noise(0.9, { gain: 0.45, hp: 900 }); tone(55, 1, { type: 'sawtooth', gain: 0.4 }); },
+
   pop() { noise(0.12, { gain: 0.55, hp: 600 }); tone(180, 0.08, { type: 'square', gain: 0.2, slide: -120 }); },
   bang() { noise(0.35, { gain: 0.7, hp: 300 }); tone(90, 0.25, { type: 'sawtooth', gain: 0.35, slide: -60 }); },
   whistle() { tone(2300, 0.35, { type: 'sine', gain: 0.35, slide: 200 }); tone(2380, 0.35, { type: 'sine', gain: 0.25, slide: 150, delay: 0.02 }); },

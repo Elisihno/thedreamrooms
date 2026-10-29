@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 (async()=>{ const b=await chromium.launch({args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox']});
 const c=await b.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true}); const p=await c.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{if(m.type()==='error')errs.push(m.text().slice(0,200))});
-const boot=async()=>{ await p.goto('http://localhost:8123/levelfun/index.html?touch=1'); await p.evaluate(()=>localStorage.clear()); await p.goto('http://localhost:8123/levelfun/index.html?touch=1'); await p.waitForFunction(()=>document.getElementById('primary').textContent==='START'&&window.LF,{timeout:90000}); await p.tap('#primary'); await p.waitForTimeout(300); };
+const boot=async()=>{ await p.goto('http://localhost:8123/levelfun/index.html?touch=1&difficulty=practice'); await p.evaluate(()=>localStorage.clear()); await p.goto('http://localhost:8123/levelfun/index.html?touch=1&difficulty=practice'); await p.waitForFunction(()=>document.getElementById('primary').textContent==='START'&&window.LF,{timeout:90000}); await p.tap('#primary'); await p.waitForTimeout(300); };
 const log=[]; const L=(s)=>{ log.push(s); if(!s.startsWith('OK')) console.log(s); };
 const run = async (route) => {
   await boot();

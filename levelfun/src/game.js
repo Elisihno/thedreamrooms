@@ -13,13 +13,16 @@ import { Player } from './player.js';
 import { playGame, GAMES } from './arcade/games.js';
 import { ItemSystem } from './items/items.js';
 import { UseSystem } from './items/uses.js';
-import { initAudio } from './audio/sfx.js';
+import { initAudio, sfx } from './audio/sfx.js';
+import { Smiley, DIFFICULTY } from './ai/smiley.js';
 
 const $ = id => document.getElementById(id);
 const settings = loadSettings();
 const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window || /[?&]touch=1/.test(location.search);
 document.body.classList.toggle('touch', isTouch);
 
+const qd = /[?&]difficulty=(\w+)/.exec(location.search); if (qd) settings.difficulty = qd[1];
+if (!(settings.difficulty in DIFFICULTY)) settings.difficulty = 'normal';
 configureAssets({ texSize: CFG.quality[settings.quality].texSize, aniso: CFG.quality[settings.quality].aniso });
 
 const canvas = $('game');
@@ -37,11 +40,12 @@ const camera = new THREE.PerspectiveCamera(settings.fov, innerWidth / innerHeigh
 scene.add(camera);
 
 // Quality buttons work during loading too; applyQuality runs once the world exists.
-let onQuality = null;
+let onQuality = null, onDifficulty = null;
 document.querySelectorAll('[data-setting]').forEach(b => b.addEventListener('click', () => {
   const k = b.dataset.setting, v = b.dataset.value;
-  settings[k] = k === 'quality' || k === 'crouchMode' ? v : Number(v);
+  settings[k] = k === 'quality' || k === 'crouchMode' || k === 'difficulty' ? v : Number(v);
   if (k === 'quality') onQuality?.();
+  if (k === 'difficulty') onDifficulty?.();
   saveSettings(settings);
   document.querySelectorAll('[data-setting]').forEach(x => x.classList.toggle('on', String(settings[x.dataset.setting]) === x.dataset.value));
 }));
@@ -76,6 +80,13 @@ const items = new ItemSystem(scene, camera, world);
 items.init(ItemSystem.load());   // continue a saved game, or scatter the items for a new one
 const uses = new UseSystem({ items, world, player, camera, scene, ui: { toast: m => toast(m), note: d => showNote(d), ending: k => showEnding(k), flash: () => doFlash(), need: t => showNeed(t) } });
 uses.restore(items.loadedExtra);
+if (!uses.p.day) uses.p.day = 1;
+const smiley = new Smiley({ scene, world, player, items, camera, difficulty: settings.difficulty });
+smiley.respawn(30);
+smiley.onCatch = kind => startScare(kind);
+const DIFFNOTE = { practice: 'Practice: Smiley is not in the building. Explore in peace.', easy: 'Easy: Smiley walks slowly (75%).', normal: 'Normal: Smiley is a little slower than you (90%).', hard: 'Hard: Smiley walks as fast as you (100%).', extreme: 'Extreme: Smiley is faster than you (110%), hears much further and checks hiding places he saw.' };
+onDifficulty = () => { const was = smiley.present; smiley.difficulty = settings.difficulty; if (smiley.present && !was) smiley.respawn(20); $('diffnote').textContent = DIFFNOTE[settings.difficulty]; };
+$('diffnote').textContent = DIFFNOTE[settings.difficulty];
 addEventListener('pointerdown', initAudio, { once: true });
 const releaseTouch = initTouch(input, $('touch-ui'), settings);
 
@@ -133,7 +144,7 @@ $('primary').addEventListener('click', () => {
   const first = !running;
   if (first) { running = true; if (isTouch) enterFullscreen(); }
   setPaused(false);
-  if (first) startWake();
+  if (first) { startWake(); toast('Day ' + uses.p.day + ' of 5'); }
 });
 $('fs').addEventListener('click', enterFullscreen);
 const SPOTS = { B: { x: 24, z: 4, yaw: -Math.PI / 2 }, 1: { x: 24, z: 8, yaw: -Math.PI / 2 }, 2: { x: 30, z: 11.5, yaw: -Math.PI / 2 }, 3: { x: 24, z: 8, yaw: -Math.PI / 2 } };
@@ -155,6 +166,7 @@ input.on('pause', () => { if (running && !paused) setPaused(true); });
 // Nearest interactable the player is looking at (doors, secret hatches, later items).
 const _dir = new THREE.Vector3(), _pv = new THREE.Vector3();
 function findTarget() {
+  if (player.hide) return { kind: 'unhide', x: 0, y: 0, z: 0, onUse: () => exitHide() };
   const it = items.target();
   if (it) return { kind: 'item', item: it, onUse: () => items.pickUp(it) };
   const st = uses.stationTarget(items.heldId());   // machines and locks: the hand shows; wrong item says what you need
@@ -188,8 +200,8 @@ addEventListener('keydown', e => { if (modal && modal !== 'ending' && modal !== 
 function showEnding(kind) {
   items.save(); if (!enterModal('ending')) return;
   const E = $('ending'); E.className = kind;
-  $('endt').textContent = kind === 'exit' ? 'YOU ESCAPED LEVEL FUN' : 'YOU ESCAPED';
-  $('endp').textContent = kind === 'exit'
+  $('endt').textContent = kind === 'over' ? 'GAME OVER' : kind === 'exit' ? 'YOU ESCAPED LEVEL FUN' : 'YOU ESCAPED';
+  $('endp').textContent = kind === 'over' ? 'Smiley found you on the fifth day. The party is never over.' : kind === 'exit'
     ? 'The emergency door opens onto a yellow hallway of buzzing lights and damp carpet. You have left Level Fun... but not the Backrooms.'
     : 'The service elevator groans open onto warm daylight. Real grass, real sky. You made it out.';
 }
@@ -197,6 +209,74 @@ $('endbtn').addEventListener('click', () => { ItemSystem.clear(); location.reloa
 let needT = 0;
 function showNeed(text) { const n = $('need'); n.textContent = text; n.hidden = false; n.classList.remove('show'); void n.offsetWidth; n.classList.add('show'); clearTimeout(needT); needT = setTimeout(() => { n.hidden = true; }, 1900); }
 function doFlash() { const f = $('flash'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 70); }
+
+// ---- Hiding places: step into tables, lockers, stalls, benches, tunnels and nooks; Smiley only checks one he saw you enter ----
+function enterHide(sp) {
+  if (player.hide || scare) return;
+  const px = player.pos.x, pz = player.pos.z, py = player.pos.y;
+  smiley.noteHide(sp, px, pz);
+  player.hide = { spot: sp, eye: sp.kind === 'locker' || sp.kind === 'stall' ? 1.25 : 0.6, ox: px, oy: py, oz: pz };
+  player.crouched = true; input.crouch = true;
+  toast('Hiding. Tap the hand to come out.');
+}
+function exitHide() {
+  const h = player.hide; if (!h) return;
+  player.hide = null; player.teleport({ x: h.ox, z: h.oz, y: h.oy, yaw: player.yaw, crouched: true });
+}
+for (const sp of world.hiding) world.interactable({ x: sp.x, y: sp.y + 0.9, z: sp.z, radius: 1.7, kind: 'hide', spot: sp, onUse: () => enterHide(sp) });
+
+// ---- Caught: a short, quick scare, then the next day ----
+let scare = null, dayHold = false;
+function startScare(kind) {
+  if (scare) return;
+  if (camView) closeCameras();
+  if (player.hide && kind !== 'table') kind = 'grab';
+  scare = { t: 0, kind, init: false, flashed: false }; $('touch-ui').hidden = true; releaseTouch();
+}
+function runScare(dt) {
+  const S = scare, sm = smiley, cp = camera.position; S.t += dt;
+  if (!S.init) {
+    S.init = true; S.cam = cp.clone();
+    let dx = sm.pos.x - cp.x, dz = sm.pos.z - cp.z; const d = Math.hypot(dx, dz);
+    if (d < 0.2) { dx = -Math.sin(player.yaw); dz = -Math.cos(player.yaw); } else { dx /= d; dz /= d; }
+    S.ux = dx; S.uz = dz; S.floorY = sm.pos.y;
+  }
+  const dist = S.kind === 'table' ? 2.1 : Math.max(0.95, 2.2 - S.t * 4);
+  sm.pos.set(S.cam.x + S.ux * dist, S.floorY, S.cam.z + S.uz * dist);
+  sm.yaw = Math.atan2(S.ux, S.uz); sm.root.visible = true; sm.sync();
+  const r = sm.rig;
+  if (r.legL) {
+    r.legL.rotation.x = r.legR.rotation.x = 0;
+    if (S.kind === 'table') { r.root.rotation.x = 1.25; r.armL.rotation.x = r.armR.rotation.x = -0.5; }
+    else if (S.kind === 'hit') { r.root.rotation.x = 0.2; r.armL.rotation.x = -0.4; r.armR.rotation.x = S.t < 0.35 ? -2.6 + S.t * 0 : -2.6 + Math.min(1, (S.t - 0.35) * 8) * 2.1; }
+    else { r.root.rotation.x = 0.25; r.armL.rotation.x = r.armR.rotation.x = -1.45; }
+  }
+  const tgt = Math.atan2(-S.ux, -S.uz); let dy = Math.atan2(Math.sin(tgt - player.yaw), Math.cos(tgt - player.yaw));
+  player.yaw += dy * Math.min(1, dt * 12);
+  const headY = S.kind === 'table' ? 0.55 : 1.7, eyeY = S.cam.y, dd = Math.max(0.5, Math.hypot(S.cam.x - sm.pos.x, S.cam.z - sm.pos.z));
+  player.pitch += (Math.atan2(headY + S.floorY - eyeY, dd) - player.pitch) * Math.min(1, dt * 8);
+  const sh = Math.max(0, S.t - 0.3) * 0.03, kick = S.kind === 'hit' && S.t > 0.35 ? Math.min(1, (S.t - 0.35) * 5) * 0.5 : 0;
+  camera.position.set(S.cam.x + (Math.random() - 0.5) * sh, S.cam.y + (Math.random() - 0.5) * sh - kick * 0.2, S.cam.z + (Math.random() - 0.5) * sh);
+  camera.rotation.set(player.pitch - kick, player.yaw, kick * 0.8 + (Math.random() - 0.5) * sh * 0.5, 'YXZ');
+  const sc = $('scare');
+  if (!S.flashed && S.t > 0.3) { S.flashed = true; sfx.scream(); if (S.kind === 'hit') sfx.thump(); sc.className = 'red'; sc.style.opacity = 0.75; }
+  if (S.flashed && S.t < 1.2) sc.style.opacity = Math.max(0.25, 0.75 - (S.t - 0.3) * 0.5);
+  if (S.t > 1.2) { sc.className = ''; sc.style.opacity = Math.min(1, (S.t - 1.2) / 0.5); }
+  world.update(dt); world.updateVisibility(player.pos.x, player.pos.y); pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
+  if (S.t > 1.8) endCaught();
+}
+function endCaught() {
+  scare = null; $('touch-ui').hidden = paused || !isTouch; const sc = $('scare'); smiley.rig.root && (smiley.rig.root.rotation.x = 0);
+  items.drop(); player.hide = null; player.stuckT = 0; input.crouch = true;
+  const q = uses.p; q.day = q.day || 1;
+  if (q.day >= 5) { sc.style.opacity = 0; showEnding('over'); return; }
+  q.day++; items.save();
+  $('dayt').textContent = 'DAY ' + q.day;
+  $('dayp').textContent = 'You wake up under the table again. Everything you solved stays solved, and every item is where you left it.';
+  $('daycard').hidden = false; dayHold = true;
+  player.teleport(startPos); smiley.respawn(25);
+  setTimeout(() => { $('daycard').hidden = true; sc.style.opacity = 0; dayHold = false; startWake(); }, 3400);
+}
 
 // ---- Security cameras: watched from the Security Room monitors, in night vision ----
 let camView = null;   // { i, fov }
@@ -211,6 +291,7 @@ function showCam(i) {
 }
 function openCameras() {
   if (camView || modal || !enterModal('cams')) return;
+  world.noises.push({ x: player.pos.x, y: player.pos.y, z: player.pos.z, loud: 0.5, src: 'cams', t: -99 });
   camView = { i: 0, fov: camera.fov }; items.hand.visible = false;
   $('game').classList.add('nightvision'); camera.fov = 78; camera.updateProjectionMatrix(); showCam(0);
 }
@@ -270,11 +351,22 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  if (!paused) {
+  if (scare) runScare(dt);
+  else if (!paused && !dayHold) {
     player.update(dt);
     world.update(dt);
     items.update(dt, player);
     uses.update(dt);
+    smiley.update(dt);
+    for (let i = world.traps.length - 1; i >= 0; i--) {   // party traps: goo that holds you for a few seconds
+      const t = world.traps[i];
+      if (!player.hide && player.stuckT <= 0 && Math.hypot(player.pos.x - t.x, player.pos.z - t.z) < 0.55 && Math.abs(player.pos.y - t.y) < 0.7) {
+        player.stuckT = 3.5; scene.remove(t.mesh); world.traps.splice(i, 1); sfx.stick(); toast('Stuck in party goo!');
+        world.noises.push({ x: t.x, y: t.y, z: t.z, loud: 0.45, src: 'trap', t: -99 });
+      }
+    }
+    $('stucknote').hidden = player.stuckT <= 0;
+    if (player.stuckT > 0) { player._sq = (player._sq || 0) - dt; if (player._sq <= 0) { player._sq = 0.7; sfx.struggle(); } }
     if (isTouch) { const h = !!items.held; $('dropbtn').hidden = !h; $('usebtn').hidden = !uses.canUse(); }
     world.updateVisibility(player.pos.x, player.pos.y);
     pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
@@ -297,7 +389,7 @@ function frame(now) {
   }
   if (camView) {   // looking through a security camera
     const p = camPose(CAMERAS[camView.i]); camera.position.set(p.x, p.y, p.z); camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
-    world.updateVisibility(p.x, LEVEL_Y[CAMERAS[camView.i].level] + 0.1); pool.update(dt, p.x, p.y, p.z); world.update(dt);
+    smiley.update(dt); world.updateVisibility(p.x, LEVEL_Y[CAMERAS[camView.i].level] + 0.1); pool.update(dt, p.x, p.y, p.z); world.update(dt);
     const s = $('camtime'); const t = Math.floor(now / 1000); s.textContent = 'REC ' + String(Math.floor(t / 3600) % 24).padStart(2, '0') + ':' + String(Math.floor(t / 60) % 60).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
   }
   if (!arcadeStop) renderer.render(scene, camera);   // the 3D view is hidden behind the arcade overlay: skip the work
@@ -308,4 +400,4 @@ setLoad(1, 'Ready'); $('loadbar').classList.add('done'); $('loadmsg').classList.
 requestAnimationFrame(frame);
 
 // Test hook for automated checks.
-window.LF = { uses, items, rewards, openArcade, player, world, input, settings, renderer, scene, setPaused, pool, camera };
+window.LF = { smiley, uses, items, rewards, openArcade, player, world, input, settings, renderer, scene, setPaused, pool, camera };

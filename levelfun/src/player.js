@@ -16,6 +16,7 @@ export class Player {
     this.vx = 0; this.vz = 0;
     this.bob = 0; this.speed = 0;
     this.wakeT = WAKE;
+    this.hide = null; this.stuckT = 0;   // hiding place {spot,...} / seconds left stuck in a party trap
     camera.rotation.order = 'YXZ';
   }
 
@@ -46,8 +47,16 @@ export class Player {
     if (waking) this.eye = 0.22 + (P.eyeCrouch - 0.22) * ease((wk - 0.25) / 0.75);
     else this.eye += ((this.crouched ? P.eyeCrouch : P.eyeStand) - this.eye) * Math.min(1, dt * 10);
 
+    // Hiding: stay put inside the spot, only looking around
+    if (this.hide) {
+      const h = this.hide; this.pos.set(h.spot.x, h.spot.y, h.spot.z); this.vx = this.vz = this.speed = 0; this.lean = 0;
+      this.crouched = true; this.eye += (h.eye - this.eye) * Math.min(1, dt * 8);
+      this.camera.position.set(this.pos.x, this.pos.y + this.eye, this.pos.z); this.camera.rotation.set(this.pitch, this.yaw, 0);
+      return;
+    }
+    if (this.stuckT > 0) this.stuckT -= dt;
     // Movement
-    const m = wk < 0.6 ? { x: 0, y: 0 } : inp.move, sp = this.crouched ? P.crouch : P.walk;
+    const m = wk < 0.6 || this.stuckT > 0 ? { x: 0, y: 0 } : inp.move, sp = this.crouched ? P.crouch : P.walk;
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     const tx = (-s * m.y + c * m.x) * sp, tz = (-c * m.y - s * m.x) * sp;
     const k = Math.min(1, dt * P.accel);
