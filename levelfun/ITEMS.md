@@ -1,7 +1,7 @@
 # LEVEL FUN — items and what they do
 
 One item can be carried at a time. Look at an item to see its outline, tap the circle (or press E) to pick it up.
-DROP / THROW appear while you hold something (PC: G / right mouse). **USE** appears when the item in your hand can do something right now (PC: U, or E when nothing else is targeted). **ZAP** appears when you hold the Party Zapper (PC: F / left mouse).
+DROP appears while you hold something (PC: G drops, right mouse throws). **USE** appears when the item in your hand can do something right now (PC: U, or E when nothing else is targeted). **ZAP** appears when you hold the Party Zapper (PC: F / left mouse).
 
 ## Main escape-puzzle items (12 categories)
 | # | Item | Where it comes from | Use |
