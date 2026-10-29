@@ -77,7 +77,8 @@ const player = new Player(camera, world, input);
 const startPos = { x: START.x, z: START.z, y: LEVEL_Y[START.level], yaw: START.yaw, crouched: true };
 player.teleport(startPos);
 const items = new ItemSystem(scene, camera, world);
-items.init(ItemSystem.load());   // continue a saved game, or scatter the items for a new one
+ItemSystem.clear();   // a run is never resumed: every launch is a fresh game with newly scattered items (and no test layouts carried over)
+items.init(null);
 const uses = new UseSystem({ items, world, player, camera, scene, ui: { toast: m => toast(m), note: d => showNote(d), ending: k => showEnding(k), flash: () => doFlash(), need: t => showNeed(t) } });
 uses.restore(items.loadedExtra);
 if (!uses.p.day) uses.p.day = 1;
