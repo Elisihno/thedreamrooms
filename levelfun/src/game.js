@@ -23,6 +23,14 @@ document.body.classList.toggle('touch', isTouch);
 configureAssets({ texSize: CFG.quality[settings.quality].texSize, aniso: CFG.quality[settings.quality].aniso });
 
 const canvas = $('game');
+// Birthday-party lettering for the action buttons: every letter in its own colour, tilted and bouncing a little.
+function partyLetters(el, text) {
+  const cols = ['#ff4f5e', '#ffd23c', '#3fd0ff', '#7ee05a', '#ff8ad8', '#ff9a1f'];
+  el.setAttribute('aria-label', text); el.textContent = '';
+  [...text].forEach((ch, i) => { const s = document.createElement('span'); s.textContent = ch; s.style.color = cols[(i * 2 + text.length) % cols.length]; s.style.transform = `translateY(${i % 2 ? -0.06 : 0.05}em) rotate(${[-9, 6, -4, 8][i % 4]}deg)`; el.appendChild(s); });
+}
+partyLetters($('usebtn'), 'USE'); partyLetters($('dropbtn'), 'DROP');
+
 const renderer = createRenderer(canvas, settings.quality);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(settings.fov, innerWidth / innerHeight, 0.05, 80);
