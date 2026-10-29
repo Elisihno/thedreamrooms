@@ -43,6 +43,7 @@ export function playGame(id, canvas, { onWin, onExit }) {
     if (['Space', 'Enter', 'ArrowUp', 'KeyW'].includes(e.code)) { e.preventDefault(); press({ x: W / 2, y: H / 2, key: true }); }
   };
   canvas.addEventListener('pointerdown', down); addEventListener('keydown', key);
+  canvas.__lfWin = () => { state = 'win'; onWin(id); };   // test hook: lets automated runs finish a game
 
   function run(now) {
     if (stopped) return;
