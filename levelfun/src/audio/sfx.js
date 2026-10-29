@@ -53,6 +53,7 @@ export const sfx = {
     breath.f.frequency.setTargetAtTime(chasing ? 700 : 480, t, 0.2);
   },
   smileyNotice() { tone(70, 0.9, { type: 'sawtooth', gain: 0.3, slide: -20 }); tone(740, 0.5, { type: 'square', gain: 0.08, slide: -300 }); },
+  heavyDoor() { noise(0.5, { gain: 0.5, hp: 150 }); tone(70, 0.8, { type: 'sawtooth', gain: 0.35, slide: -30 }); tone(130, 1.1, { type: 'sawtooth', gain: 0.12, slide: 110, delay: 0.1 }); tone(60, 0.5, { type: 'sine', gain: 0.5, delay: 0.9, slide: -20 }); },
   doorCreak() { tone(180, 0.7, { type: 'sawtooth', gain: 0.08, slide: 120 }); noise(0.6, { gain: 0.05, hp: 1200 }); },
   stunned() { sfx.zap(); tone(60, 1.2, { type: 'sawtooth', gain: 0.3, slide: -30 }); },
   stick() { noise(0.5, { gain: 0.35, hp: 200 }); tone(240, 0.35, { type: 'sine', gain: 0.25, slide: -170 }); tone(160, 0.3, { type: 'sine', gain: 0.2, slide: -100, delay: 0.15 }); },

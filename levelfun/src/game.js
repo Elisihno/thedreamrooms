@@ -303,6 +303,7 @@ function closeCameras() {
   $('game').classList.remove('nightvision'); leaveModal();
 }
 world.fixtures.openCameras = openCameras;
+world.fixtures.heavyDoor = () => sfx.heavyDoor();
 $('camprev').addEventListener('click', () => showCam(camView.i - 1));
 $('camnext').addEventListener('click', () => showCam(camView.i + 1));
 $('camexit').addEventListener('click', closeCameras);

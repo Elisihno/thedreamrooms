@@ -116,12 +116,20 @@ export class Smiley {
     if (!clear(top) && !clear(p.pos.y + (p.crouched ? 0.4 : 1.0)) && !clear(p.pos.y + 0.2)) return false;
     return true;
   }
+  // Footsteps: he hears you walking nearby (up to one floor away) and goes straight for you. Crouch-walking is much quieter, standing still is silent.
+  senseSteps() {
+    const p = this.player; if (p.hide || p.speed < 0.5) return false;
+    const dy = Math.abs(p.pos.y - this.pos.y); if (dy > 4.6) return false;
+    const range = (p.crouched ? 3.5 : 9) * this.cfg.hear, d = Math.hypot(p.pos.x - this.pos.x, p.pos.z - this.pos.z) + dy * 1.5;
+    return d <= range;
+  }
   hearNoises() {
     const list = this.world.noises || []; let best = null;
     for (const n of list) {
       if (this.noiseSeen.has(n)) continue; this.noiseSeen.add(n);
       if (n.src === 'smiley') continue;
-      const d = Math.hypot(n.x - this.pos.x, n.z - this.pos.z) + Math.abs(n.y - this.pos.y) * 2.5, range = (6 + 22 * n.loud) * this.cfg.hear;
+      const dy = Math.abs(n.y - this.pos.y); if (dy > 4.6) continue;   // he hears noises up to one floor away, no further
+      const d = Math.hypot(n.x - this.pos.x, n.z - this.pos.z) + dy * 0.75, range = (6 + 22 * n.loud) * this.cfg.hear;
       if (d <= range && (!best || n.loud / (d + 3) > best.score)) best = { n, score: n.loud / (d + 3) };
     }
     return best && best.n;
@@ -161,7 +169,7 @@ export class Smiley {
     if (this.look <= 0) {
       this.look = 0.15;
       const holdingPlush = this.items.heldId() === 'plush';
-      this.canSeeNow = this.grace <= 0 && this.sees();
+      this.canSeeNow = this.grace <= 0 && (this.sees() || this.senseSteps());   // seen or heard: he goes straight for you
       if (this.canSeeNow) {
         this.unseenT = 0; this.lastSeen = { x: p.pos.x, z: p.pos.z, y: p.pos.y };
         if (holdingPlush) this.trackPlush = true;

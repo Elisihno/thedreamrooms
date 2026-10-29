@@ -46,7 +46,7 @@ class Door {
       : world.collision.add(o.c - 0.06, o.a, o.c + 0.06, o.b, y0, y0 + 2.15);
     world.interactable({
       x: isX ? (o.a + o.b) / 2 : o.c, y: y0 + 1.1, z: isX ? o.c : (o.a + o.b) / 2, radius: 2.2, kind: 'door',
-      onUse: () => { if (this.toggle()) world.noises?.push({ x: this.o.axis === 'x' ? (this.o.a + this.o.b) / 2 : this.o.c, y: y0, z: this.o.axis === 'x' ? this.o.c : (this.o.a + this.o.b) / 2, loud: 0.3, src: 'door', t: -99 }); },
+      onUse: () => { if (this.toggle()) { if (this.o.kind === 'heavy') world.fixtures.heavyDoor?.(); world.noises?.push({ x: this.o.axis === 'x' ? (this.o.a + this.o.b) / 2 : this.o.c, y: y0, z: this.o.axis === 'x' ? this.o.c : (this.o.a + this.o.b) / 2, loud: this.o.kind === 'heavy' ? 1 : 0.3, src: 'door', t: -99 }); } },
     });
   }
   toggle(quiet) { if (this.locked) { this.rattle = 0.5; this.world.fixtures.onLocked?.(); return false; } this.target = this.target ? 0 : 1; return true; }
