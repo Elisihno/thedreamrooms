@@ -121,7 +121,7 @@ const BUILDERS = {
   zapBody: () => zapParts(['body']),
   zapHead: () => zapParts(['head']),
   zapper: () => zapParts(['grip', 'body', 'head']),
-  battery: () => { const g = new THREE.Group(); g.add(cyl(0.025, 0.09, mat(0xf1c40f), 0, 0.045, 0)); g.add(cyl(0.025, 0.03, mat(0x222222), 0, 0.075, 0)); g.add(cyl(0.01, 0.01, mat(0xcccccc, { metalness: 0.8 }), 0, 0.095, 0)); return g; },
+  battery: () => { const g = new THREE.Group(); g.add(cyl(0.025, 0.075, mat(0xf1c40f), 0, 0.0375, 0)); g.add(cyl(0.0262, 0.02, mat(0x222222), 0, 0.066, 0)); g.add(cyl(0.0262, 0.008, mat(0x222222), 0, 0.012, 0)); g.add(cyl(0.011, 0.012, mat(0xcccccc, { metalness: 0.8 }), 0, 0.081, 0)); g.add(box(0.012, 0.03, 0.0015, mat(0x222222), 0, 0.04, 0.0262)); return g; },
   turningHandle: () => { const g = new THREE.Group(); const brass = mat(0xb59a4a, { metalness: 0.6, roughness: 0.4 });
     g.add(cyl(0.015, 0.1, brass, 0, 0.05, 0)); const bar = cyl(0.013, 0.2, brass, 0, 0.11, 0); bar.rotation.z = Math.PI / 2; g.add(bar);
     for (const sx of [-1, 1]) g.add(ball(0.025, mat(0x9c2f2f), sx * 0.1, 0.11, 0)); g.add(cyl(0.035, 0.012, brass, 0, 0.006, 0)); return g; },

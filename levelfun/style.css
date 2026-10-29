@@ -141,3 +141,5 @@ button { font: inherit; color: #fff; }
 /* Party lettering: chunky rounded letters with a dark outline */
 .tbtn.use, .tbtn.drop { font-family: "Arial Rounded MT Bold", "Chalkboard SE", "Marker Felt", "Comic Sans MS", "Trebuchet MS", system-ui, sans-serif; font-weight: 900; letter-spacing: .02em; text-shadow: none; }
 .tbtn.use span, .tbtn.drop span { display: inline-block; -webkit-text-stroke: calc(var(--u) * .1) #1b1033; paint-order: stroke fill; filter: drop-shadow(0 3px 2px rgba(0,0,0,.6)); }
+
+.tbtn.use[hidden], .tbtn.drop[hidden], .tbtn.throw[hidden] { display: none; }

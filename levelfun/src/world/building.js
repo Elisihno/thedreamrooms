@@ -21,7 +21,7 @@ const MOODS = {
 
 class Door {
   constructor(world, o) {
-    this.world = world; this.o = o; this.openT = 0; this.target = 0; this.locked = false;
+    this.world = world; this.o = o; this.openT = 0; this.target = 0; this.locked = false; this.rattle = 0;
     const L = o.b - o.a, isX = o.axis === 'x';
     const y0 = LEVEL_Y[o.level];
     this.pivot = new THREE.Group();
@@ -49,8 +49,9 @@ class Door {
       onUse: () => this.toggle(),
     });
   }
-  toggle() { if (this.locked) return false; this.target = this.target ? 0 : 1; return true; }
+  toggle() { if (this.locked) { this.rattle = 0.5; this.world.fixtures.onLocked?.(); return false; } this.target = this.target ? 0 : 1; return true; }
   update(dt) {
+    if (this.rattle > 0) { this.rattle = Math.max(0, this.rattle - dt); this.pivot.rotation.y = this.base + Math.sin(this.rattle * 60) * 0.03 * (this.rattle / 0.5); if (!this.rattle) this.pivot.rotation.y = this.base; }
     if (this.openT === this.target) return;
     const s = dt * 2.2;
     this.openT = this.target > this.openT ? Math.min(this.target, this.openT + s) : Math.max(this.target, this.openT - s);
