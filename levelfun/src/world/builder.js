@@ -3,7 +3,7 @@ import { mergeGeometries } from '../../vendor/BufferGeometryUtils.js';
 import { CollisionWorld } from './collision.js';
 import { getMaterial, getBasic } from '../assets/registry.js';
 import { TILE } from '../assets/manifest.js';
-import { LEVEL_Y, LEVELS, CEIL } from './layout.js';
+import { LEVEL_Y, LEVELS, CEIL, SPIRAL } from './layout.js';
 
 const geoCache = new Map();
 
@@ -160,8 +160,13 @@ export class World {
   }
 
   // Show only the groups near the player's height (plus the shaft when beside it).
-  updateVisibility(px, py) {
+  // Near the spiral staircase the floors directly above and below are drawn too, so you see them through the stairwell.
+  updateVisibility(px, py, pz) {
     for (const id in this.ranges) this.levels[id].visible = py > this.ranges[id][0] && py < this.ranges[id][1];
+    if (pz !== undefined && Math.hypot(px - SPIRAL.cx, pz - SPIRAL.cz) < 7) {
+      const cur = LEVELS.findIndex(id => py > this.ranges[id][0] && py < this.ranges[id][1]);
+      for (const k of [cur - 1, cur + 1]) if (cur >= 0 && LEVELS[k]) this.levels[LEVELS[k]].visible = true;
+    }
     this.always.visible = px > 58.8;
   }
 }

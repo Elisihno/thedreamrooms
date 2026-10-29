@@ -264,7 +264,7 @@ function runScare(dt) {
   if (!S.flashed && S.t > 0.3) { S.flashed = true; sfx.scream(); if (S.kind === 'hit') sfx.thump(); sc.className = 'red'; sc.style.opacity = 0.75; }
   if (S.flashed && S.t < 1.2) sc.style.opacity = Math.max(0.25, 0.75 - (S.t - 0.3) * 0.5);
   if (S.t > 1.2) { sc.className = ''; sc.style.opacity = Math.min(1, (S.t - 1.2) / 0.5); }
-  world.update(dt); world.updateVisibility(player.pos.x, player.pos.y); pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
+  world.update(dt); world.updateVisibility(player.pos.x, player.pos.y, player.pos.z); pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
   if (S.t > 1.8) endCaught();
 }
 function endCaught() {
@@ -371,7 +371,7 @@ function frame(now) {
     $('stucknote').hidden = player.stuckT <= 0;
     if (player.stuckT > 0) { player._sq = (player._sq || 0) - dt; if (player._sq <= 0) { player._sq = 0.7; sfx.struggle(); } }
     if (isTouch) { const h = !!items.held; $('dropbtn').hidden = !h; $('usebtn').hidden = !uses.canUse(); }
-    world.updateVisibility(player.pos.x, player.pos.y);
+    world.updateVisibility(player.pos.x, player.pos.y, player.pos.z);
     pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
     if (isTouch) {   // context buttons: the hand shows only when something can be opened, the circle only for items
       const t = findTarget(), item = t && t.kind === 'item';
