@@ -17,7 +17,7 @@ DROP / THROW appear while you hold something (PC: G / right mouse). **USE** appe
 | 9 | Generator Handle | scattered (electrical/boiler/storage) | USE at the basement generator |
 | 10 | Power Fuse | scattered (staff/archives/storage/service) | USE at the basement generator; handle + fuse = power repaired |
 | 11 | Arcade Token | Prize Counter counter-top | Hold it and tap the hand at an arcade game machine; reusable |
-| 12 | Party Zapper parts ×3 (Grip, Body, Probe Head) | three different rooms | USE all three at the assembly bench in the Party Preparation Room; the finished Party Zapper appears on the bench |
+| 12 | Party Stun Gun parts ×3 (Grip, Body, Probe Head) | three different rooms | USE all three at the assembly bench in the Party Preparation Room; the finished Party Stun Gun appears on the bench |
 
 Emergency Exit ending: Exit Key + Wire Cutters + Exit Code Note on the keypad + Exit Fuse, then walk through the open door.
 Service Elevator ending: Motor + Circuit + Screwdriver (wiring) + Generator Handle & Power Fuse (power), then the Elevator Key, then walk into the elevator.
@@ -39,6 +39,6 @@ Service Elevator ending: Motor + Circuit + Screwdriver (wiring) + Generator Hand
 | 24 | Secret Passage Diagram | USE reads it — a clue to the Playground ↔ Supply Closet passage |
 | 25 | Valve Wheel | USE at the maintenance hatch (Kitchen floor ↔ Maintenance Storage); reusable |
 | – | Batteries ×3 | one lying around, one in each locked locker; USE while looking at the assembled Party Zapper loads it (up to 3 charges) |
-| – | Party Zapper (assembled) | ZAP / USE fires a stun bolt (one charge each). Smiley does not exist yet, so the bolt only makes light, sound and a stun event for later |
+| – | Party Stun Gun (assembled, a.k.a. the Party Zapper) | ZAP / USE fires a stun bolt (one charge each). Smiley does not exist yet, so the bolt only makes light, sound and a stun event for later |
 
 Notes: sounds are synthesized placeholders. Noises (thrown items, pops, whistle, music, zapper...) are recorded for Smiley to hear in Stage 4. Progress, popped balloons, installed parts and item positions are saved.

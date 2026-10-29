@@ -243,11 +243,12 @@ function frame(now) {
     pool.update(dt, camera.position.x, camera.position.y, camera.position.z);
     if (isTouch) {   // context buttons: the hand shows only when something can be opened, the circle only for items
       const t = findTarget(), item = t && t.kind === 'item';
-      $('hand').hidden = !t || item; $('grab').hidden = !item;
+      $('hand').hidden = !t || item; $('grab').hidden = !item; $('itemname').hidden = !item;
       if (item) {   // the pickup circle sits on the item itself
         const it = t.item, p = _pv.set(it.x, it.y + it.def.size * 0.5, it.z).project(camera);
         const px = Math.min(innerWidth - 40, Math.max(40, (p.x * 0.5 + 0.5) * innerWidth)), py = Math.min(innerHeight - 40, Math.max(40, (-p.y * 0.5 + 0.5) * innerHeight));
         const gb = $('grab'); gb.style.left = px + 'px'; gb.style.top = py + 'px';
+        const nm = $('itemname'); if (nm.textContent !== it.def.name) nm.textContent = it.def.name; nm.style.left = px + 'px'; nm.style.top = Math.min(innerHeight - 24, py + 26) + 'px';
       }
       $('crouchfig').classList.toggle('crouched', player.crouched);
     }
