@@ -83,7 +83,7 @@ const uses = new UseSystem({ items, world, player, camera, scene, ui: { toast: m
 uses.restore(items.loadedExtra);
 if (!uses.p.day) uses.p.day = 1;
 const smiley = new Smiley({ scene, world, player, items, camera, difficulty: settings.difficulty });
-smiley.respawn(30);
+smiley.respawn(12);
 smiley.onCatch = kind => startScare(kind);
 const DIFFNOTE = { practice: 'Practice: Smiley is not in the building. Explore in peace.', easy: 'Easy: Smiley walks slowly (75%).', normal: 'Normal: Smiley is a little slower than you (90%).', hard: 'Hard: Smiley walks as fast as you (100%).', extreme: 'Extreme: Smiley is faster than you (110%), hears much further and checks hiding places he saw.' };
 onDifficulty = () => { const was = smiley.present; smiley.difficulty = settings.difficulty; if (smiley.present && !was) smiley.respawn(20); $('diffnote').textContent = DIFFNOTE[settings.difficulty]; };
@@ -276,7 +276,7 @@ function endCaught() {
   $('dayt').textContent = 'DAY ' + q.day;
   $('dayp').textContent = 'You wake up under the table again. Everything you solved stays solved, and every item is where you left it.';
   $('daycard').hidden = false; dayHold = true;
-  player.teleport(startPos); smiley.respawn(25);
+  player.teleport(startPos); smiley.respawn(10);
   setTimeout(() => { $('daycard').hidden = true; sc.style.opacity = 0; dayHold = false; startWake(); }, 3400);
 }
 
