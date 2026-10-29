@@ -152,6 +152,7 @@ export class ItemSystem {
     const taken = [];
     const spots = {};
     const forRoom = id => spots[id] || (spots[id] = this.roomSpots(id));
+    const surf = {}; const forSurf = id => surf[id] || (surf[id] = this.surfaceSpots(id));
     const order = Object.keys(ITEMS);
     for (const id of order) {
       const def = ITEMS[id];
@@ -162,8 +163,15 @@ export class ItemSystem {
         let spot = null;
         if (def.fixed) spot = { level: def.fixed.level, x: def.fixed.x, z: def.fixed.z, y: LEVEL_Y[def.fixed.level] + def.fixed.y };
         else {
-          const pool = def.where.flatMap(forRoom).filter(s => !taken.some(t => Math.hypot(t.x - s.x, t.z - s.z) < 1.2 && t.level === s.level));
-          spot = pool[Math.floor(r() * pool.length)] || forRoom(def.where[0])[0];
+          // about half of the small items sit on tables, counters, benches, shelves and inside trash cans instead of the floor
+          if (def.size <= 0.36 && r() < 0.55) {
+            const sp = def.where.flatMap(forSurf).filter(s => !taken.some(t => Math.hypot(t.x - s.x, t.z - s.z) < 0.5 && t.level === s.level && Math.abs((t.y ?? 0) - s.y) < 0.6));
+            spot = sp[Math.floor(r() * sp.length)] || null;
+          }
+          if (!spot) {
+            const pool = def.where.flatMap(forRoom).filter(s => !taken.some(t => Math.hypot(t.x - s.x, t.z - s.z) < 1.2 && t.level === s.level));
+            spot = pool[Math.floor(r() * pool.length)] || forRoom(def.where[0])[0];
+          }
         }
         taken.push(spot);
         it.x = spot.x; it.z = spot.z; it.y = spot.y ?? LEVEL_Y[spot.level];
@@ -171,6 +179,52 @@ export class ItemSystem {
         this.place(it);
       }
     }
+  }
+
+  // Boxes whose flat top is a believable place for an item: tables, counters, benches, shelves, crates, trash cans (0.3 - 1.25 m above their floor).
+  getSupports() {
+    if (this.supports) return this.supports;
+    const lv = Object.entries(LEVEL_Y), doorBoxes = new Set(this.world.doors.map(d => d.box));
+    this.supports = [];
+    for (const b of this.world.collision.boxes) {
+      if (!b.enabled || doorBoxes.has(b)) continue;
+      let base = -Infinity, level = null; for (const [l, y] of lv) if (y <= b.y1 + 0.01 && y > base) { base = y; level = l; }
+      const rel = b.y1 - base, w = b.maxX - b.minX, d = b.maxZ - b.minZ;
+      if (rel < 0.3 || rel > 1.25 || Math.min(w, d) < 0.25 || b.y0 > base + 1.3) continue;
+      const bin = Math.abs(w - 0.76) < 0.03 && Math.abs(d - 0.76) < 0.03 && Math.abs(b.y1 - b.y0 - 0.75) < 0.03;
+      this.supports.push({ b, level, base, top: b.y1, bin });
+    }
+    return this.supports;
+  }
+  // Is there somewhere to stand within arm's reach of this point?
+  reachable(x, z, base) {
+    for (const r of [0.75, 1.0, 1.3]) for (let k = 0; k < 12; k++) {
+      const a = k * Math.PI / 6, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r, f = this.world.floorAt(px, pz, base + 0.1, true);
+      if (f === null || Math.abs(f - base) > 0.02) continue;
+      if (!this.world.collision.overlaps(px, pz, 0.3, base + 0.2, base + 1.7)) return true;
+    }
+    return false;
+  }
+  surfaceSpots(areaId) {
+    const a = AREAS.find(q => q.id === areaId); if (!a) return [];
+    const out = [], col = this.world.collision, doors = OPENINGS.filter(o => o.level === a.level);
+    for (const sp of this.getSupports()) {
+      if (sp.level !== a.level) continue;
+      const { b } = sp, cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
+      if (cx < a.rect[0] + 0.3 || cx > a.rect[2] - 0.3 || cz < a.rect[1] + 0.3 || cz > a.rect[3] - 0.3) continue;
+      const pts = [];
+      if (sp.bin) pts.push([cx, cz]);
+      else for (let x = b.minX + 0.2; x <= b.maxX - 0.2 + 1e-6; x += 0.4) for (let z = b.minZ + 0.2; z <= b.maxZ - 0.2 + 1e-6; z += 0.4) pts.push([x, z]);
+      if (!pts.length) pts.push([cx, cz]);
+      for (const [x, z] of pts) {
+        if (Math.hypot(x - SPIRAL.cx, z - SPIRAL.cz) < 2.6) continue;
+        if (!sp.bin && col.overlaps(x, z, 0.14, sp.top + 0.03, sp.top + 0.5)) continue;   // something sits on or above it
+        if (doors.some(o => (o.axis === 'x' ? Math.hypot(x - (o.a + o.b) / 2, z - o.c) : Math.hypot(x - o.c, z - (o.a + o.b) / 2)) < 1.0)) continue;
+        if (!this.reachable(x, z, sp.base)) continue;
+        out.push({ level: a.level, x, z, y: sp.bin ? sp.top - 0.28 : sp.top, surface: true, bin: sp.bin });
+      }
+    }
+    return out;
   }
 
   // Candidate floor points in a room: open flat floor, away from furniture, walls and doorways.
@@ -334,7 +388,8 @@ export class ItemSystem {
     if (Math.abs(p.z - nz) > 1e-4) it.vz *= -0.35;
     it.x = p.x; it.z = p.z;
     const ny = it.y + it.vy * dt;
-    const fl = w.floorAt(it.x, it.z, it.y + 0.02, false);
+    let fl = w.floorAt(it.x, it.z, it.y + 0.02, false);
+    for (const sp of this.getSupports()) { const bb = sp.b; if (it.x > bb.minX - 0.02 && it.x < bb.maxX + 0.02 && it.z > bb.minZ - 0.02 && it.z < bb.maxZ + 0.02 && sp.top <= it.y + 0.03 && sp.top > fl) fl = sp.top; }   // items land on tables, counters and bins
     if (Number.isFinite(fl) && ny <= fl) {
       const impact = -it.vy;
       it.y = fl;

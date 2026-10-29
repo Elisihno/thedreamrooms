@@ -45,3 +45,6 @@ Notes: sounds are synthesized placeholders. Noises (thrown items, pops, whistle,
 
 ## Security cameras
 The Security Room (behind the locked door, needs the Turning Handle) has monitors on its east wall. Tap the hand at them to watch all 9 cameras in night vision (PREV / NEXT, EXIT): Floor 1 Main Party Hall, Reception, Dining Room, Kitchen; Floor 2 Arcade, Ball Pit, Indoor Playground; Floor 3 Abandoned Celebration Hall, Maintenance Corridor.
+
+## Where items are placed
+Every new game scatters the items again. About half of the small items (up to about 36 cm) sit on tables, counters, desks, benches, shelves, crates or inside trash cans (still inside the item's allowed rooms); the rest lie on the floor. A spot only counts if there is room above it and a place to stand within arm's reach. Dropped or thrown items land on those surfaces too.
