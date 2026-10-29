@@ -119,6 +119,7 @@ export class Smiley {
   // Footsteps: he hears you walking nearby (up to one floor away) and goes straight for you. Crouch-walking is much quieter, standing still is silent.
   senseSteps() {
     const p = this.player; if (p.hide) return false;
+    if (this.nav.blocked(p.pos.x, p.pos.z, p.pos.y)) return false;   // crawling under a deck, tunnel or table: he can't tell where you are by sound
     const dy = Math.abs(p.pos.y - this.pos.y); if (dy > 4.6) return false;
     const d = Math.hypot(p.pos.x - this.pos.x, p.pos.z - this.pos.z) + dy * 1.5, h = this.cfg.hear;
     if (d <= 2.0 * h) return true;   // right behind him he hears you breathe, even standing still
