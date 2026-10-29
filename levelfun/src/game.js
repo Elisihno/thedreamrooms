@@ -7,7 +7,7 @@ import { createRenderer, applyQuality, resize } from './core/renderer.js';
 import { configureAssets, preloadTextures } from './assets/registry.js';
 import { buildBuilding } from './world/building.js';
 import { LightPool } from './world/lightpool.js';
-import { START, LEVEL_Y, LEVELS, LEVEL_NAME } from './world/layout.js';
+import { START, LEVEL_Y, LEVELS, LEVEL_NAME, CAMERAS, AREAS } from './world/layout.js';
 import { loadModels, screenMaterials } from './assets/models.js';
 import { Player } from './player.js';
 import { playGame, GAMES } from './arcade/games.js';
@@ -184,7 +184,7 @@ function enterModal(id) { if (modal) return false; setPaused(true); $('menu').hi
 function leaveModal() { if (!modal) return; $(modal).hidden = true; modal = null; setPaused(false); }
 function showNote(d) { if (!enterModal('note')) return; $('notet').textContent = d.title; $('noteb').textContent = d.body; $('noteb').classList.toggle('bignum', !!d.big); }
 $('noteclose').addEventListener('click', leaveModal);
-addEventListener('keydown', e => { if (modal && modal !== 'ending' && e.code === 'Escape') leaveModal(); });
+addEventListener('keydown', e => { if (modal && modal !== 'ending' && modal !== 'cams' && e.code === 'Escape') leaveModal(); });
 function showEnding(kind) {
   items.save(); if (!enterModal('ending')) return;
   const E = $('ending'); E.className = kind;
@@ -197,6 +197,33 @@ $('endbtn').addEventListener('click', () => { ItemSystem.clear(); location.reloa
 let needT = 0;
 function showNeed(text) { const n = $('need'); n.textContent = text; n.hidden = false; n.classList.remove('show'); void n.offsetWidth; n.classList.add('show'); clearTimeout(needT); needT = setTimeout(() => { n.hidden = true; }, 1900); }
 function doFlash() { const f = $('flash'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 70); }
+
+// ---- Security cameras: watched from the Security Room monitors, in night vision ----
+let camView = null;   // { i, fov }
+function camPose(c) {
+  const a = AREAS.find(q => q.level === c.level && q.id === c.room), cx = (a.rect[0] + a.rect[2]) / 2, cz = (a.rect[1] + a.rect[3]) / 2;
+  const x = c.x, y = LEVEL_Y[c.level] + c.y, z = c.z, dx = cx - x, dz = cz - z, dy = LEVEL_Y[c.level] + 0.8 - y;
+  return { x, y, z, yaw: Math.atan2(-dx, -dz), pitch: Math.atan2(dy, Math.hypot(dx, dz)) };
+}
+function showCam(i) {
+  const n = CAMERAS.length; camView.i = (i + n) % n; const c = CAMERAS[camView.i];
+  $('camlabel').textContent = `CAM ${camView.i + 1}/${n}  ${c.name.toUpperCase()}  (FLOOR ${c.level === 'B' ? 'B' : c.level})`;
+}
+function openCameras() {
+  if (camView || modal || !enterModal('cams')) return;
+  camView = { i: 0, fov: camera.fov }; items.hand.visible = false;
+  $('game').classList.add('nightvision'); camera.fov = 78; camera.updateProjectionMatrix(); showCam(0);
+}
+function closeCameras() {
+  if (!camView) return;
+  camera.fov = camView.fov; camera.updateProjectionMatrix(); camView = null; items.hand.visible = true;
+  $('game').classList.remove('nightvision'); leaveModal();
+}
+world.fixtures.openCameras = openCameras;
+$('camprev').addEventListener('click', () => showCam(camView.i - 1));
+$('camnext').addEventListener('click', () => showCam(camView.i + 1));
+$('camexit').addEventListener('click', closeCameras);
+addEventListener('keydown', e => { if (!camView) return; if (e.code === 'ArrowLeft' || e.code === 'KeyA') showCam(camView.i - 1); else if (e.code === 'ArrowRight' || e.code === 'KeyD') showCam(camView.i + 1); else if (e.code === 'Escape') closeCameras(); });
 
 // ---- Arcade minigames: a full-screen pixel overlay; the world is frozen while it is open ----
 let arcadeStop = null;
@@ -267,6 +294,11 @@ function frame(now) {
     screenMaterials.forEach((m, i) => { m.emissiveIntensity = 0.75 + 0.25 * Math.sin(tt * 3 + i); });
     const dark = player.pos.y > 6 || player.pos.y < -2;
     ambient.intensity += ((dark ? 0.6 : 1.1) - ambient.intensity) * Math.min(1, dt * 2);
+  }
+  if (camView) {   // looking through a security camera
+    const p = camPose(CAMERAS[camView.i]); camera.position.set(p.x, p.y, p.z); camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
+    world.updateVisibility(p.x, LEVEL_Y[CAMERAS[camView.i].level] + 0.1); pool.update(dt, p.x, p.y, p.z); world.update(dt);
+    const s = $('camtime'); const t = Math.floor(now / 1000); s.textContent = 'REC ' + String(Math.floor(t / 3600) % 24).padStart(2, '0') + ':' + String(Math.floor(t / 60) % 60).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
   }
   if (!arcadeStop) renderer.render(scene, camera);   // the 3D view is hidden behind the arcade overlay: skip the work
 }

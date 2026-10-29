@@ -42,3 +42,6 @@ Service Elevator ending: Motor + Circuit + Screwdriver (wiring) + Generator Hand
 | – | Party Stun Gun (assembled, a.k.a. the Party Zapper) | ZAP / USE fires a stun bolt (one charge each). Smiley does not exist yet, so the bolt only makes light, sound and a stun event for later |
 
 Notes: sounds are synthesized placeholders. Noises (thrown items, pops, whistle, music, zapper...) are recorded for Smiley to hear in Stage 4. Progress, popped balloons, installed parts and item positions are saved.
+
+## Security cameras
+The Security Room (behind the locked door, needs the Turning Handle) has monitors on its east wall. Tap the hand at them to watch all 9 cameras in night vision (PREV / NEXT, EXIT): Floor 1 Main Party Hall, Reception, Dining Room, Kitchen; Floor 2 Arcade, Ball Pit, Indoor Playground; Floor 3 Abandoned Celebration Hall, Maintenance Corridor.

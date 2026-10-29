@@ -122,9 +122,13 @@ const BUILDERS = {
   zapHead: () => zapParts(['head']),
   zapper: () => zapParts(['grip', 'body', 'head']),
   battery: () => { const g = new THREE.Group(); g.add(cyl(0.025, 0.075, mat(0xf1c40f), 0, 0.0375, 0)); g.add(cyl(0.0262, 0.02, mat(0x222222), 0, 0.066, 0)); g.add(cyl(0.0262, 0.008, mat(0x222222), 0, 0.012, 0)); g.add(cyl(0.011, 0.012, mat(0xcccccc, { metalness: 0.8 }), 0, 0.081, 0)); g.add(box(0.012, 0.03, 0.0015, mat(0x222222), 0, 0.04, 0.0262)); return g; },
-  turningHandle: () => { const g = new THREE.Group(); const brass = mat(0xb59a4a, { metalness: 0.6, roughness: 0.4 });
-    g.add(cyl(0.015, 0.1, brass, 0, 0.05, 0)); const bar = cyl(0.013, 0.2, brass, 0, 0.11, 0); bar.rotation.z = Math.PI / 2; g.add(bar);
-    for (const sx of [-1, 1]) g.add(ball(0.025, mat(0x9c2f2f), sx * 0.1, 0.11, 0)); g.add(cyl(0.035, 0.012, brass, 0, 0.006, 0)); return g; },
+  turningHandle: () => { const g = new THREE.Group(); const iron = mat(0x24262b, { metalness: 0.7, roughness: 0.4 }), dark = mat(0x15161a, { metalness: 0.6, roughness: 0.55 }), worn = mat(0x6a5d3c, { metalness: 0.8, roughness: 0.35 });
+    g.add(cyl(0.045, 0.012, dark, 0, 0.006, 0, 24));                                              // base flange
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.78; g.add(cyl(0.0065, 0.008, worn, Math.cos(a) * 0.033, 0.016, Math.sin(a) * 0.033, 8)); }   // bolts
+    g.add(cyl(0.017, 0.07, iron, 0, 0.047, 0, 14)); g.add(cyl(0.024, 0.014, dark, 0, 0.088, 0, 14));   // shaft and collar
+    const bar = cyl(0.011, 0.2, iron, 0, 0.108, 0, 12); bar.rotation.z = Math.PI / 2; g.add(bar);       // crank bar
+    for (const sx of [-1, 1]) { g.add(ball(0.027, dark, sx * 0.1, 0.108, 0)); g.add(cyl(0.012, 0.012, worn, sx * 0.075, 0.108, 0, 10)).rotation.z = Math.PI / 2; }
+    g.add(ball(0.014, worn, 0, 0.125, 0)); return g; },
   plush: () => { const g = new THREE.Group(); const fur = mat(0xf0e6d8, { roughness: 0.95, metalness: 0 });
     const body = ball(0.11, fur, 0, 0.12, 0); body.scale.set(1, 1.15, 0.9); g.add(body); const head = ball(0.1, fur, 0, 0.3, 0); g.add(head);
     for (const sx of [-1, 1]) { g.add(ball(0.035, fur, sx * 0.085, 0.38, 0)); g.add(ball(0.012, mat(0x111111), sx * 0.04, 0.32, 0.092)); g.add(ball(0.022, mat(0xff9ab8, { roughness: 1 }), sx * 0.065, 0.285, 0.085)); g.add(cyl(0.03, 0.12, fur, sx * 0.13, 0.12, 0.02)); g.add(cyl(0.03, 0.1, fur, sx * 0.05, 0.03, 0.02)); }

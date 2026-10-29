@@ -42,6 +42,7 @@ export class UseSystem {
     this.anim = []; this.time = 0; this.alarmT = 0; this.ended = false; this.zaps = [];
     world.stuns = []; world.fixtures.hatchGate = (P, held) => this.hatchGate(P, held);
     this.buildStations(); this.buildKeypadLight(); this.buildDoorSocket();
+    world.interactable({ x: 58.7, y: Y('1') + 1.3, z: 20.6, radius: 3.2, kind: 'monitor', onUse: () => world.fixtures.openCameras && world.fixtures.openCameras() });   // the security monitors
     world.fixtures.onLocked = () => this.need(this.needText('turning_handle'));
     items.extraSave = () => this.p;
   }
@@ -58,7 +59,12 @@ export class UseSystem {
     if (q.elevOpen) this.openElevator(true);
     this.applyDoors();
   }
-  applyDoors() { const d = this.world.doors.find(d => d.o.kind === 'heavy'); if (d) d.locked = !this.p.handle; if (this.doorSocket) this.doorSocket.visible = !this.p.handle; }
+  applyDoors() {
+    const d = this.world.doors.find(d => d.o.kind === 'heavy'); if (!d) return;
+    d.locked = !this.p.handle; if (this.doorSocket) this.doorSocket.visible = !this.p.handle;
+    // the bracket and the installed handle are mounted ON the door so they swing with it
+    for (const obj of [this.doorSocket, this.p.handle && this.items.items.find(i => i.id === 'turning_handle' && i.state === 'installed')?.mesh]) { if (obj && obj.parent !== d.pivot) { obj.updateWorldMatrix(true, false); d.pivot.attach(obj); } }
+  }
 
   // ---------- stations: places that take an item ----------
   buildStations() {
@@ -79,7 +85,7 @@ export class UseSystem {
     add({ id: 'el_door', need: 'I Need the Elevator Key', level: '3', x: 59.3, y: e3 + 1.1, z: 11, r: 2.4, accepts: ['elevator_key'], done: () => q.elevOpen,
       apply: h => { if (!(q.elev.motor && q.elev.circuit && q.elev.wiring && q.genHandle && q.genFuse)) { this.need('The Elevator Needs Repairs First'); return; } sfx.install(); this.items.consume(h); this.openElevator(); } });
     // Security Room door: the Turning Handle
-    add({ id: 'sec_door', level: '1', x: 54.4, y: 1.1, z: 15.6, r: 2.2, accepts: ['turning_handle'], done: () => q.handle, apply: h => { q.handle = true; it.installAt(h, { x: 53.65, y: 1.05, z: 15.82, rx: -Math.PI / 2 }); sfx.install(); this.applyDoors(); } });
+    add({ id: 'sec_door', level: '1', x: 54.4, y: 1.1, z: 15.6, r: 2.2, accepts: ['turning_handle'], done: () => q.handle, apply: h => { q.handle = true; it.installAt(h, { x: 53.65, y: 1.05, z: 15.9, rx: -Math.PI / 2 }); sfx.install(); this.applyDoors(); } });
     // optional locked compartments (each holds one Battery)
     add({ id: 'lock_party', level: '1', x: 50.5, y: 1.1, z: 0.8, r: 2.0, accepts: ['party_room_key'], done: () => q.party, apply: h => { q.party = true; it.consume(h); sfx.install(); const b1 = it.items.find(i => i.uid === 'battery#1'); if (b1) it.reveal(b1, 50.5, Y('1') + 1.0, 1.1); } });
     add({ id: 'lock_maint', level: '3', x: 49.6, y: e3 + 1.1, z: 4.8, r: 2.0, accepts: ['maintenance_key'], done: () => q.maint, apply: () => { q.maint = true; sfx.install(); const b2 = it.items.find(i => i.uid === 'battery#2'); if (b2) it.reveal(b2, 49.6, e3 + 1.0, 5.1); } });
@@ -109,7 +115,7 @@ export class UseSystem {
     const plate = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.012), m), stub = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.04, 10), m);
     stub.rotation.x = Math.PI / 2; stub.position.z = -0.02;
     const led = new THREE.Mesh(new THREE.SphereGeometry(0.01, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3030 })); led.position.set(0.04, 0.04, -0.01); g.add(plate, stub, led);
-    g.position.set(53.65, Y('1') + 1.05, 15.86); this.scene.add(g); this.doorSocket = g; g.visible = !this.p.handle;
+    g.position.set(53.65, Y('1') + 1.05, 15.9); this.scene.add(g); this.doorSocket = g; g.visible = !this.p.handle;
   }
   setKeypadLight(on) { this.keypadLight.material.color.setHex(on ? 0x39ff6a : 0xcc2222); }
 
