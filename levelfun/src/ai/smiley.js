@@ -235,7 +235,9 @@ export class Smiley {
     const p = this.player;
     this.pathT -= dt;
     const target = this.canSeeNow || this.trackPlush ? { x: p.pos.x, z: p.pos.z, y: p.pos.y } : this.lastSeen;
-    if (target && (this.pathT <= 0 || this.arrived())) { this.goTo(target.x, target.z, target.y); this.pathT = 0.4; }
+    // re-plan only when the target has really moved or the plan is old; replanning every few frames made him dither at the stairs
+    const pl = this.planned, moved = !pl || Math.hypot(target ? target.x - pl.x : 0, target ? target.z - pl.z : 0) > 1.2 || (target && Math.abs(target.y - pl.y) > 1.5);
+    if (target && (this.arrived() || (this.pathT <= 0 && moved) || this.pathT < -2.5)) { this.goTo(target.x, target.z, target.y); this.pathT = 0.4; this.planned = { x: target.x, z: target.z, y: target.y }; }
     if (!this.arrived()) this.follow(dt, speed); else { this.animate(dt, 0); }
     if (!this.canSeeNow && !this.trackPlush && this.unseenT > 1.2) { this.setState('search'); this.timer = 6; this.path = null; this.wander = 0; }
   }
@@ -261,7 +263,8 @@ export class Smiley {
   follow(dt, speed) {
     const path = this.path; if (!path) return;
     while (this.pi < path.length) { const q = path[this.pi], h = Math.hypot(q.x - this.pos.x, q.z - this.pos.z); const flat = this.pi === 0 || Math.abs(q.y - path[this.pi - 1].y) < 0.05;
-      if (h < 0.1 || (h < 0.28 && flat)) this.pi++; else break; }
+      const nearStairs = Math.abs(q.x - this.nav.stairs.x) < 3.5 && Math.abs(q.z - this.nav.stairs.z) < 3.5;   // tight tolerance at the stairwell lip
+      if (h < 0.1 || (h < 0.28 && flat && !nearStairs)) this.pi++; else break; }
     if (this.pi >= path.length) { this.animate(dt, 0); return; }
     const w = path[this.pi], dx = w.x - this.pos.x, dz = w.z - this.pos.z, d = Math.hypot(dx, dz) || 1;
     this.turnTo(Math.atan2(-dx, -dz), dt);
