@@ -146,7 +146,7 @@ $('primary').addEventListener('click', () => {
   const first = !running;
   if (first) { running = true; if (isTouch) enterFullscreen(); }
   setPaused(false);
-  if (first) { startWake(); toast('Day ' + uses.p.day + ' of 5'); }
+  if (first) showDayCard(uses.p.day, 2600, () => startWake());
 });
 $('fs').addEventListener('click', enterFullscreen);
 const SPOTS = { B: { x: 24, z: 4, yaw: -Math.PI / 2 }, 1: { x: 24, z: 8, yaw: -Math.PI / 2 }, 2: { x: 30, z: 11.5, yaw: -Math.PI / 2 }, 3: { x: 24, z: 8, yaw: -Math.PI / 2 } };
@@ -228,6 +228,11 @@ function exitHide() {
 }
 for (const sp of world.hiding) world.interactable({ x: sp.x, y: sp.y + 0.9, z: sp.z, radius: 1.7, kind: 'hide', spot: sp, onUse: () => enterHide(sp) });
 
+// The day card: black screen, a small scratchy handwritten "DAY n" and nothing else.
+function showDayCard(n, ms, then) {
+  const c = $('daycard'); $('dayt').textContent = 'DAY ' + n; c.classList.remove('out'); c.hidden = false; dayHold = true;
+  setTimeout(() => { c.classList.add('out'); dayHold = false; then && then(); setTimeout(() => { c.hidden = true; }, 850); }, ms);
+}
 // ---- Caught: a short, quick scare, then the next day ----
 let scare = null, dayHold = false;
 function startScare(kind) {
@@ -274,11 +279,9 @@ function endCaught() {
   const q = uses.p; q.day = q.day || 1;
   if (q.day >= 5) { sc.style.opacity = 0; showEnding('over'); return; }
   q.day++; items.save();
-  $('dayt').textContent = 'DAY ' + q.day;
-  $('dayp').textContent = 'You wake up under the table again. Everything you solved stays solved, and every item is where you left it.';
-  $('daycard').hidden = false; dayHold = true;
   player.teleport(startPos); smiley.respawn(10);
-  setTimeout(() => { $('daycard').hidden = true; sc.style.opacity = 0; dayHold = false; startWake(); }, 3400);
+  $('scare').style.opacity = 0;
+  showDayCard(q.day, 3000, () => startWake());
 }
 
 // ---- Security cameras: watched from the Security Room monitors, in night vision ----

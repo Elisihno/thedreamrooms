@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Reenie+Beanie&display=swap");
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; touch-action: none; font-family: system-ui, sans-serif; color: #eee; }
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
@@ -165,11 +166,11 @@ button { font: inherit; color: #fff; }
 /* Smiley: jumpscare flash, the next-day card, the stuck-in-goo note */
 #scare { position: fixed; inset: 0; z-index: 9; pointer-events: none; background: #000; opacity: 0; }
 #scare.red { background: #b0001a; }
-#daycard { position: fixed; inset: 0; z-index: 14; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #fff; animation: dayin .6s ease-out; }
+#daycard { position: fixed; inset: 0; z-index: 14; background: #000; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 17vh; pointer-events: none; transition: opacity .8s ease; }
 #daycard[hidden] { display: none; }
-#daycard h1 { font: 900 clamp(40px, 16vh, 110px)/1 "Arial Rounded MT Bold", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif; margin: 0; color: #ffd23c; -webkit-text-stroke: 3px #1b1033; paint-order: stroke fill; letter-spacing: .04em; }
-#daycard p { font: 700 clamp(14px, 4.5vh, 24px) system-ui, sans-serif; opacity: .8; margin: 1em 1.5em 0; }
-@keyframes dayin { from { opacity: 0; } to { opacity: 1; } }
+#daycard.out { opacity: 0; }
+#daycard h1 { margin: 0; font: 400 clamp(20px, 7vh, 50px)/1 "Reenie Beanie", "Segoe Script", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", cursive; color: #d6d6d6; letter-spacing: .05em; text-transform: uppercase; transform: rotate(-1.5deg); opacity: .9; animation: dayflick 2.4s steps(1) infinite; }
+@keyframes dayflick { 0%, 100% { opacity: .92; } 37% { opacity: .75; } 41% { opacity: .95; } 78% { opacity: .82; } }
 #stucknote { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 12; font: 900 clamp(22px, 8vh, 46px) "Arial Rounded MT Bold", system-ui, sans-serif; color: #ff5fb8; -webkit-text-stroke: 4px #1b1033; paint-order: stroke fill; pointer-events: none; }
 #stucknote[hidden] { display: none; }
 
