@@ -157,5 +157,9 @@ function buildSpiral(w) {
     instanceModel(w.group(g), 'spiral', [{ x: cx, y: yb, z: cz }]);
     w.spiral({ cx, cz, y0: yb, rIn: walkIn, rOut: walkOut, treads, a0, da, rise });
     w.collision.add(cx - 0.2, cz - 0.2, cx + 0.2, cz + 0.2, yb, yb + rise + 1.2);   // centre column
+    // close the hollow between this level's ceiling and the next floor around the stairwell (otherwise you look into a black void)
+    const y0 = yb + CEIL - 0.05, y1 = yb + rise + 0.05, R = SPIRAL.holeR;
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(R, R, y1 - y0, 40, 1, true), new THREE.MeshStandardMaterial({ color: 0x57524b, roughness: 1, side: THREE.DoubleSide }));
+    tube.position.set(cx, (y0 + y1) / 2, cz); w.group(g).add(tube);
   });
 }
