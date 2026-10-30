@@ -136,8 +136,24 @@ const BUILDERS = {
     g.add(mesh(new THREE.ConeGeometry(0.035, 0.08, 12), mat(0xff5fa8), 0, 0.42, 0)); return g; },
   musicBox: () => { const g = new THREE.Group(); g.add(box(0.15, 0.08, 0.1, mat(0xe86ba5), 0, 0.04, 0)); g.add(box(0.155, 0.02, 0.105, mat(0xffd23c), 0, 0.09, 0));
     const crank = cyl(0.004, 0.05, mat(0xcccccc, { metalness: 0.8 }), 0.09, 0.05, 0); crank.rotation.z = Math.PI / 2; g.add(crank); g.add(ball(0.012, mat(0xc0392b), 0.12, 0.05, 0)); g.add(box(0.15, 0.01, 0.012, mat(0xffffff), 0, 0.045, 0.051)); return g; },
-  popper: () => { const g = new THREE.Group(); g.add(mesh(new THREE.ConeGeometry(0.05, 0.16, 16), mat(0xe74c3c), 0, 0.08, 0)); g.add(cyl(0.02, 0.07, mat(0xf1c40f), 0, 0.19, 0));
-    for (const [c, a] of [[0x3498db, 0.2], [0x2ecc71, 2.2], [0x9b59b6, 4.2]]) { const s = box(0.004, 0.06, 0.012, mat(c), Math.cos(a) * 0.02, 0.24, Math.sin(a) * 0.02); s.rotation.z = Math.cos(a) * 0.4; g.add(s); } return g; },
+  popper: () => {   // a party popper: striped paper cone, gold rim, a burst of ribbons and confetti from the wide end, a pull ring at the point
+    const g = new THREE.Group(), cols = [0xff3d8b, 0xffd23c, 0x2fc4ff, 0x7be04f, 0xff8a1f], H = 0.2, r0 = 0.012, r1 = 0.052, n = 5;
+    for (let i = 0; i < n; i++) {
+      const ra = r0 + (r1 - r0) * i / n, rb = r0 + (r1 - r0) * (i + 1) / n;
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(rb, ra, H / n + 0.0005, 18, 1, true), new THREE.MeshStandardMaterial({ color: cols[i % cols.length], roughness: 0.7, side: THREE.DoubleSide }));
+      seg.position.y = H / n * (i + 0.5); g.add(seg);
+    }
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(r1, 0.0045, 8, 22), mat(0xf2c230, { metalness: 0.7, roughness: 0.35 })); rim.rotation.x = Math.PI / 2; rim.position.y = H; g.add(rim);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.003, 6, 14), mat(0xe8e8ee, { metalness: 0.8, roughness: 0.3 })); ring.position.set(0, -0.012, 0); g.add(ring);
+    for (let i = 0; i < 7; i++) {   // ribbons curling out of the opening
+      const a = i / 7 * Math.PI * 2, rb = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.07 + (i % 3) * 0.015, 0.0015), new THREE.MeshStandardMaterial({ color: cols[i % cols.length], roughness: 0.6, side: THREE.DoubleSide }));
+      rb.position.set(Math.cos(a) * 0.03, H + 0.04, Math.sin(a) * 0.03); rb.rotation.set(Math.sin(a) * 0.55, a, -Math.cos(a) * 0.5 + 0.3 * (i % 2)); g.add(rb);
+    }
+    for (let i = 0; i < 9; i++) {   // loose confetti
+      const a = i * 2.4, c = new THREE.Mesh(new THREE.BoxGeometry(0.011, 0.0015, 0.008), new THREE.MeshStandardMaterial({ color: cols[(i + 2) % cols.length], roughness: 0.6 }));
+      c.position.set(Math.cos(a) * (0.02 + 0.012 * (i % 4)), H + 0.05 + 0.02 * (i % 5), Math.sin(a) * (0.02 + 0.012 * (i % 3))); c.rotation.set(a, a * 1.7, a * 0.6); g.add(c);
+    }
+    return g; },
   recorder: () => { const g = new THREE.Group(); g.add(box(0.2, 0.05, 0.12, mat(0x303338), 0, 0.025, 0)); g.add(box(0.12, 0.004, 0.07, mat(0x8a8f96), -0.02, 0.052, 0));
     for (const sx of [-1, 1]) { const r = cyl(0.018, 0.006, mat(0xe8e8e8), sx * 0.04 - 0.02, 0.057, 0); g.add(r); }
     for (let i = 0; i < 4; i++) g.add(box(0.016, 0.008, 0.02, mat(i === 0 ? 0xd32f2f : 0xbbbbbb), 0.06 + (i % 2) * 0.02, 0.054, -0.03 + Math.floor(i / 2) * 0.03)); return g; },
