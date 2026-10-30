@@ -56,7 +56,7 @@ export class Input {
       this.keys.add(e.code);
       switch (e.code) {
         case 'KeyE': this.emit('interact'); break;
-        case 'KeyG': this.emit('drop'); break;
+        case 'KeyG': case 'Space': this.emit('drop'); break;
         case 'KeyU': this.emit('use'); break;
         case 'KeyF': this.emit('zapper'); break;
         case 'KeyC': case 'ControlLeft': case 'ControlRight':

@@ -117,6 +117,7 @@ function setPaused(p) {
   input.enabled = !p;
   $('menu').hidden = !p;
   $('touch-ui').hidden = p || !isTouch;
+  if (p) { $('pcmark').hidden = $('pcname').hidden = true; }
   $('primary').textContent = running ? 'RESUME' : 'START';
   $('hint').hidden = running;
   if (p) { items.save(); releaseTouch(); if (document.pointerLockElement) document.exitPointerLock(); }
@@ -383,6 +384,15 @@ function frame(now) {
         const nm = $('itemname'); if (nm.textContent !== it.def.name) nm.textContent = it.def.name; nm.style.left = px + 'px'; nm.style.top = Math.min(innerHeight - 24, py + 26) + 'px';
       }
       $('crouchfig').classList.toggle('crouched', player.crouched);
+    }
+    if (!isTouch) {   // PC: the pickup circle with an E sits on the item you are looking at
+      const t = findTarget(), item = t && t.kind === 'item', pm = $('pcmark'), pn = $('pcname');
+      pm.hidden = pn.hidden = !item;
+      if (item) {
+        const it = t.item, p = _pv.set(it.x, it.y + it.def.size * 0.5, it.z).project(camera);
+        const px = Math.min(innerWidth - 30, Math.max(30, (p.x * 0.5 + 0.5) * innerWidth)), py = Math.min(innerHeight - 30, Math.max(30, (-p.y * 0.5 + 0.5) * innerHeight));
+        pm.style.left = px + 'px'; pm.style.top = py + 'px'; if (pn.textContent !== it.def.name) pn.textContent = it.def.name; pn.style.left = px + 'px'; pn.style.top = Math.min(innerHeight - 24, py + 26) + 'px';
+      }
     }
     const tt = now / 1000;
     for (const s of world.fixtures.arcadeScreens || []) s.tick(tt);
