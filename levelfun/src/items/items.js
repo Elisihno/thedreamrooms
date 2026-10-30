@@ -381,6 +381,10 @@ export class ItemSystem {
   step(it, dt) {
     const w = this.world, r = 0.1;
     it.vy -= G * dt;
+    if (w.knock && Math.hypot(it.vx, it.vz) + Math.abs(it.vy) > 2.2) {   // a thrown item that hits a standing prop knocks it over
+      const k = w.knock.touching(it.x, it.y, it.z, 0.14);
+      if (k && it.y < k.y + k.K.h) { w.knock.knock(k, it.vx, it.vz, 'item'); it.vx *= -0.3; it.vz *= -0.3; }
+    }
     const nx = it.x + it.vx * dt, nz = it.z + it.vz * dt;
     const p = { x: nx, z: nz };
     w.collision.resolve(p, r, it.y, it.y + 0.2);
@@ -389,7 +393,7 @@ export class ItemSystem {
     it.x = p.x; it.z = p.z;
     const ny = it.y + it.vy * dt;
     let fl = w.floorAt(it.x, it.z, it.y + 0.02, false);
-    for (const sp of this.getSupports()) { const bb = sp.b; if (it.x > bb.minX - 0.02 && it.x < bb.maxX + 0.02 && it.z > bb.minZ - 0.02 && it.z < bb.maxZ + 0.02 && sp.top <= it.y + 0.03 && sp.top > fl) fl = sp.top; }   // items land on tables, counters and bins
+    for (const sp of this.getSupports()) { const bb = sp.b; if (!bb.enabled) continue; if (it.x > bb.minX - 0.02 && it.x < bb.maxX + 0.02 && it.z > bb.minZ - 0.02 && it.z < bb.maxZ + 0.02 && sp.top <= it.y + 0.03 && sp.top > fl) fl = sp.top; }   // items land on tables, counters and bins
     if (Number.isFinite(fl) && ny <= fl) {
       const impact = -it.vy;
       it.y = fl;
@@ -400,6 +404,14 @@ export class ItemSystem {
     } else it.y = ny;
     it.mesh.position.set(it.x, it.y, it.z);
     it.mesh.rotation.y += Math.hypot(it.vx, it.vz) * dt * 2.5;
+  }
+
+  // Items resting inside or on top of a prop that was just knocked over spill out and fall.
+  spill(k) {
+    for (const it of this.items) {
+      if (it.state !== 'world' || Math.hypot(it.x - k.x, it.z - k.z) > k.K.r + 0.05 || it.y < k.y + 0.1 || it.y > k.y + k.K.h + 0.1) continue;
+      it.state = 'air'; it.rest = false; it.vx = k.dx * 1.6; it.vz = k.dz * 1.6; it.vy = 1.2; this.dirty = true;
+    }
   }
 
   noise(it, loud, src) { this.noises.push({ x: it.x, y: it.y, z: it.z, loud, src, t: this.time }); if (this.noises.length > 32) this.noises.shift(); }

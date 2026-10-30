@@ -157,6 +157,7 @@ export class World {
 
   update(dt) {
     for (const d of this.doors) d.update(dt);
+    if (this.knock) this.knock.update(dt);
   }
 
   // Show only the groups near the player's height (plus the shaft when beside it).

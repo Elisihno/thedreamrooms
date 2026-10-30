@@ -4,6 +4,7 @@ import { getMaterial, getBasic } from '../assets/registry.js';
 import { instanceModel, hasModel, cloneModel, modelSize } from '../assets/models.js';
 import { partySet, instanced } from './partyprops.js';
 import { doubleSidedModel } from './doorleaf.js';
+import { Knockables } from './knock.js';
 import { drawCentered } from '../arcade/pixelfont.js';
 import { mergeGeometries } from '../../vendor/BufferGeometryUtils.js';
 
@@ -45,10 +46,11 @@ export function furnish(w) {
       solid(l, cx, cz, alongX ? 0.27 : 0.31, alongX ? 0.31 : 0.27, 1.9);
     }
   };
-  const bin = (l, x, z) => { put('trash_can', l, { x, z, ry: x * 5 }); solid(l, x, z, 0.38, 0.38, 0.75); };
+  const knock = w.knock = new Knockables(w);
+  const bin = (l, x, z) => { if (!knock.add('bin', l, x, Y(l), z, x * 5)) { put('trash_can', l, { x, z, ry: x * 5 }); solid(l, x, z, 0.38, 0.38, 0.75); } };
   const metalTable = (l, x, z, rot = true) => { put('metal_table', l, { x, z, ry: rot ? Math.PI / 2 : 0 }); w.collision.add(x - (rot ? 0.87 : 0.49), z - (rot ? 0.49 : 0.87), x + (rot ? 0.87 : 0.49), z + (rot ? 0.49 : 0.87), Y(l) + 0.85, Y(l) + 0.95); };
   const picnic = (l, x, z, ry = 0) => { put('bench', l, { x, z, ry }); solid(l, x, z, ry ? 0.87 : 0.9, ry ? 0.9 : 0.87, 0.7); };
-  const lamp = (l, x, z) => { put('floor_lamp', l, { x, z }); solid(l, x, z, 0.2, 0.2, 1.6); };
+  const lamp = (l, x, z) => { if (!knock.add('lamp', l, x, Y(l), z)) { put('floor_lamp', l, { x, z }); solid(l, x, z, 0.2, 0.2, 1.6); } };
   const exitSign = (l, x, y, z, ry) => put('exit_sign', l, { x, z, y: Y(l) + y, ry });
     // pipe runs: one cheap instanced pipe section (tube + two flanges, ~100 triangles), 1.65 m long, laid end to end
   const pipeItems = new Map();
@@ -66,7 +68,7 @@ export function furnish(w) {
     solid(l, cx, cz, alongX ? 0.36 : d, alongX ? d : 0.36, 0.7, yBase - 0.05);
   };
   const desk = (l, x, z, ry = 0) => { put('desk', l, { x, z, ry }); const r = Math.abs(Math.sin(ry)) > 0.5; solid(l, x, z, r ? 0.42 : 1.0, r ? 1.0 : 0.42, 0.7); };
-  const officeChair = (l, x, z, ry = 0) => { put('chair_office', l, { x, z, ry }); solid(l, x, z, 0.28, 0.28, 0.9); };
+  const officeChair = (l, x, z, ry = 0) => { if (!knock.add('chair', l, x, Y(l), z, ry)) { put('chair_office', l, { x, z, ry }); solid(l, x, z, 0.28, 0.28, 0.9); } };
   const winch = (l, x, z, ry = 0) => { put('winch', l, { x, z, ry }); const r = Math.abs(Math.sin(ry)) > 0.5; solid(l, x, z, r ? 0.95 : 0.85, r ? 0.85 : 0.95, 0.96); };
   const screen = (l, x, y, z, w2, h2, d2, color) => w.box({ level: l, x, y: Y(l) + y, z, w: w2, h: h2, d: d2, mat: color, basic: true, collide: false, cast: false, receive: false });
   const bunch = (l, x, z, s = 1) => { const ms = instanceModel(w.group(l), 'balloons', [{ x, y: Y(l), z, ry: x * 3.1, s }]); w.balloons.push({ key: `${l}:fbunch:${Math.round(x * 10)}:${Math.round(z * 10)}`, meshes: ms, index: 0, x, y: Y(l) + 1.0 * s, z, r: 0.55 * s, popped: false }); return ms; };

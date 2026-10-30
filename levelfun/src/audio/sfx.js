@@ -54,6 +54,12 @@ export const sfx = {
   },
   smileyNotice() { tone(70, 0.9, { type: 'sawtooth', gain: 0.3, slide: -20 }); tone(740, 0.5, { type: 'square', gain: 0.08, slide: -300 }); },
   heavyDoor() { noise(0.5, { gain: 0.5, hp: 150 }); tone(70, 0.8, { type: 'sawtooth', gain: 0.35, slide: -30 }); tone(130, 1.1, { type: 'sawtooth', gain: 0.12, slide: 110, delay: 0.1 }); tone(60, 0.5, { type: 'sine', gain: 0.5, delay: 0.9, slide: -20 }); },
+  // something big tips over: a hollow bang for a bin, a metallic crash for a lamp, a rattle for a chair
+  clatter(kind) {
+    if (kind === 'bin') { noise(0.35, { gain: 0.55, hp: 250 }); tone(150, 0.25, { type: 'square', gain: 0.3, slide: -90 }); noise(0.2, { gain: 0.3, hp: 900, delay: 0.22 }); tone(210, 0.15, { type: 'square', gain: 0.18, slide: -120, delay: 0.24 }); }
+    else if (kind === 'lamp') { noise(0.5, { gain: 0.6, hp: 400 }); tone(900, 0.3, { type: 'triangle', gain: 0.25, slide: -500 }); tone(1500, 0.4, { type: 'sine', gain: 0.14, slide: -900, delay: 0.05 }); noise(0.25, { gain: 0.3, hp: 2500, delay: 0.3 }); }
+    else { noise(0.3, { gain: 0.5, hp: 500 }); tone(320, 0.15, { type: 'square', gain: 0.25, slide: -200 }); noise(0.18, { gain: 0.3, hp: 1500, delay: 0.2 }); }
+  },
   doorCreak() { tone(180, 0.7, { type: 'sawtooth', gain: 0.08, slide: 120 }); noise(0.6, { gain: 0.05, hp: 1200 }); },
   stunned() { sfx.zap(); tone(60, 1.2, { type: 'sawtooth', gain: 0.3, slide: -30 }); },
   stick() { noise(0.5, { gain: 0.35, hp: 200 }); tone(240, 0.35, { type: 'sine', gain: 0.25, slide: -170 }); tone(160, 0.3, { type: 'sine', gain: 0.2, slide: -100, delay: 0.15 }); },

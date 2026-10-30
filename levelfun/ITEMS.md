@@ -48,3 +48,6 @@ The Security Room (behind the locked door, needs the Turning Handle) has monitor
 
 ## Where items are placed
 Every new game scatters the items again. About half of the small items (up to about 36 cm) sit on tables, counters, desks, benches, shelves, crates or inside trash cans (still inside the item's allowed rooms); the rest lie on the floor. A spot only counts if there is room above it and a place to stand within arm's reach. Dropped or thrown items land on those surfaces too.
+
+## Things you can knock over
+Trash cans, floor lamps and office chairs tip over when you walk into them, when a thrown item hits them, or when Smiley barges past. They crash (a loud noise Smiley investigates), stay lying down as an obstacle for the rest of the run, and items stored in a knocked-over bin spill out.

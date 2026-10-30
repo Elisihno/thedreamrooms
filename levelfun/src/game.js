@@ -307,6 +307,7 @@ function closeCameras() {
   $('game').classList.remove('nightvision'); leaveModal();
 }
 world.fixtures.openCameras = openCameras;
+if (world.knock) world.knock.onKnock = k => items.spill(k);
 world.fixtures.heavyDoor = () => sfx.heavyDoor();
 $('camprev').addEventListener('click', () => showCam(camView.i - 1));
 $('camnext').addEventListener('click', () => showCam(camView.i + 1));
@@ -365,6 +366,12 @@ function frame(now) {
     items.update(dt, player);
     uses.update(dt);
     smiley.update(dt);
+    const kn = world.knock;   // walking into a trash can, lamp or office chair tips it over (so does Smiley barging past)
+    if (kn && !player.hide && player.speed > 1.0) {
+      const k = kn.touching(player.pos.x, player.pos.y, player.pos.z, 0.43);
+      if (k && (k.x - player.pos.x) * player.vx + (k.z - player.pos.z) * player.vz > 0) kn.knock(k, player.vx, player.vz, 'player');
+    }
+    if (kn && smiley.present && smiley.moved > 0.01) { const k = kn.touching(smiley.pos.x, smiley.pos.y, smiley.pos.z, 0.3); if (k) kn.knock(k, k.x - smiley.pos.x, k.z - smiley.pos.z, 'smiley'); }
     for (let i = world.traps.length - 1; i >= 0; i--) {   // party traps: goo that holds you for a few seconds
       const t = world.traps[i];
       if (!player.hide && player.stuckT <= 0 && Math.hypot(player.pos.x - t.x, player.pos.z - t.z) < 0.55 && Math.abs(player.pos.y - t.y) < 0.7) {
