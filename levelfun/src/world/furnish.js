@@ -1,0 +1,387 @@
+import * as THREE from '../three.js';
+import { AREAS, HIDING, CAMERAS, FIXTURES, LEVEL_Y, SPIRAL, CEIL, BALLPIT } from './layout.js';
+import { getMaterial, getBasic } from '../assets/registry.js';
+import { instanceModel, hasModel, cloneModel, modelSize } from '../assets/models.js';
+import { partySet, instanced } from './partyprops.js';
+import { doubleSidedModel } from './doorleaf.js';
+import { Knockables } from './knock.js';
+import { drawCentered } from '../arcade/pixelfont.js';
+import { mergeGeometries } from '../../vendor/BufferGeometryUtils.js';
+
+// Furniture, props and fixtures for every room. All static pieces go through the batched box builder.
+export function furnish(w) {
+  const Y = l => LEVEL_Y[l];
+  const bx = (l, x0, z0, x1, z1, h, mat, y = 0, o = {}) => w.block(l, x0, z0, x1, z1, Y(l) + y, Y(l) + y + h, mat, o);
+  const deco = { collide: false };
+  const stairRect = [SPIRAL.cx - SPIRAL.holeR - 0.6, SPIRAL.cz - SPIRAL.holeR - 0.6, SPIRAL.cx + SPIRAL.holeR + 0.6, SPIRAL.cz + SPIRAL.holeR + 0.6];
+
+  // ----- reusable pieces -----
+  // the room containing a point (used to turn shelves and sofas away from the nearest wall)
+  const roomAt = (l, x, z) => AREAS.find(r => r.level === l && x >= r.rect[0] && x <= r.rect[2] && z >= r.rect[1] && z <= r.rect[3]);
+  const facing = (l, x0, z0, x1, z1) => {
+    const r = roomAt(l, (x0 + x1) / 2, (z0 + z1) / 2)?.rect || [x0, z0, x1, z1], alongX = (x1 - x0) >= (z1 - z0);
+    if (alongX) return ((z0 + z1) / 2 - r[1] < r[3] - (z0 + z1) / 2) ? 0 : Math.PI;            // +z or -z
+    return ((x0 + x1) / 2 - r[0] < r[2] - (x0 + x1) / 2) ? Math.PI / 2 : -Math.PI / 2;           // +x or -x
+  };
+  // metal shelving units (the model is 1.55 x 0.55 x 2 m) laid end to end along the long side of the old box footprint
+  const shelf = (l, x0, z0, x1, z1) => {
+    const alongX = (x1 - x0) >= (z1 - z0), len = alongX ? x1 - x0 : z1 - z0, n = Math.max(1, Math.round(len / 1.55)), ry = facing(l, x0, z0, x1, z1);
+    for (let i = 0; i < n; i++) {
+      const cx = alongX ? x0 + (i + 0.5) * len / n : (x0 + x1) / 2, cz = alongX ? (z0 + z1) / 2 : z0 + (i + 0.5) * len / n;
+      put('shelf', l, { x: cx, z: cz, ry, sx: len / n / 1.55 });
+      solid(l, cx, cz, alongX ? len / n / 2 : 0.275, alongX ? 0.275 : len / n / 2, 2.0);
+    }
+  };
+  // model props are collected per level and instanced at the end
+  const place = new Map();
+  const put = (name, l, p) => { const k = name + '|' + l; (place.get(k) || place.set(k, []).get(k)).push({ y: Y(l), ...p }); };
+  const solid = (l, x, z, hx, hz, h, y = 0) => w.collision.add(x - hx, z - hz, x + hx, z + hz, Y(l) + y, Y(l) + y + h);
+  const crate = (l, x, z, s = 0.8, y = 0) => { put('crate', l, { x, z, y: Y(l) + y, s: s / 0.8, ry: (x * 7 + z * 3) % 6.28 }); solid(l, x, z, s / 2, s / 2, s, y); };
+  // lockers in a row; `face` is the direction the doors face (S = +z, E = +x, N = -z, W = -x)
+  const locker = (l, x, z, face = 'S', n = 1) => {
+    const ry = { S: 0, E: Math.PI / 2, N: Math.PI, W: -Math.PI / 2 }[face], alongX = face === 'S' || face === 'N';
+    for (let i = 0; i < n; i++) {
+      const cx = x + (alongX ? i * 0.55 : 0), cz = z + (alongX ? 0 : i * 0.55);
+      put('locker', l, { x: cx, z: cz, ry });
+      solid(l, cx, cz, alongX ? 0.27 : 0.31, alongX ? 0.31 : 0.27, 1.9);
+    }
+  };
+  const knock = w.knock = new Knockables(w);
+  const bin = (l, x, z) => { if (!knock.add('bin', l, x, Y(l), z, x * 5)) { put('trash_can', l, { x, z, ry: x * 5 }); solid(l, x, z, 0.38, 0.38, 0.75); } };
+  const metalTable = (l, x, z, rot = true) => { put('metal_table', l, { x, z, ry: rot ? Math.PI / 2 : 0 }); w.collision.add(x - (rot ? 0.87 : 0.49), z - (rot ? 0.49 : 0.87), x + (rot ? 0.87 : 0.49), z + (rot ? 0.49 : 0.87), Y(l) + 0.85, Y(l) + 0.95); };
+  const picnic = (l, x, z, ry = 0) => { put('bench', l, { x, z, ry }); solid(l, x, z, ry ? 0.87 : 0.9, ry ? 0.9 : 0.87, 0.7); };
+  const lamp = (l, x, z) => { if (!knock.add('lamp', l, x, Y(l), z)) { put('floor_lamp', l, { x, z }); solid(l, x, z, 0.2, 0.2, 1.6); } };
+  const exitSign = (l, x, y, z, ry) => put('exit_sign', l, { x, z, y: Y(l) + y, ry });
+    // pipe runs: one cheap instanced pipe section (tube + two flanges, ~100 triangles), 1.65 m long, laid end to end
+  const pipeItems = new Map();
+  const pipe = (l, x0, z0, x1, z1, y) => {
+    const alongX = (x1 - x0) >= (z1 - z0), len = alongX ? x1 - x0 : z1 - z0, n = Math.max(1, Math.round(len / 1.65));
+    const arr = pipeItems.get(l) || pipeItems.set(l, []).get(l);
+    for (let i = 0; i < n; i++) arr.push({ x: alongX ? x0 + (i + 0.5) * len / n : (x0 + x1) / 2, z: alongX ? (z0 + z1) / 2 : z0 + (i + 0.5) * len / n, y: Y(l) + y + 0.09, rz: alongX ? Math.PI / 2 : 0, rx: alongX ? 0 : Math.PI / 2, sy: len / n / 1.65 });
+  };
+  // wall-mounted breaker panel (model is 0.55 x 0.5 x 0.37; front = +z). cx,cz = centre of its back; face = direction it faces
+  const breaker = (l, x, z, face, yBase = 1.1, s = 1.3) => {
+    const ry = { S: 0, E: Math.PI / 2, N: Math.PI, W: -Math.PI / 2 }[face], d = 0.37 * s / 2 + 0.02;
+    const cx = x + (face === 'E' ? d : face === 'W' ? -d : 0), cz = z + (face === 'S' ? d : face === 'N' ? -d : 0);
+    put('breaker', l, { x: cx, z: cz, y: Y(l) + yBase - 0.5 * s, ry, s });   // model starts 0.5 m above its own origin
+    const alongX = face === 'S' || face === 'N';
+    solid(l, cx, cz, alongX ? 0.36 : d, alongX ? d : 0.36, 0.7, yBase - 0.05);
+  };
+  const desk = (l, x, z, ry = 0) => { put('desk', l, { x, z, ry }); const r = Math.abs(Math.sin(ry)) > 0.5; solid(l, x, z, r ? 0.42 : 1.0, r ? 1.0 : 0.42, 0.7); };
+  const officeChair = (l, x, z, ry = 0) => { if (!knock.add('chair', l, x, Y(l), z, ry)) { put('chair_office', l, { x, z, ry }); solid(l, x, z, 0.28, 0.28, 0.9); } };
+  const winch = (l, x, z, ry = 0) => { put('winch', l, { x, z, ry }); const r = Math.abs(Math.sin(ry)) > 0.5; solid(l, x, z, r ? 0.95 : 0.85, r ? 0.85 : 0.95, 0.96); };
+  const screen = (l, x, y, z, w2, h2, d2, color) => w.box({ level: l, x, y: Y(l) + y, z, w: w2, h: h2, d: d2, mat: color, basic: true, collide: false, cast: false, receive: false });
+  const bunch = (l, x, z, s = 1) => { const ms = instanceModel(w.group(l), 'balloons', [{ x, y: Y(l), z, ry: x * 3.1, s }]); w.balloons.push({ key: `${l}:fbunch:${Math.round(x * 10)}:${Math.round(z * 10)}`, meshes: ms, index: 0, x, y: Y(l) + 1.0 * s, z, r: 0.55 * s, popped: false }); return ms; };
+  const couch = (l, x0, z0, x1, z1) => {
+    const alongX = (x1 - x0) >= (z1 - z0), len = alongX ? x1 - x0 : z1 - z0, n = Math.max(1, Math.round(len / 2)), ry = facing(l, x0, z0, x1, z1);
+    for (let i = 0; i < n; i++) {
+      const cx = alongX ? x0 + (i + 0.5) * len / n : (x0 + x1) / 2, cz = alongX ? (z0 + z1) / 2 : z0 + (i + 0.5) * len / n;
+      put('sofa', l, { x: cx, z: cz, ry, sx: Math.min(1.2, len / n / 2) }); solid(l, cx, cz, alongX ? len / n / 2 : 0.48, alongX ? 0.48 : len / n / 2, 0.8);
+    }
+  };
+  // ============================== FLOOR 1 ==============================
+  // Reception: desk (hiding spot), couches, balloons
+  put('counter', '1', { x: 7.6, z: 2.7, s: 1.5 }); solid('1', 7.6, 2.7, 1.9, 0.38, 0.95); metalTable('1', 3.2, 2.8);
+  couch('1', 0.3, 6, 1.3, 10); couch('1', 3.5, 9.7, 8, 10.7, 'tile_metal');
+  bunch('1', 2, 2); bunch('1', 10.5, 10.5);
+  // Main Party Hall: stage with curtain, gift table (hiding), banquet tables
+  partySet(w, '1', { tables: [{ x: 28, z: 11, len: 1.2 }, { x: 20, z: 11.5, len: 1.0 }], bounds: { x0: 12, x1: 36, z0: 0, z1: 16 }, avoid: [stairRect, [35, 3, 36, 5], [35, 12, 36, 16]], ceilingBalloons: 14, seed: 11, confetti: 500 });
+  // Kitchen: counters, island with knee space (hiding), fridges
+  for (let i = 0; i < 5; i++) metalTable('1', 37.4 + i * 1.8, 0.65);
+  for (const z of [2.2, 3.2, 6.2]) { put('fridge', '1', { x: 47.45, z, ry: -Math.PI / 2 }); solid('1', 47.45, z, 0.39, 0.37, 1.85); }
+  bin('1', 37.2, 11.3); bin('1', 47.3, 9.3);
+  if (hasModel('pots')) put('pots', '1', { x: 39.2, z: 0.65, y: Y('1') + 0.95, s: 0.8 });   // copper pots and pans on the counter
+  metalTable('1', 41.5, 5.5); metalTable('1', 43.4, 5.5); metalTable('1', 38.2, 10.3, false); metalTable('1', 42.3, 11.3);
+  // Dining Room: three long party tables (start under the middle one), cake, balloons, confetti, bunting
+  partySet(w, '1', { tables: [{ x: 22, z: 19.5 }, { x: 22, z: 23, cake: true }, { x: 22, z: 26.5 }], bounds: { x0: 12, x1: 36, z0: 16, z1: 30 }, avoid: [[34, 16.5, 36, 20.5], [35, 21, 36, 23], [35, 27, 36, 29.5]], ceilingBalloons: 28, bunting: true, seed: 5, confetti: 700, tableScale: 1.15 });
+  // Bathrooms: stall row on the north wall (textured), a dirty public toilet in every stall, sinks on the south wall
+  const STALL_X0 = 40.17, STALL_W = 1.11, STALL_Z = 17.35;   // six open stalls against the north wall, each 1.12 m wide, 1.22 m deep
+  for (let i = 0; i < 6; i++) {
+    const sx = STALL_X0 + STALL_W * (i + 0.5);
+    put('stall', '1', { x: sx, z: STALL_Z - 0.61 });
+    put('toilet', '1', { x: sx, z: 16.1 + 0.4 }); solid('1', sx, 16.5, 0.21, 0.365, 0.8);
+  }
+  for (let k = 0; k <= 6; k++) solid('1', STALL_X0 + STALL_W * k, 16.73, 0.03, 0.63, 1.9);
+  for (const x of [41.4, 43.0, 44.6, 46.2]) { put('sink', '1', { x, z: 25.7, y: Y('1') + 0.5, ry: Math.PI }); solid('1', x, 25.7, 0.23, 0.2, 0.65, 0.45); }
+  // Security Room: monitor wall + desk (no hiding spot here)
+  for (const z of [18.6, 20.6, 22.6]) { desk('1', 59.35, z, Math.PI / 2); officeChair('1', 58.35, z + 0.15, Math.PI / 2); }
+  for (const z of [18.6, 20.6, 22.6]) { put('crt', '1', { x: 59.4, z, y: Y('1') + 0.69, ry: Math.PI }); put('crt', '1', { x: 59.4, z: z - 0.5, y: Y('1') + 0.69, ry: Math.PI }); }
+  breaker('1', 50, 25.9, 'N'); breaker('1', 52, 25.9, 'N');
+  // Supply Closet: shelves + crates (keeps the ladder corner free)
+  shelf('1', 49, 26.1, 57, 26.8); shelf('1', 49, 32.1, 57, 32.9, 'diamond_plate');
+  crate('1', 51, 29.5, 0.9); crate('1', 52.2, 29.5, 0.7); crate('1', 51.6, 29.5, 0.7, 0.9); crate('1', 55.5, 30, 1.0);
+  // Emergency Exit Room: exit door, four mechanisms, warning stripes
+  exitFixtures();
+  // Party Preparation Room: assembly bench, hiding bench, shelves, boxes
+  metalTable('1', 55, 0.8); metalTable('1', 56.9, 0.8);
+  metalTable('1', 51, 9.6);
+  locker('1', 50.5, 0.35, 'S', 1);   // the Party Room Key opens this storage compartment
+  shelf('1', 58.8, 3, 59.8, 10.5, 'wood'); shelf('1', 48.2, 2, 49.2, 7, 'wood');
+  crate('1', 55.5, 5, 0.9); crate('1', 56.5, 5.4, 0.7); bunch('1', 51, 4, 0.9);
+  // corridors
+  crate('1', 46.5, 31.5, 0.8);
+
+  // ============================== FLOOR 2 ==============================
+  // Party Room A / B
+  partySet(w, '2', { tables: [{ x: 6.5, z: 3, len: 1.1 }, { x: 6.5, z: 7, len: 1.1 }], bounds: { x0: 0, x1: 12, z0: 0, z1: 10 }, ceilingBalloons: 10, seed: 21, confetti: 350 });
+  partySet(w, '2', { tables: [{ x: 8, z: 18, len: 1.1 }, { x: 8, z: 22, len: 1.0 }], bounds: { x0: 0, x1: 14, z0: 13, z1: 25 }, avoid: [[0, 13.5, 3, 18]], ceilingBalloons: 10, seed: 23, confetti: 350 });
+  couch('2', 12.3, 7, 13, 9.5, 'tile_metal');
+  // Landing: benches
+  // Arcade: two mirrored rows of machines along the north and south walls (three are the playable games, marked by a lit sign),
+  // dressed as a party: balloons, hats on the machines, bunting and confetti
+  const games = [['pop', 29.65], ['dash', 38.45], ['find', 44.95]];
+  w.fixtures.arcade = [];
+  const asz = modelSize('arcade') || { x: 0.9, z: 0.9, y: 1.85 };
+  const placements = [], machineHats = [];
+  const addMachine = (x, z, facingSouth) => {
+    placements.push({ x, y: Y('2'), z: facingSouth ? z + asz.z / 2 : z - asz.z / 2, ry: facingSouth ? 0 : Math.PI });
+    w.collision.add(x - asz.x / 2, facingSouth ? z : z - asz.z, x + asz.x / 2, facingSouth ? z + asz.z : z, Y('2'), Y('2') + 1.9);
+  };
+  // The playable machines show a blinking pixel "START GAME" on their screen; USE in front of one opens the minigame.
+  w.fixtures.arcadeScreens = [];
+  function playableScreen(game, x, pz) {
+    const cv = document.createElement('canvas'); cv.width = 96; cv.height = 75;
+    const c = cv.getContext('2d'), tex = new THREE.CanvasTexture(cv); tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+    const name = { pop: 'POP', dash: 'DASH', find: 'FIND' }[game];
+    let on = null;
+    const paint = lit => {
+      c.fillStyle = '#0a1a5a'; c.fillRect(0, 0, 96, 75); c.fillStyle = '#1b3fae'; c.fillRect(3, 3, 90, 69);
+      drawCentered(c, name, 48, 8, 2, '#ffd23c', '#7a2a00');
+      if (lit) { drawCentered(c, 'START', 48, 28, 2, '#fff', '#c0392b'); drawCentered(c, 'GAME', 48, 46, 2, '#fff', '#c0392b'); }
+      tex.needsUpdate = true;
+    };
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.476, 0.372), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+    mesh.position.set(x, Y('2') + 1.124 + 0.004, pz + 0.04); mesh.rotation.x = -0.222;
+    w.group('2').add(mesh);
+    const sv = document.createElement('canvas'); sv.width = 96; sv.height = 18; { const sc = sv.getContext('2d'); sc.fillStyle = '#ffd23c'; sc.fillRect(0, 0, 96, 18); sc.fillStyle = '#c0392b'; sc.fillRect(0, 0, 96, 2); sc.fillRect(0, 16, 96, 2); drawCentered(sc, 'PLAY ME!', 48, 5, 1, '#7a2a00'); }
+    const st = new THREE.CanvasTexture(sv); st.magFilter = THREE.NearestFilter; st.colorSpace = THREE.SRGBColorSpace;
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.15), new THREE.MeshBasicMaterial({ map: st, toneMapped: false })); sign.position.set(x, Y('2') + 2.15, pz + 0.05); w.group('2').add(sign);
+    let warnUntil = 0, last = 0;
+    const scr = {
+      warn() { warnUntil = last + 2.2; on = null; },
+      tick(t) {
+        last = t;
+        const warning = t < warnUntil, l = warning ? 'warn' + (Math.floor(t * 4) % 2) : Math.floor(t * 2.2) % 2 === 0;
+        if (l !== on) { on = l; if (warning) paintWarn(l === 'warn0'); else paint(l); }
+      },
+    };
+    const paintWarn = lit => {
+      c.fillStyle = '#5a0a0a'; c.fillRect(0, 0, 96, 75); c.fillStyle = '#a01818'; c.fillRect(3, 3, 90, 69);
+      if (lit) { drawCentered(c, 'INSERT', 48, 18, 2, '#fff', '#300'); drawCentered(c, 'TOKEN', 48, 40, 2, '#ffd23c', '#300'); }
+      tex.needsUpdate = true;
+    };
+    w.interactable({ x, y: Y('2') + 1.2, z: pz + 0.6, radius: 2.1, kind: 'arcade', game, onUse: () => w.fixtures.arcadeHandler?.(game, scr) });
+    w.fixtures.arcadeScreens.push(scr);
+  }
+  for (let k = 0; k < 7; k++) for (const sx of [-1, 1]) {   // mirrored about x = 36; the middle stays open for the doorway on the south wall
+    const x = 36 + sx * (2.45 + 1.3 * k);
+    addMachine(x, 0.12, true);
+    addMachine(x, 9.88, false);
+    machineHats.push({ x, y: Y('2') + asz.y, z: 0.12 + asz.z / 2, ry: (k * 2.1 + sx) }, { x, y: Y('2') + asz.y, z: 9.88 - asz.z / 2, ry: (k * 1.7 - sx) });
+    const g = games.find(q => Math.abs(q[1] - x) < 0.3);
+    if (g) { w.fixtures.arcade.push({ game: g[0], x, z: 0.12 + asz.z + 0.4 }); playableScreen(g[0], x, 0.12 + asz.z / 2); }
+  }
+  {
+    const hatGeo = new THREE.ConeGeometry(0.1, 0.26, 10); hatGeo.translate(0, 0.13, 0);
+    const cols = [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71, 0x9b59b6, 0xff7eb6, 0xff8c1a];
+    instanced(w.group('2'), hatGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), machineHats.map((h, i) => ({ ...h, color: cols[i % cols.length] })), { receive: false, optional: w.optional });
+  }
+  partySet(w, '2', { tables: [], bounds: { x0: 24, x1: 48, z0: 0, z1: 10 }, avoid: [[24, 0, 48, 1.4], [24, 8.6, 48, 10]], ceilingBalloons: 26, seed: 41, bunting: true, confetti: 500 });
+  for (const [bx, bz] of [[36, 0.7], [33.1, 3.2], [38.9, 3.2], [30, 5], [42, 5], [25.5, 2.2], [25.5, 7.8], [46.5, 2.2], [46.5, 7.8], [33.1, 6.9], [38.9, 6.9]]) bunch('2', bx, bz, 1.0);
+  instanceModel(w.group('2'), 'arcade', placements);
+  // Prize Counter: counter model, plush shelves, token spot
+  if (hasModel('counter')) { instanceModel(w.group('2'), 'counter', [{ x: 54, y: Y('2'), z: 1.2, s: 1.5 }]); w.collision.add(52.1, 0.1, 55.9, 1.55, Y('2'), Y('2') + 0.95); }
+  shelf('2', 58.8, 1.5, 59.8, 8.5, 'wood'); shelf('2', 49, 8.8, 53, 9.8, 'wood', 1.8);
+  bunch('2', 50, 5, 0.9); bunch('2', 57, 6, 0.9);
+  // Indoor Playground: elevated decks with crawl-under tunnels, hide-and-seek huts, foam pillars
+  playground();
+  // Ball Pit: padded rim with entrances, sea of balls (not a hiding spot)
+  ballPit();
+  // Storage Closet and Service Corridor
+  shelf('2', 49, 13.2, 52.5, 14, 'tile_metal'); shelf('2', 56, 13.2, 58.5, 14, 'tile_metal'); shelf('2', 49, 18, 58, 18.8, 'diamond_plate'); crate('2', 56, 16, 1.0); crate('2', 54, 16.2, 0.7);
+  pipe('2', 48.2, 19.1, 59.8, 19.4, 2.2); pipe('2', 48.2, 19.5, 59.8, 19.8, 1.9, 'panel_concrete'); crate('2', 58.5, 21.6, 0.9);
+
+  // ============================== FLOOR 3 (abandoned) ==============================
+  // Celebration Hall: knocked-over party remains
+  partySet(w, '3', { tables: [{ x: 28, z: 11, len: 1.1 }, { x: 22, z: 13, len: 0.8 }], bounds: { x0: 12, x1: 36, z0: 0, z1: 16 }, avoid: [stairRect, [35, 5, 36, 10]], ceilingBalloons: 5, seed: 31, bunting: true, confetti: 250 });
+  locker('3', 33.8, 0.35, 'S', 3); crate('3', 14, 12, 0.9); crate('3', 14.9, 12.2, 0.7);
+  // Staff Office: lockers, desks (one with knee space), cabinets
+  locker('3', 0.45, 2, 'E', 4); metalTable('3', 9, 9.1); desk('3', 5.5, 4.6); officeChair('3', 5.5, 5.6, Math.PI); locker('3', 10.4, 0.9, 'S', 2);
+  couch('3', 3, 10.2, 6, 11.4, 'tile_metal');
+  // Surveillance Archives: shelf rows
+  shelf('3', 37, 1.1, 46, 1.9, 'tile_metal'); shelf('3', 37, 4.3, 46, 5.1, 'tile_metal'); locker('3', 47.55, 1, 'W', 2); screen('3', 36.15, 1.4, 3, 0.03, 0.6, 1.0, 0x1f4f46);
+  // Maintenance Corridor
+  pipe('3', 36.2, 6.1, 47.8, 6.4, 2.3); pipe('3', 36.2, 8.6, 47.8, 8.9, 2.0, 'panel_concrete');
+  // Storage Room: stacked crates and lockers (hatch corner kept clear)
+  for (const [x, z] of [[38, 11.5], [39.2, 11.5], [38.6, 14], [41, 16.5], [43.5, 11.2]]) { crate('3', x, z, 1.0); }
+  crate('3', 38.6, 11.5, 0.9, 1.0); locker('3', 38.2, 18.6, 'N', 3);
+  // Maintenance Office: workbench + elevator door + parts
+  locker('3', 49.6, 4.35, 'S', 1);   // the Maintenance Key opens this compartment
+  metalTable('3', 51.5, 6.2); metalTable('3', 53.4, 6.2); breaker('3', 56, 4.1, 'S'); breaker('3', 57.8, 4.1, 'S');
+  shelf('3', 49, 11, 54, 11.9, 'tile_metal');
+  elevator();
+  // Elevator Room: machinery
+  winch('3', 52, 16.6); winch('3', 56.6, 17.2, Math.PI / 2); for (const x of [51, 53.2, 55.4]) breaker('3', x, 23.9, 'N');
+  pipe('3', 48.2, 14.1, 59.8, 14.4, 2.3);
+  // Birthday Chamber: the main table with the cake
+  partySet(w, '3', { tables: [{ x: 24, z: 23, len: 1.5, cake: true }], bounds: { x0: 12, x1: 36, z0: 16, z1: 30 }, ceilingBalloons: 12, seed: 41, bunting: true, confetti: 500 });
+
+  // ============================== BASEMENT ==============================
+  // Basement Hall and Generator Room
+  pipe('B', 12.2, 0.1, 35.8, 0.4, 2.3); pipe('B', 12.2, 7.4, 35.8, 7.7, 2.0, 'panel_concrete'); crate('B', 33.5, 6.5, 0.9);
+  put('generator', 'B', { x: 24, z: 16.5, ry: Math.PI / 2, s: 1.4 }); solid('B', 24, 16.5, 1.4, 0.65, 1.16);
+  put('generator', 'B', { x: 31.5, z: 11, ry: Math.PI / 2 }); solid('B', 31.5, 11, 1.0, 0.47, 0.83);
+  for (const x of [17, 20, 27, 30]) breaker('B', x, 21.9, 'N');
+  w.light({ level: 'B', x: 24, y: Y('B') + 2.5, z: 16.5, color: 0xffc080, intensity: 26, distance: 10, flicker: 0.2, lamp: false });
+  for (const [x, z] of [[14, 20.5], [15.2, 20.5], [34, 9.5], [34, 20.5]]) crate('B', x, z, 0.8);
+  pipe('B', 12.2, 8.2, 35.8, 8.5, 2.3);
+  // Electrical Room: cabinets and a workbench (hiding spot)
+  for (let i = 0; i < 4; i++) breaker('B', 1.6 + i * 1.7, 0.1, 'S'); locker('B', 11.55, 4, 'W', 5); metalTable('B', 6, 9);
+  // Maintenance Storage: shelves, workbench (hiding spot), crates; ladder corner kept clear
+  shelf('B', 37, 0.2, 46, 1.0, 'tile_metal'); metalTable('B', 38, 8.5); crate('B', 46.5, 3, 0.9); crate('B', 46.5, 4.1, 0.7);
+  // Boiler Room: tanks and pipes (shaft corner kept clear)
+  w.light({ level: 'B', x: 54.5, y: Y('B') + 2.4, z: 6, color: 0xff7a50, intensity: 24, distance: 10, flicker: 0.3, lamp: false });
+  put('boiler', 'B', { x: 52.5, z: 3.8 }); solid('B', 52.5, 3.8, 0.73, 0.54, 2.5); put('boiler', 'B', { x: 56.8, z: 3.6, ry: 0.2 }); solid('B', 56.8, 3.6, 0.73, 0.54, 2.5); pipe('B', 49, 0.2, 59.8, 0.5, 2.4, 'panel_concrete'); pipe('B', 49, 8, 56, 8.3, 0.4);
+  // Hidden Records Room: filing cabinets
+  locker('B', 1.2, 14.45, 'S', 8); locker('B', 1.2, 25.55, 'N', 8);
+
+  // ---- extra model props ----
+  put('table_bell', '1', { x: 8.4, z: 2.7, y: Y('1') + 0.93 });
+  lamp('1', 1, 1.3); lamp('1', 11, 6); lamp('1', 35, 15); lamp('2', 22.5, 1.2); lamp('2', 49, 9); lamp('3', 13, 15); lamp('3', 11, 11);
+  picnic('1', 7, 7.8, 0); picnic('2', 55, 6, Math.PI / 2);
+  bin('1', 59, 15.2); bin('1', 37.2, 13); bin('2', 3, 11.7); bin('2', 59, 11.7); bin('1', 38.4, 25.2); bin('3', 47.3, 8.4); bin('B', 13, 7); bin('B', 47, 16);
+  exitSign('1', 0.4, 2.4, 17, Math.PI / 2); exitSign('1', 11.8, 2.3, 6, -Math.PI / 2); exitSign('2', 12.2, 2.3, 8.5, Math.PI / 2); exitSign('3', 12.4, 2.3, 14, Math.PI / 2); exitSign('B', 14, 2.3, 7.8, Math.PI);
+  for (const [k, arr] of place) { const [name, l] = k.split('|'); instanceModel(w.group(l), name, arr); }
+  {
+    const tube = new THREE.CylinderGeometry(0.13, 0.13, 1.65, 12, 1, true), fl = [-0.8, 0.8].map(yy => new THREE.CylinderGeometry(0.17, 0.17, 0.06, 12).translate(0, yy, 0));
+    const geo = mergeGeometries([tube, ...fl]);
+    for (const [l, items] of pipeItems) instanced(w.group(l), geo, getMaterial('pipe_paint'), items, { receive: false });
+  }
+
+  // ============================== markers ==============================
+  hidingSpots();
+  cameras();
+
+  // ---- local builders needing access to the helpers above ----
+  function exitFixtures() {
+    const l = '1', y = Y(l);
+    w.fixtures.exitDoor = { level: l, x: 0.15, z: 17 };
+    w.fixtures.exitDoors = [];
+    for (const z of [16.2, 17.8]) {
+      if (hasModel('door')) { const d = doubleSidedModel('door', 1.2 / 1.04, 1.05, 0.133); d.rotation.y = Math.PI / 2; d.position.set(0.12, y, z); w.group(l).add(d); d.userData.z0 = z; w.fixtures.exitDoors.push(d); }
+    }
+    w.fixtures.exitBox = w.collision.add(0, 15.4, 0.3, 18.6, y, y + 2.3);
+    bx(l, 0.3, 14.5, 2.5, 19.5, 0.02, 'hazard_stripes', 0, deco);
+    // the four mechanisms beside the door (west wall, facing into the room)
+    const panel = (name, id, z, yBase, s, ry, hx, hz, h, yOff = 0) => {
+      put(name, l, { x: 0.1 + hx, z, y: y + yBase - yOff * s, ry, s }); solid(l, 0.1 + hx, z, hx, hz, h, yBase);
+      w.fixtures.exitMechanisms.push({ id, z });
+    };
+    w.fixtures.exitMechanisms = [];
+    panel('breaker2', 'key', 13.6, 1.0, 1.3, Math.PI / 2, 0.24, 0.36, 0.7, 0.5);    // padlocked breaker box: the Exit Key
+    panel('fuse_small', 'wires', 14.7, 1.0, 1.0, Math.PI / 2, 0.25, 0.25, 0.5);     // open junction box with wiring: Wire Cutters
+    panel('keypad', 'code', 19.5, 1.25, 1.6, 0, 0.05, 0.1, 0.32);                   // keypad and card reader: the exit code
+    panel('fuse_tall', 'fuse', 20.7, 0, 1.0, Math.PI / 2, 0.1, 0.14, 1.9);          // post-mounted fuse cabinet: the Exit Fuse
+  }
+  function elevator() {
+    const l = '3', y = Y(l);
+    w.fixtures.elevator = { level: l, x: 59.9, z: 11 };
+    w.fixtures.elevDoors = [];
+    for (const z of [10.35, 11.65]) { const d = doubleSidedModel('door', 1.3 / 1.04, 1.07, 0.133); d.rotation.y = -Math.PI / 2; d.position.set(59.75, y, z); w.group(l).add(d); d.userData.z0 = z; w.fixtures.elevDoors.push(d); }
+    w.fixtures.elevBox = w.collision.add(59.2, 9.55, 60, 12.45, y, y + 2.5);
+  }
+  function playground() {
+    const l = '2', y = Y(l);
+    // Raised decks on four posts; the 0.85 m gap underneath is a crawl-under hiding place. Faces never overlap.
+    const platform = (x0, z0, x1, z1, top, post) => {
+      bx(l, x0, z0, x1, z1, 0.15, top, 0.85, { y0: y + 0.85, y1: y + 1.0 });
+      for (const [px, pz] of [[x0 + 0.05, z0 + 0.05], [x1 - 0.25, z0 + 0.05], [x0 + 0.05, z1 - 0.25], [x1 - 0.25, z1 - 0.25]]) bx(l, px, pz, px + 0.2, pz + 0.2, 0.85, post);
+    };
+    platform(17, 18, 21.5, 22, 'deck_blue', 'deck_red');
+    platform(25, 24, 29.5, 28, 'deck_red', 'deck_blue');
+    // The main tower is walkable: a ramp on its east side leads up, and the slide leaves its south edge.
+    const T = { x0: 29.5, z0: 15.5, x1: 33.5, z1: 19.5 }, top = y + 1.0;
+    platform(T.x0, T.z0, T.x1, T.z1, 'deck_blue', 'deck_red');
+    w.flat([T.x0, T.z0, T.x1, T.z1], top, [], 'tower');
+    const rail = (x0, z0, x1, z1) => bx(l, x0, z0, x1, z1, 0.8, 'padding_squares', 1.0);
+    rail(T.x0, T.z0, T.x1, T.z0 + 0.1);            // north
+    rail(T.x0, T.z0 + 0.1, T.x0 + 0.1, T.z1 - 0.1);  // west
+    rail(T.x1 - 0.1, 17.5, T.x1, T.z1 - 0.1);      // east, from the landing south
+    rail(T.x0, T.z1 - 0.1, 31.0, T.z1);            // south, either side of the slide
+    rail(32.0, T.z1 - 0.1, T.x1, T.z1);
+    // access: a landing beside the tower's north-east corner and a gentle 4.5 m ramp running south from it
+    platform(T.x1, T.z0, 35.1, 17.5, 'deck_blue', 'deck_red');
+    w.flat([T.x1, T.z0, 35.1, 17.5], top, [], 'tower-landing');
+    w.ramp([T.x1, 17.5, 35.1, 22.0], 'z', top, y, 'tower-ramp');
+    wedge(17.5, 22.0, (T.x1 + 35.1) / 2, 1.6, top, y, 'z', 'rubber_studs');
+    // slide: its deck meets the tower's south edge; the sloping part is walkable too
+    put('slide', l, { x: 31.5, z: T.z1 + 1.2, y, s: 0.6, sx: 1.6 });
+    w.flat([31.0, T.z1, 32.0, T.z1 + 0.6], top, [], 'slide-deck');
+    w.ramp([31.0, T.z1 + 0.6, 32.0, T.z1 + 2.4], 'z', top, y, 'slide');
+    // two huts with three walls and a roof (hiding places)
+    const t = 0.15;
+    const hut = (x0, z0, x1, z1, open) => {
+      if (open !== 'W') bx(l, x0, z0, x0 + t, z1, 1.5, 'padding_squares');
+      if (open !== 'E') bx(l, x1 - t, z0, x1, z1, 1.5, 'padding_squares');
+      if (open !== 'N') bx(l, x0 + (open !== 'W' ? t : 0), z0, x1 - (open !== 'E' ? t : 0), z0 + t, 1.5, 'padding_squares');
+      if (open !== 'S') bx(l, x0 + (open !== 'W' ? t : 0), z1 - t, x1 - (open !== 'E' ? t : 0), z1, 1.5, 'padding_squares');
+      bx(l, x0, z0, x1, z1, 0.15, 'deck_red', 1.5, { y0: y + 1.5, y1: y + 1.65 });
+    };
+    hut(16, 28.2, 20, 32, 'E'); hut(22.5, 14.1, 26.5, 17, 'S');
+  }
+  // A sloped slab (ramp visual): runs from a to b along `axis`, height hA at a down/up to hB at b, centred on `mid` across.
+  function wedge(a, b, mid, wid, hA, hB, axis, mat) {
+    const len = b - a, rise = hB - hA, ang = Math.atan2(rise, len), L = Math.hypot(len, rise);
+    const geo = new THREE.BoxGeometry(L, 0.1, wid);
+    const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * L * 0.5, uv.getY(i) * wid * 0.5);
+    const m = new THREE.Mesh(geo, getMaterial(mat));
+    m.rotation.z = ang;
+    const cx = (a + b) / 2, cy = (hA + hB) / 2 - 0.05 / Math.cos(ang);
+    if (axis === 'x') { m.position.set(cx, cy, mid); w.group('2').add(m); return; }
+    const g = new THREE.Group(); g.position.set(mid, cy, cx); g.rotation.y = -Math.PI / 2; g.add(m); w.group('2').add(g); return;   // local +x becomes world +z
+  }
+  function ballPit() {
+    // The supplied ball pit, sunk into the floor: only its low rim shows. Walk in anywhere; two ramps lead back out.
+    const l = '2', y = Y(l), { cx, cz, half, depth } = BALLPIT, fy = y - depth;
+    put('ballpit', l, { x: cx, z: cz, s: 0.85, y: y - 0.8 });
+    w.flat([cx - half, cz - half, cx + half, cz + half], fy, [], 'ballpit');
+    const ramps = [[cx - half, cx - half + 1.6, y, fy], [cx + half - 1.6, cx + half, fy, y]];
+    const rz = [cz - 0.65, cz + 0.65];
+    for (const [a, b, hA, hB] of ramps) { w.ramp([a, rz[0], b, rz[1]], 'x', hA, hB, 'ballpit-ramp'); wedge(a, b, cz, 1.3, hA, hB, 'x', 'padding_purple'); }
+    // the floor of balls: a painted layer plus loose balls on top
+    const cv = document.createElement('canvas'); cv.width = cv.height = 256; const g = cv.getContext('2d');
+    g.fillStyle = '#2a1f33'; g.fillRect(0, 0, 256, 256);
+    const cols = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6', '#ff7eb6'];
+    let sd = 11; const rr = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+    for (let i = 0; i < 160; i++) { const px = rr() * 256, py = rr() * 256, r = 17 + rr() * 6, c = cols[i % 6]; for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) { const gr = g.createRadialGradient(px + ox - 5, py + oy - 5, 2, px + ox, py + oy, r); gr.addColorStop(0, '#fff'); gr.addColorStop(0.25, c); gr.addColorStop(1, '#00000088'); g.fillStyle = gr; g.beginPath(); g.arc(px + ox, py + oy, r, 0, 6.3); g.fill(); } }
+    const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(3, 3); tex.colorSpace = THREE.SRGBColorSpace;
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(half * 2, half * 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.set(cx, fy + 0.002, cz); w.group(l).add(floor);
+    const balls = [];
+    for (let i = 0; i < 300; i++) {
+      const bx0 = cx + (rr() - 0.5) * (half * 2 - 0.3), bz0 = cz + (rr() - 0.5) * (half * 2 - 0.3);
+      if (Math.abs(bz0 - cz) < 0.85 && (bx0 < cx - half + 1.75 || bx0 > cx + half - 1.75)) continue;   // keep the ramps clear
+      balls.push({ x: bx0, y: fy + 0.09 + rr() * 0.06, z: bz0, color: cols[i % 6] });
+    }
+    const im = new THREE.InstancedMesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 }), balls.length);
+    const o = new THREE.Object3D(), c = new THREE.Color();
+    balls.forEach((b, i) => { o.position.set(b.x, b.y, b.z); o.updateMatrix(); im.setMatrixAt(i, o.matrix); im.setColorAt(i, c.set(b.color)); });
+    im.computeBoundingSphere(); im.userData.optional = true; w.optional.push(im); w.group(l).add(im);
+    bunch(l, 38.2, 14.5, 0.9);
+  }
+  function hidingSpots() {
+    // visible markers are the furniture itself (tables, desks, lockers, huts); the list drives AI/gameplay later
+    w.hiding = HIDING.map((h, i) => ({ id: i, ...h, y: Y(h.level) }));
+  }
+  function cameras() {
+    w.cameraPoints = CAMERAS.map((c, i) => ({ id: i, ...c }));
+    for (const c of CAMERAS) {
+      const y = Y(c.level) + c.y;
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.34), getMaterial('panel_concrete'));
+      const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 10), getBasic(0x111111)); lens.rotation.x = Math.PI / 2; lens.position.z = 0.18;
+      const led = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 6), getBasic(0xff2a2a)); led.position.set(0.07, 0.06, 0.15);
+      g.add(body, lens, led); g.position.set(c.x, y, c.z); g.rotation.y = c.yaw; w.group(c.level).add(g);
+    }
+  }
+}

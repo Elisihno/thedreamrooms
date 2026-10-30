@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<title>LEVEL FUN</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vignette"></div>
+<div id="lids"><i class="top"></i><i class="bot"></i></div>
+<div id="toast"></div>
+
+<div id="touch-ui" hidden>
+  <div id="stick"><div id="knob"></div></div>
+  <button class="tbtn leanbtn lean-l" data-act="leanL" aria-label="Lean left"></button>
+  <button class="tbtn leanbtn lean-r" data-act="leanR" aria-label="Lean right"></button>
+  <button class="tbtn pause" data-act="pause">&#10074;&#10074;</button>
+  <button id="crouchfig" class="tbtn icon crouchfig" data-act="crouch" aria-label="Crouch"><i></i></button>
+  <button id="usebtn" class="tbtn use" data-act="use" hidden>USE</button>
+  <button id="dropbtn" class="tbtn drop" data-act="drop" hidden>DROP</button>
+  <div id="itemname" hidden></div>
+  <button id="hand" class="tbtn icon hand" data-act="interact" aria-label="Open" hidden><i></i></button>
+  <button id="grab" class="tbtn icon grab" data-act="interact" aria-label="Pick up" hidden><b></b></button>
+  </div>
+
+<div id="menu">
+  <div class="panel">
+    <h1>LEVEL <span>FUN</span></h1>
+    <p class="sub">Stage 4 &middot; Smiley &middot; build <b id="build"></b></p>
+    <button id="primary" class="big">START</button>
+    <div id="loadbar"><i id="loadfill"></i></div><p id="loadmsg" class="note">Starting…</p>
+    <p id="hint" class="hint">Touch: left thumb = move, swipe elsewhere = look, tap the hand (top right) to open doors and hatches, tap the circle to pick things up (one item at a time; DROP / THROW appear while you hold something), tap the figure (top left) to crouch.<br>PC: WASD move, mouse look, E use or pick up, Space (or G) drop, U use item, F stun gun, C crouch, Q / R lean, Esc pause.<br>You wake under a table in the Dining Room. Explore all four floors (take the spiral staircase in the middle of the Main Party Hall). Secret hatches: look for odd striped panels in the floor and ceiling, then press USE. Menu: jump to any floor.</p>
+    <div class="row"><span>Graphics</span>
+      <div class="seg"><button data-setting="quality" data-value="low">Low</button><button data-setting="quality" data-value="medium">Medium</button><button data-setting="quality" data-value="high">High</button></div></div>
+    <div class="row"><span>Smiley</span>
+      <div class="seg"><button data-setting="difficulty" data-value="practice">Practice</button><button data-setting="difficulty" data-value="easy">Easy</button><button data-setting="difficulty" data-value="normal">Normal</button><button data-setting="difficulty" data-value="hard">Hard</button><button data-setting="difficulty" data-value="extreme">Extreme</button></div></div>
+    <p class="note" id="diffnote"></p>
+    <div class="row"><span>Sensitivity <i id="sensv"></i></span><input id="sens" type="range" min="0.3" max="2.5" step="0.05"></div>
+    <div class="row"><span>Field of view <i id="fovv"></i></span><input id="fov" type="range" min="60" max="100" step="1"></div>
+    <div class="row"><span>Crouch (keyboard)</span>
+      <div class="seg"><button data-setting="crouchMode" data-value="toggle">Toggle</button><button data-setting="crouchMode" data-value="hold">Hold</button></div></div>
+    <div class="row"><button id="respawn">Back to start</button><button id="fs">Fullscreen</button></div>
+    <div class="row"><span>Go to (test)</span><div class="seg"><button data-floor="B">Basement</button><button data-floor="1">Floor 1</button><button data-floor="2">Floor 2</button><button data-floor="3">Floor 3</button></div></div>
+    <div class="row"><button id="spawnall">Spawn all items in front of me (test)</button></div>
+    <div class="row"><button id="xray">Show Smiley, green glow through walls (test): OFF</button></div>
+    <div class="row"><button id="newgame">New game (new item layout)</button></div>
+    <div class="row"><button id="unlock">Open all secret passages (test)</button></div>
+    <p class="note">Graphics: antialiasing and texture detail apply on next launch.</p>
+  </div>
+</div>
+
+<div id="arcade" hidden><canvas id="acv" width="320" height="180"></canvas><p id="amsg">LOADING GAME…</p><button id="aquit">&times; EXIT</button></div>
+
+<div id="cams" hidden><div id="camtop"><button id="camexit">&times; EXIT</button><span id="camlabel"></span><span id="camtime"></span></div><div id="camscan"></div><button id="camprev">&#9664; PREV</button><button id="camnext">NEXT &#9654;</button></div>
+
+<div id="note" hidden><div class="paper"><h2 id="notet"></h2><pre id="noteb"></pre><button id="noteclose">CLOSE</button></div></div>
+<div id="ending" hidden><div class="endbox"><h1 id="endt"></h1><p id="endp"></p><button id="endbtn" class="big">PLAY AGAIN</button></div></div>
+<div id="need" hidden></div>
+<div id="flash"></div>
+<div id="pcmark" hidden><b>E</b></div><div id="pcname" hidden></div>
+<div id="scare"></div>
+<div id="daycard" hidden><h1 id="dayt"></h1></div>
+<div id="stucknote" hidden>STUCK!</div>
+
+<div id="rotate"><div>Rotate your device<br>to landscape</div></div>
+
+<script>
+// Show any startup failure on screen (phones have no console).
+(function () {
+  setTimeout(function () { if (!window.__lfBoot) { var m = document.getElementById('loadmsg'); if (m) m.textContent = 'The game script did not start (old browser? modules/top-level await unsupported). ' + navigator.userAgent; } }, 6000);
+  var lm = document.getElementById('loadmsg'); if (lm) lm.textContent = 'Page loaded - starting game code…';
+  function toast(m) { var t = document.getElementById('toast'); if (t) { t.textContent = 'Error: ' + m; t.style.background = 'rgba(160,0,0,.85)'; t.style.maxWidth = '90vw'; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 9000); } }
+  function show(m) { toast(m); var b = document.getElementById('primary'), t = document.getElementById('hint'); if (b) b.textContent = 'Error - see text below'; if (t) { t.hidden = false; t.textContent = 'Startup error: ' + m; t.style.color = '#f88'; } }
+  addEventListener('error', function (e) { show((e.message || 'script error') + (e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
+  addEventListener('unhandledrejection', function (e) { show(String((e.reason && (e.reason.stack || e.reason.message)) || e.reason).slice(0, 300)); });
+})();
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
