@@ -175,7 +175,7 @@ button { font: inherit; color: #fff; }
 #stucknote[hidden] { display: none; }
 
 /* PC: the pickup circle with a white E in it, placed on the item */
-#pcmark { position: fixed; z-index: 6; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; pointer-events: none; background: rgba(0,0,0,.25); }
-#pcmark b { font: 900 20px/1 "Arial Rounded MT Bold", system-ui, sans-serif; color: #fff; text-shadow: 0 1px 3px #000; }
+#pcmark { position: fixed; z-index: 6; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; pointer-events: none; background: none; box-shadow: 0 0 3px rgba(0,0,0,.6); }
+#pcmark b { font: 400 19px/1 "Century Gothic", "Trebuchet MS", system-ui, sans-serif; color: #fff; text-shadow: 0 0 2px rgba(0,0,0,.7); transform: translateY(-1px); }
 #pcname { position: fixed; z-index: 6; transform: translate(-50%, 0); padding: 2px 8px; font: 700 15px/1.2 system-ui, sans-serif; color: #fff; text-shadow: 0 1px 3px #000, 0 0 6px #000; background: rgba(0,0,0,.35); border-radius: 10px; white-space: nowrap; pointer-events: none; }
 #pcmark[hidden], #pcname[hidden] { display: none; }
