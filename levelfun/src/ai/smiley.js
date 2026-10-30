@@ -226,7 +226,7 @@ export class Smiley {
   }
   doSearch(dt, speed) {
     // after losing sight: go to where he last saw you, then poke around nearby for about ten seconds
-    if (this.sawHide && this.stateT < 0.2 && Math.random() < this.cfg.hide) { this.setState('checkhide'); this.goTo(this.sawHide.sx, this.sawHide.sz, this.sawHide.y); return; }
+    if (this.sawHide && this.stateT < 0.2 && (this.sawHide.spot.kind === 'table' || Math.random() < this.cfg.hide)) { this.setState('checkhide'); this.goTo(this.sawHide.sx, this.sawHide.sz, this.sawHide.y); return; }
     if (this.stateT === dt || (!this.path && this.lastSeen)) { if (this.lastSeen) { this.goTo(this.lastSeen.x, this.lastSeen.z, this.lastSeen.y); this.lastSeen = null; } }
     if (!this.arrived()) { this.follow(dt, speed); return; }
     this.timer -= dt; this.turnTo(this.yaw + dt * 1.2, dt); this.animate(dt, 0);
@@ -362,5 +362,8 @@ export class Smiley {
     const d = Math.hypot(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
     if (d < 1.0 && Math.abs(p.pos.y - this.pos.y) < 1.4) this.catchPlayer(Math.random() < 0.45 ? 'hit' : 'grab');
   }
-  catchPlayer(kind) { if (this.catching) return; this.catching = true; this.path = null; this.onCatch(kind); }
+  catchPlayer(kind) {
+    if (this.catching) return;
+    const p = this.player;   // found under a table (or any low cover): he crouches down and looks underneath
+    if (kind !== 'table' && (p.hide ? p.hide.spot.kind === 'table' : p.crouched && this.nav.blocked(p.pos.x, p.pos.z, p.pos.y))) kind = 'table'; this.catching = true; this.path = null; this.onCatch(kind); }
 }
