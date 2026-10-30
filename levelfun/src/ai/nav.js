@@ -28,6 +28,13 @@ export class Nav {
   cell(ix, iz, yFrom) {
     const x = ix * STEP, z = iz * STEP, f = this.world.floorAt(x, z, yFrom + MAXSTEP, true);
     if (f === null || f < yFrom - 0.9) return null;
+    if (Math.abs(x - this.stairs.x) < 2.3 && Math.abs(z - this.stairs.z) < 2.3) {   // around the stairwell keep clear of the edge so he never hugs the lip (less on the narrow treads)
+      const flat = Object.values(LEVEL_Y).some(ly => Math.abs(f - ly) < 0.02);
+      // flat floor close to the opening is only used on the landing side (x > centre, z < centre): everywhere else it is the lip
+      if (flat && Math.hypot(x - this.stairs.x, z - this.stairs.z) < 1.75 && !(x >= this.stairs.x - 0.1 && z <= this.stairs.z + 0.05)) return null;
+      const d = flat ? 0.2 : 0.04;
+      for (let k = 0; k < 8; k++) { const ang = k * Math.PI / 4 + 0.29, ox = Math.cos(ang) * d, oz = Math.sin(ang) * d; const g = this.world.floorAt(x + ox, z + oz, yFrom + MAXSTEP, true); if (g === null || Math.abs(g - f) > 0.5) return null; }
+    }
     return this.blocked(x, z, f) ? null : f;
   }
   // Nearest walkable cell to a point (spiral outward).

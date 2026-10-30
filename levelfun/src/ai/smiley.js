@@ -278,7 +278,12 @@ export class Smiley {
     const f = this.world.floorAt(this.pos.x, this.pos.z, this.pos.y + 0.45, true);
     if (f === null) {   // stepped over an opening (stairwell edge): slide along it, or stay put
       const nx = this.pos.x, nz = this.pos.z, fy = this.pos.y + 0.45, W = this.world;
-      if (W.floorAt(nx, pz, fy, true) !== null) this.pos.z = pz; else if (W.floorAt(px, nz, fy, true) !== null) this.pos.x = px; else { this.pos.x = px; this.pos.z = pz; }
+      const prog = (x, z) => ((x - px) * dx + (z - pz) * dz) / d;   // progress along the way to the waypoint
+      if (W.floorAt(nx, pz, fy, true) !== null && prog(nx, pz) > step * 0.3) this.pos.z = pz; else if (W.floorAt(px, nz, fy, true) !== null && prog(px, nz) > step * 0.3) this.pos.x = px; else {
+        // wedged on the lip: sidestep a little to either side of the direction of travel
+        this.pos.x = px; this.pos.z = pz; const ux = -dz / d, uz = dx / d;
+        for (const sd of [0.06, -0.06, 0.12, -0.12]) { const cx2 = px + dx / d * step + ux * sd, cz2 = pz + dz / d * step + uz * sd; if (W.floorAt(cx2, cz2, fy, true) !== null && !W.collision.overlaps(cx2, cz2, RADIUS, this.pos.y + 0.25, this.pos.y + 1.9)) { this.pos.x = cx2; this.pos.z = cz2; break; } }
+      }
     } else this.pos.y += (f - this.pos.y) * Math.min(1, dt * 14);
     this.moved = Math.hypot(this.pos.x - px, this.pos.z - pz);
     this.animate(dt, this.moved / dt);
